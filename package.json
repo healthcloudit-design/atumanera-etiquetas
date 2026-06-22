@@ -1,0 +1,12 @@
+{
+  "name": "atumaneraetiquetas",
+  "version": "1.0.0",
+  "description": "Tienda online A Tu Manera Etiquetas",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "mercadopago": "^2.13.0"
+  }
+}
