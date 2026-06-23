@@ -1327,13 +1327,13 @@ async function addToCart() {
   try {
     const mockupEl = document.getElementById('mockupCard');
     const canvas = await html2canvas(mockupEl, {
-      scale: 0.6,
+      scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: null,
       logging: false,
     });
-    thumbnail = canvas.toDataURL('image/jpeg', 0.75);
+    thumbnail = canvas.toDataURL('image/jpeg', 0.9);
   } catch(e) {
     console.warn('Miniatura no disponible:', e);
   }
@@ -1651,7 +1651,7 @@ function renderOrders(orders) {
     const iconIdx = item && item.design_icon_index != null ? item.design_icon_index : null;
     const iconSrc = iconIdx != null ? DIBUJOS_REALES[iconIdx] : null;
     const thumb = mockupSrc
-      ? `<img src="${mockupSrc}" onclick="openImgLightbox(this.src)" style="width:160px;height:108px;object-fit:cover;border-radius:8px;border:1px solid #eee;cursor:zoom-in;">`
+      ? `<img src="${mockupSrc}" onclick="openImgLightbox(this.src)" style="width:160px;height:108px;object-fit:contain;border-radius:8px;border:1px solid #eee;background:#f5f5f5;cursor:zoom-in;">`
       : iconSrc
         ? `<img src="${iconSrc}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;">`
         : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
