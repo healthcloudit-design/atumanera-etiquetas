@@ -47,7 +47,7 @@ module.exports = async function handler(req, res) {
     // 2. Insertar items del pedido
     const orderItems = cartItems.map(item => ({
       order_id: order.id,
-      product_id: item.productId,
+      product_id: null, // FK a products — se resuelve por product_name
       product_name: item.product,
       design_text: item.text,
       design_font: item.font,
@@ -63,7 +63,8 @@ module.exports = async function handler(req, res) {
       subtotal: item.price,
     }));
 
-    await supabase.from('order_items').insert(orderItems);
+    const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+    if (itemsError) console.error('Error insertando order_items:', itemsError);
 
     // 3. Crear preferencia en Mercado Pago
     const preference = new Preference(mp);
