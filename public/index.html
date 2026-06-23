@@ -1698,19 +1698,28 @@ function openOrderDetail(id) {
   const o = allOrders.find(x => x.id === id);
   if (!o) return;
   const items = o.order_items || [];
-  const itemsHtml = items.map(it => `
+  const itemsHtml = items.map(it => {
+    const thumbSrc = it.design_thumbnail_url
+      || (it.design_icon_index != null ? DIBUJOS_REALES[it.design_icon_index] : null);
+    return `
     <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:10px;">
-      <div style="font-weight:700;margin-bottom:8px;">${it.product_name} × ${it.quantity} set (${it.units_total} unidades)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;color:#555;">
-        <div>Texto: <strong>${it.design_text}</strong></div>
-        <div>Fuente: <strong>${it.design_font}</strong></div>
-        <div>Color texto: <strong>${it.design_text_color || '—'}</strong></div>
-        <div>Posición ícono: <strong>${it.design_position || '—'}</strong></div>
-        ${it.design_border_color ? `<div>Color borde: <strong>${it.design_border_color}</strong></div>` : ''}
-        ${it.design_pulsera_color ? `<div>Color pulsera: <strong>${it.design_pulsera_color}</strong></div>` : ''}
-        <div>Subtotal: <strong>$${(it.subtotal/100).toLocaleString('es-AR')}</strong></div>
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        ${thumbSrc ? `<img src="${thumbSrc}" style="width:110px;height:74px;object-fit:cover;border-radius:8px;border:1px solid #eee;flex-shrink:0;">` : ''}
+        <div style="flex:1;">
+          <div style="font-weight:700;margin-bottom:8px;">${it.product_name} × ${it.quantity} set (${it.units_total} unidades)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;color:#555;">
+            <div>Texto: <strong>${it.design_text}</strong></div>
+            <div>Fuente: <strong>${it.design_font}</strong></div>
+            <div>Color texto: <strong>${it.design_text_color || '—'}</strong></div>
+            <div>Posición ícono: <strong>${it.design_position || '—'}</strong></div>
+            ${it.design_border_color ? `<div>Color borde: <strong>${it.design_border_color}</strong></div>` : ''}
+            ${it.design_pulsera_color ? `<div>Color pulsera: <strong>${it.design_pulsera_color}</strong></div>` : ''}
+            <div>Subtotal: <strong>$${(it.subtotal/100).toLocaleString('es-AR')}</strong></div>
+          </div>
+        </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   const modal = document.getElementById('orderModal');
   document.getElementById('orderModalContent').innerHTML = `
