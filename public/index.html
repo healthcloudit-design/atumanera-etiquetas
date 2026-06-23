@@ -97,6 +97,32 @@ img{max-width:100%;}
   .carousel-btn{padding:9px 18px;font-size:13px;}
 }
 
+/* ===== ADMIN DASHBOARD ===== */
+.admin-login{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:24px;}
+.admin-login-card{background:#fff;border-radius:20px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.10);max-width:380px;width:100%;text-align:center;}
+.admin-login-card h2{font-size:22px;font-weight:800;margin-bottom:6px;color:#1A1A1A;}
+.admin-login-card p{font-size:14px;color:#aaa;margin-bottom:24px;}
+.admin-login-card input{width:100%;border:2px solid #e0e0e0;border-radius:10px;padding:12px 16px;font-size:15px;font-family:'Nunito',sans-serif;outline:none;margin-bottom:12px;text-align:center;letter-spacing:2px;}
+.admin-login-card input:focus{border-color:#00AEEF;}
+.admin-login-btn{width:100%;background:#00AEEF;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;transition:background 0.2s;}
+.admin-login-btn:hover{background:#0099d4;}
+.admin-login-error{background:#ffebee;border:1px solid #ef9a9a;border-radius:8px;padding:10px;font-size:13px;color:#c62828;margin-bottom:12px;display:none;}
+.admin-dash{padding:24px;max-width:1200px;margin:0 auto;}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.admin-header h2{font-size:22px;font-weight:800;color:#1A1A1A;}
+.admin-header .logout-btn{background:#f5f5f5;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;color:#555;}
+.admin-toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+.filter-btn{padding:7px 16px;border-radius:20px;border:2px solid #e0e0e0;background:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;color:#555;transition:all 0.15s;}
+.filter-btn:hover{border-color:#00AEEF;color:#00AEEF;}
+.filter-btn.active{background:#00AEEF;border-color:#00AEEF;color:#fff;}
+.admin-search{flex:1;min-width:200px;border:2px solid #e0e0e0;border-radius:10px;padding:8px 14px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;}
+.admin-search:focus{border-color:#00AEEF;}
+.orders-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);}
+.orders-table thead{background:#f9f9f9;}
+.orders-table th{padding:12px 10px;text-align:left;font-size:11px;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;}
+.order-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.order-modal-inner{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;}
+
 /* ===== COMO FUNCIONA ===== */
 .como-funciona{padding:40px 24px;background:#fff;text-align:center;}
 .section-title{font-family:'Pacifico',cursive;font-size:26px;color:#1A1A1A;margin-bottom:6px;}
@@ -368,6 +394,7 @@ img{max-width:100%;}
       </div>
     </div>
     <div class="nav-item" onclick="showPage('editor')">✏️ Diseñá las tuyas</div>
+    <div class="nav-item" onclick="goToAdmin()" style="color:#aaa;font-size:11px;">⚙️</div>
   </nav>
   <div class="header-right">
     <button class="cart-btn" onclick="toggleCart()">
@@ -656,6 +683,66 @@ img{max-width:100%;}
     <div class="cart-total"><span>Total</span><span>$<span id="cartTotal">0</span></span></div>
     <button class="checkout-btn" onclick="goToCheckout()">💳 Ir a pagar con Mercado Pago</button>
   </div>
+</div>
+
+<!-- ========== ADMIN PAGE ========== -->
+<div id="page-admin" class="page">
+  <!-- LOGIN -->
+  <div class="admin-login" id="adminLoginWrap" style="display:flex;">
+    <div class="admin-login-card">
+      <div style="font-size:48px;margin-bottom:12px;">🔐</div>
+      <h2>Panel de administración</h2>
+      <p>A Tu Manera Etiquetas</p>
+      <div class="admin-login-error" id="adminLoginError"></div>
+      <input type="password" id="adminTokenInput" placeholder="Contraseña" onkeydown="if(event.key==='Enter')adminLogin()">
+      <button class="admin-login-btn" id="adminLoginBtn" onclick="adminLogin()">Ingresar</button>
+    </div>
+  </div>
+  <!-- DASHBOARD -->
+  <div id="adminDashWrap" style="display:none;">
+    <div class="admin-dash">
+      <div class="admin-header">
+        <div>
+          <h2>📋 Pedidos</h2>
+          <div style="font-size:13px;color:#aaa;" id="orderCount">Cargando...</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button onclick="loadOrders()" style="background:#e6f7ff;color:#00AEEF;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">🔄 Actualizar</button>
+          <button class="logout-btn" onclick="showPage('home')">← Volver al sitio</button>
+        </div>
+      </div>
+      <div class="admin-toolbar">
+        <button class="filter-btn active" onclick="filterOrders('all')">Todos</button>
+        <button class="filter-btn" onclick="filterOrders('pending_payment')">⏳ Pendiente pago</button>
+        <button class="filter-btn" onclick="filterOrders('paid')">✅ Pagados</button>
+        <button class="filter-btn" onclick="filterOrders('in_production')">🔧 En producción</button>
+        <button class="filter-btn" onclick="filterOrders('shipped')">📦 Enviados</button>
+        <button class="filter-btn" onclick="filterOrders('delivered')">🏠 Entregados</button>
+        <input class="admin-search" id="searchInput" type="text" placeholder="🔍 Buscar por nombre, email o N° pedido..." oninput="searchOrders()">
+      </div>
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>N° Pedido</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Diseño</th>
+            <th>Total</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">⏳ Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PEDIDO -->
+<div class="order-modal" id="orderModal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="order-modal-inner" id="orderModalContent"></div>
 </div>
 
 <div class="toast" id="toast">✅ Agregado al carrito</div>
@@ -1474,6 +1561,197 @@ function resetTimer() {
 resetTimer();
 
 init();
+
+/* ============================================================
+   DASHBOARD ADMIN
+   ============================================================ */
+const API_ORDERS = 'https://atumanera-etiquetas.vercel.app/api/orders';
+let adminToken = '';
+let allOrders = [];
+let filterStatus = 'all';
+
+function goToAdmin() {
+  showPage('admin');
+  document.getElementById('adminLoginWrap').style.display = 'flex';
+  document.getElementById('adminDashWrap').style.display = 'none';
+  document.getElementById('adminTokenInput').value = '';
+  document.getElementById('adminLoginError').style.display = 'none';
+}
+
+async function adminLogin() {
+  const token = document.getElementById('adminTokenInput').value.trim();
+  if (!token) return;
+  const btn = document.getElementById('adminLoginBtn');
+  btn.textContent = '⏳ Ingresando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(API_ORDERS + '?limit=1', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.status === 401) throw new Error('Token incorrecto');
+    if (!res.ok) throw new Error('Error del servidor');
+    adminToken = token;
+    document.getElementById('adminLoginWrap').style.display = 'none';
+    document.getElementById('adminDashWrap').style.display = 'block';
+    loadOrders();
+  } catch(e) {
+    document.getElementById('adminLoginError').textContent = e.message === 'Token incorrecto' ? '❌ Contraseña incorrecta' : '⚠️ No se pudo conectar al servidor';
+    document.getElementById('adminLoginError').style.display = 'block';
+    btn.textContent = 'Ingresar';
+    btn.disabled = false;
+  }
+}
+
+async function loadOrders() {
+  document.getElementById('ordersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">⏳ Cargando pedidos...</td></tr>';
+  try {
+    const url = filterStatus !== 'all' ? API_ORDERS + '?status=' + filterStatus : API_ORDERS;
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + adminToken } });
+    if (!res.ok) throw new Error('Error ' + res.status);
+    allOrders = await res.json();
+    renderOrders(allOrders);
+    document.getElementById('orderCount').textContent = allOrders.length + ' pedidos';
+  } catch(e) {
+    document.getElementById('ordersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#e53935;">Error al cargar pedidos: ' + e.message + '</td></tr>';
+  }
+}
+
+function renderOrders(orders) {
+  const tbody = document.getElementById('ordersBody');
+  if (!orders.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">No hay pedidos con ese filtro</td></tr>';
+    return;
+  }
+  tbody.innerHTML = orders.map(o => {
+    const item = o.order_items && o.order_items[0];
+    const thumb = item && item.design_thumbnail_url
+      ? `<img src="${item.design_thumbnail_url}" style="width:60px;height:24px;object-fit:contain;border-radius:4px;">`
+      : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
+    const date = new Date(o.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit'});
+    const statusBadge = {
+      pending_payment: '<span style="background:#fff3e0;color:#e65100;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">⏳ Pago pendiente</span>',
+      paid:            '<span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">✅ Pagado</span>',
+      in_production:   '<span style="background:#e3f2fd;color:#1565c0;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">🔧 En producción</span>',
+      shipped:         '<span style="background:#f3e5f5;color:#6a1b9a;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">📦 Enviado</span>',
+      delivered:       '<span style="background:#e0f2f1;color:#00695c;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">🏠 Entregado</span>',
+      cancelled:       '<span style="background:#ffebee;color:#c62828;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">❌ Cancelado</span>',
+    }[o.status] || o.status;
+    const total = (o.total / 100).toLocaleString('es-AR', {style:'currency',currency:'ARS',minimumFractionDigits:0});
+    return `<tr style="border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
+      <td style="padding:12px 10px;font-size:13px;font-weight:700;color:#00AEEF;">#${o.order_number}</td>
+      <td style="padding:12px 10px;font-size:12px;color:#555;">${date}</td>
+      <td style="padding:12px 10px;font-size:13px;font-weight:600;">${o.buyer_name}<br><span style="font-size:11px;color:#aaa;font-weight:400;">${o.buyer_email}</span></td>
+      <td style="padding:12px 10px;">${thumb}</td>
+      <td style="padding:12px 10px;font-size:13px;font-weight:700;">${total}</td>
+      <td style="padding:12px 10px;">${statusBadge}</td>
+      <td style="padding:12px 10px;">
+        <button onclick="openOrderDetail('${o.id}')" style="background:#f5f5f5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Ver detalle</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterOrders(status) {
+  filterStatus = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  loadOrders();
+}
+
+function searchOrders() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = allOrders.filter(o =>
+    o.buyer_name.toLowerCase().includes(q) ||
+    o.buyer_email.toLowerCase().includes(q) ||
+    String(o.order_number).includes(q)
+  );
+  renderOrders(filtered);
+}
+
+function openOrderDetail(id) {
+  const o = allOrders.find(x => x.id === id);
+  if (!o) return;
+  const items = o.order_items || [];
+  const itemsHtml = items.map(it => `
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="font-weight:700;margin-bottom:8px;">${it.product_name} × ${it.quantity} set (${it.units_total} unidades)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;color:#555;">
+        <div>Texto: <strong>${it.design_text}</strong></div>
+        <div>Fuente: <strong>${it.design_font}</strong></div>
+        <div>Color texto: <strong>${it.design_text_color || '—'}</strong></div>
+        <div>Posición ícono: <strong>${it.design_position || '—'}</strong></div>
+        ${it.design_border_color ? `<div>Color borde: <strong>${it.design_border_color}</strong></div>` : ''}
+        ${it.design_pulsera_color ? `<div>Color pulsera: <strong>${it.design_pulsera_color}</strong></div>` : ''}
+        <div>Subtotal: <strong>$${(it.subtotal/100).toLocaleString('es-AR')}</strong></div>
+      </div>
+    </div>`).join('');
+
+  const modal = document.getElementById('orderModal');
+  document.getElementById('orderModalContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="font-size:18px;font-weight:800;">Pedido #${o.order_number}</h3>
+      <button onclick="document.getElementById('orderModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Comprador</div>
+        <div style="font-weight:700;">${o.buyer_name}</div>
+        <div style="font-size:13px;color:#555;">${o.buyer_email}</div>
+        <div style="font-size:13px;color:#555;">${o.buyer_phone || '—'}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Envío</div>
+        <div style="font-weight:700;">${o.shipping_method === 'retiro' ? 'Retiro en Belgrano' : 'Andreani'}</div>
+        ${o.shipping_address ? `<div style="font-size:13px;color:#555;">${o.shipping_address}, ${o.shipping_city}</div>` : ''}
+        ${o.tracking_number ? `<div style="font-size:13px;color:#8DC63F;font-weight:700;">📦 Tracking: ${o.tracking_number}</div>` : ''}
+      </div>
+    </div>
+    <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:10px;">Diseños del pedido</div>
+    ${itemsHtml}
+    <div style="border-top:2px solid #f0f0f0;padding-top:16px;margin-top:8px;">
+      <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:10px;">Cambiar estado</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        ${['paid','in_production','shipped','delivered','cancelled'].map(s => 
+          `<button onclick="updateStatus('${o.id}','${s}')" style="background:${o.status===s?'#00AEEF':'#f5f5f5'};color:${o.status===s?'#fff':'#555'};border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">${{paid:'✅ Pagado',in_production:'🔧 En producción',shipped:'📦 Enviado',delivered:'🏠 Entregado',cancelled:'❌ Cancelar'}[s]}</button>`
+        ).join('')}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input id="trackingInput" type="text" placeholder="Número de seguimiento Andreani" value="${o.tracking_number||''}" style="flex:1;border:2px solid #e0e0e0;border-radius:8px;padding:9px 13px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;">
+        <button onclick="saveTracking('${o.id}')" style="background:#8DC63F;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Guardar</button>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+async function updateStatus(id, status) {
+  try {
+    const res = await fetch(API_ORDERS, {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status })
+    });
+    if (!res.ok) throw new Error('Error');
+    showToast('✅ Estado actualizado');
+    document.getElementById('orderModal').style.display = 'none';
+    loadOrders();
+  } catch(e) { showToast('⚠️ Error al actualizar'); }
+}
+
+async function saveTracking(id) {
+  const tracking = document.getElementById('trackingInput').value.trim();
+  try {
+    const res = await fetch(API_ORDERS, {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, tracking_number: tracking, status: 'shipped' })
+    });
+    if (!res.ok) throw new Error('Error');
+    showToast('✅ Tracking guardado — estado: Enviado');
+    document.getElementById('orderModal').style.display = 'none';
+    loadOrders();
+  } catch(e) { showToast('⚠️ Error al guardar'); }
+}
 </script>
 </body>
 </html>
