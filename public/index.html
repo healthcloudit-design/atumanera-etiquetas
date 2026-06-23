@@ -1949,6 +1949,15 @@ function openOrderDetail(id) {
           `<button onclick="updateStatus('${o.id}','${s}')" style="background:${o.status===s?'#00AEEF':'#f5f5f5'};color:${o.status===s?'#fff':'#555'};border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">${{paid:'✅ Pagado',in_production:'🔧 En producción',shipped:'📦 Enviado',delivered:'🏠 Entregado',cancelled:'❌ Cancelar'}[s]}</button>`
         ).join('')}
       </div>
+      ${o.shipping_method !== 'retiro' ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Etiqueta Andreani</div>
+        <button id="labelBtn_${o.id}" onclick="generarEtiqueta('${o.id}')"
+          style="background:#009ee3;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:8px;">
+          🖨️ Generar etiqueta
+        </button>
+        <div id="labelMsg_${o.id}" style="margin-top:8px;font-size:12px;color:#777;display:none;"></div>
+      </div>` : ''}
       <div style="display:flex;gap:8px;">
         <input id="trackingInput" type="text" placeholder="Número de seguimiento Andreani" value="${o.tracking_number||''}" style="flex:1;border:2px solid #e0e0e0;border-radius:8px;padding:9px 13px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;">
         <button onclick="saveTracking('${o.id}')" style="background:#8DC63F;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Guardar</button>
@@ -1984,6 +1993,86 @@ async function saveTracking(id) {
     document.getElementById('orderModal').style.display = 'none';
     loadOrders();
   } catch(e) { showToast('⚠️ Error al guardar'); }
+}
+
+async function generarEtiqueta(orderId) {
+  const btn = document.getElementById(`labelBtn_${orderId}`);
+  const msg = document.getElementById(`labelMsg_${orderId}`);
+  if (!btn) return;
+
+  btn.textContent = '⏳ Generando etiqueta...';
+  btn.disabled = true;
+  msg.style.display = 'none';
+
+  try {
+    const res = await fetch('https://atumanera-etiquetas.vercel.app/api/andreani-label', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + adminToken,
+      },
+      body: JSON.stringify({ orderId }),
+    });
+
+    const data = await res.json();
+
+    if (data.configPendiente) {
+      msg.innerHTML = '⚙️ <strong>Andreani no configurado.</strong> Cargá las variables de entorno en Vercel (ANDREANI_USER, ANDREANI_PASS, ANDREANI_CONTRATO y datos de remitente).';
+      msg.style.color = '#e65100';
+      msg.style.display = 'block';
+      btn.textContent = '🖨️ Generar etiqueta';
+      btn.disabled = false;
+      return;
+    }
+
+    if (!data.ok) {
+      msg.textContent = '⚠️ ' + (data.error || 'Error desconocido');
+      msg.style.color = '#c62828';
+      msg.style.display = 'block';
+      btn.textContent = '🖨️ Reintentar';
+      btn.disabled = false;
+      return;
+    }
+
+    // Éxito — actualizar tracking en pantalla y descargar PDF
+    const tracking = data.numeroDeEnvio;
+    const trackingInput = document.getElementById('trackingInput');
+    if (trackingInput) trackingInput.value = tracking;
+
+    msg.innerHTML = `✅ Etiqueta generada — Tracking: <strong>${tracking}</strong>`;
+    msg.style.color = '#2e7d32';
+    msg.style.display = 'block';
+    btn.textContent = '🖨️ Volver a imprimir';
+    btn.disabled = false;
+
+    // Descargar el PDF de la etiqueta
+    if (data.etiquetaPdf) {
+      const pdfBlob = base64ToBlob(data.etiquetaPdf, 'application/pdf');
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `etiqueta-${tracking}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Recargar la lista de pedidos para mostrar el nuevo estado y tracking
+    setTimeout(loadOrders, 1000);
+
+  } catch (err) {
+    msg.textContent = '⚠️ Error de conexión: ' + err.message;
+    msg.style.color = '#c62828';
+    msg.style.display = 'block';
+    btn.textContent = '🖨️ Reintentar';
+    btn.disabled = false;
+  }
+}
+
+function base64ToBlob(base64, type) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type });
 }
 
 function openImgLightbox(src) {
