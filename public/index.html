@@ -1670,8 +1670,9 @@ function renderOrders(orders) {
       <td style="padding:12px 10px;">${thumb}</td>
       <td style="padding:12px 10px;font-size:13px;font-weight:700;">${total}</td>
       <td style="padding:12px 10px;">${statusBadge}</td>
-      <td style="padding:12px 10px;">
+      <td style="padding:12px 10px;display:flex;gap:6px;align-items:center;">
         <button onclick="openOrderDetail('${o.id}')" style="background:#f5f5f5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Ver detalle</button>
+        ${mockupSrc ? `<button onclick="openDesignPreview('${o.id}')" style="background:#e8f7ff;color:#00AEEF;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Ver diseño</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1785,6 +1786,29 @@ async function saveTracking(id) {
     document.getElementById('orderModal').style.display = 'none';
     loadOrders();
   } catch(e) { showToast('⚠️ Error al guardar'); }
+}
+
+function openDesignPreview(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  const item = o.order_items && o.order_items[0];
+  const src = item && item.design_thumbnail_url;
+  if (!src) return;
+
+  // Cerrar si ya existe
+  const existing = document.getElementById('designLightbox');
+  if (existing) existing.remove();
+
+  const lb = document.createElement('div');
+  lb.id = 'designLightbox';
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+  lb.innerHTML = `
+    <div style="font-size:13px;color:#fff;font-family:'Nunito',sans-serif;opacity:0.7;">Pedido #${o.order_number} — ${o.buyer_name}</div>
+    <img src="${src}" style="max-width:90vw;max-height:80vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+    <button onclick="document.getElementById('designLightbox').remove()" style="background:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">Cerrar</button>
+  `;
+  lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
+  document.body.appendChild(lb);
 }
 
 // Auto-abrir admin si la URL es /admin
