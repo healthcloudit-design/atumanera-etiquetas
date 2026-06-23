@@ -1,7 +1,10 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/admin", "destination": "/index.html" }
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/pago-exitoso", "destination": "/index.html" },
+    { "source": "/pago-fallido", "destination": "/index.html" },
+    { "source": "/pago-pendiente", "destination": "/index.html" }
   ],
   "headers": [
     {
