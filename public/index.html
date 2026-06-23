@@ -1326,7 +1326,7 @@ function addToCart() {
     text: state.text || '(sin texto)',
     font: state.font,
     icon: state.iconSrc,
-    iconIdx: state.icon,
+    iconIdx: state.icon ? parseInt(state.icon.replace('real_', '')) : null,
     qty: state.qty,
     price: state.qty * p.price,
     unitsPerSet: p.unitsPerSet,
@@ -1483,7 +1483,6 @@ async function submitCheckout() {
     font: item.font,
     textColor: item.textColor || '#1A1A1A',
     iconIndex: item.iconIdx ?? null,
-    thumbnailUrl: item.icon ?? null,
     position: item.position || 'left',
     borderColor: item.borderColor || null,
     pulseraColor: item.pulseraColor || null,
@@ -1626,8 +1625,10 @@ function renderOrders(orders) {
   }
   tbody.innerHTML = orders.map(o => {
     const item = o.order_items && o.order_items[0];
-    const thumb = item && item.design_thumbnail_url
-      ? `<img src="${item.design_thumbnail_url}" style="width:60px;height:24px;object-fit:contain;border-radius:4px;">`
+    const iconIdx = item && item.design_icon_index != null ? item.design_icon_index : null;
+    const iconSrc = iconIdx != null ? DIBUJOS_REALES[iconIdx] : null;
+    const thumb = iconSrc
+      ? `<img src="${iconSrc}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;">`
       : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
     const date = new Date(o.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit'});
     const statusBadge = {
