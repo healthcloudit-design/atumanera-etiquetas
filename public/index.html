@@ -365,6 +365,7 @@ img{max-width:100%;}
 .toast{position:fixed;bottom:24px;right:24px;background:#8DC63F;color:#fff;padding:12px 20px;border-radius:10px;font-weight:800;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transform:translateY(80px);opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;}
 .toast.show{transform:translateY(0);opacity:1;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -1318,8 +1319,25 @@ function changeQty(delta) {
 /* ============================================================
    CART
    ============================================================ */
-function addToCart() {
+async function addToCart() {
   const p = PRODUCTS[state.productIdx];
+
+  // Capturar miniatura del mockup actual
+  let thumbnail = null;
+  try {
+    const mockupEl = document.getElementById('mockupCard');
+    const canvas = await html2canvas(mockupEl, {
+      scale: 0.6,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      logging: false,
+    });
+    thumbnail = canvas.toDataURL('image/jpeg', 0.75);
+  } catch(e) {
+    console.warn('Miniatura no disponible:', e);
+  }
+
   const item = {
     id: Date.now(),
     product: p.name,
@@ -1327,6 +1345,7 @@ function addToCart() {
     font: state.font,
     icon: state.iconSrc,
     iconIdx: state.icon ? parseInt(state.icon.replace('real_', '')) : null,
+    thumbnail: thumbnail,
     qty: state.qty,
     price: state.qty * p.price,
     unitsPerSet: p.unitsPerSet,
@@ -1483,6 +1502,7 @@ async function submitCheckout() {
     font: item.font,
     textColor: item.textColor || '#1A1A1A',
     iconIndex: item.iconIdx ?? null,
+    thumbnailUrl: item.thumbnail ?? null,
     position: item.position || 'left',
     borderColor: item.borderColor || null,
     pulseraColor: item.pulseraColor || null,
@@ -1625,11 +1645,14 @@ function renderOrders(orders) {
   }
   tbody.innerHTML = orders.map(o => {
     const item = o.order_items && o.order_items[0];
+    const mockupSrc = item && item.design_thumbnail_url;
     const iconIdx = item && item.design_icon_index != null ? item.design_icon_index : null;
     const iconSrc = iconIdx != null ? DIBUJOS_REALES[iconIdx] : null;
-    const thumb = iconSrc
-      ? `<img src="${iconSrc}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;">`
-      : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
+    const thumb = mockupSrc
+      ? `<img src="${mockupSrc}" style="width:80px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #eee;">`
+      : iconSrc
+        ? `<img src="${iconSrc}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;">`
+        : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
     const date = new Date(o.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit'});
     const statusBadge = {
       pending_payment: '<span style="background:#fff3e0;color:#e65100;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">⏳ Pago pendiente</span>',
