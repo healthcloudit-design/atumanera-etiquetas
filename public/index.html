@@ -1046,7 +1046,7 @@ const PULSERA_COLORS = [
 ];
 
 let state = { productIdx:0, text:'', font:'Pacifico', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', icon:'', iconSrc:null, position:'left', qty:1 };
-let cartItems = [];
+let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
 
 /* ============================================================
    INIT
@@ -1357,6 +1357,7 @@ async function addToCart() {
 }
 
 function updateCartUI() {
+  localStorage.setItem('cartItems', JSON.stringify(cartItems));
   const count = cartItems.reduce((a,i) => a+i.qty, 0);
   document.getElementById('cartCount').textContent = count;
   const container = document.getElementById('cartItems');
@@ -1649,9 +1650,9 @@ function renderOrders(orders) {
     const iconIdx = item && item.design_icon_index != null ? item.design_icon_index : null;
     const iconSrc = iconIdx != null ? DIBUJOS_REALES[iconIdx] : null;
     const thumb = mockupSrc
-      ? `<img src="${mockupSrc}" style="width:80px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #eee;">`
+      ? `<img src="${mockupSrc}" style="width:160px;height:108px;object-fit:cover;border-radius:8px;border:1px solid #eee;">`
       : iconSrc
-        ? `<img src="${iconSrc}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;">`
+        ? `<img src="${iconSrc}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;">`
         : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
     const date = new Date(o.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit'});
     const statusBadge = {
@@ -1670,9 +1671,8 @@ function renderOrders(orders) {
       <td style="padding:12px 10px;">${thumb}</td>
       <td style="padding:12px 10px;font-size:13px;font-weight:700;">${total}</td>
       <td style="padding:12px 10px;">${statusBadge}</td>
-      <td style="padding:12px 10px;display:flex;gap:6px;align-items:center;">
+      <td style="padding:12px 10px;">
         <button onclick="openOrderDetail('${o.id}')" style="background:#f5f5f5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Ver detalle</button>
-        ${mockupSrc ? `<button onclick="openDesignPreview('${o.id}')" style="background:#e8f7ff;color:#00AEEF;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Ver diseño</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1788,33 +1788,30 @@ async function saveTracking(id) {
   } catch(e) { showToast('⚠️ Error al guardar'); }
 }
 
-function openDesignPreview(orderId) {
-  const o = allOrders.find(x => x.id === orderId);
-  if (!o) return;
-  const item = o.order_items && o.order_items[0];
-  const src = item && item.design_thumbnail_url;
-  if (!src) return;
-
-  // Cerrar si ya existe
-  const existing = document.getElementById('designLightbox');
-  if (existing) existing.remove();
-
-  const lb = document.createElement('div');
-  lb.id = 'designLightbox';
-  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
-  lb.innerHTML = `
-    <div style="font-size:13px;color:#fff;font-family:'Nunito',sans-serif;opacity:0.7;">Pedido #${o.order_number} — ${o.buyer_name}</div>
-    <img src="${src}" style="max-width:90vw;max-height:80vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
-    <button onclick="document.getElementById('designLightbox').remove()" style="background:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">Cerrar</button>
-  `;
-  lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
-  document.body.appendChild(lb);
-}
-
 // Auto-abrir admin si la URL es /admin
 if (window.location.pathname === '/admin') {
   goToAdmin();
 }
+
+// Pago exitoso: limpiar carrito y mostrar mensaje
+if (window.location.pathname === '/pago-exitoso') {
+  cartItems = [];
+  localStorage.removeItem('cartItems');
+  updateCartUI();
+  showPage('home');
+  setTimeout(() => showToast('🎉 ¡Pago confirmado! Tu pedido está en camino.'), 300);
+}
+
+// Resetear el botón de pago si el usuario vuelve atrás desde MP (bfcache)
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    const btn = document.getElementById('payBtn');
+    if (btn) {
+      btn.textContent = '💳 Pagar ahora';
+      btn.disabled = false;
+    }
+  }
+});
 </script>
 </body>
 </html>
