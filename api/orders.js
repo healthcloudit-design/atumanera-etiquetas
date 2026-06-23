@@ -44,9 +44,9 @@ module.exports = async function handler(req, res) {
         .select(`
           id, order_number, buyer_name, buyer_email, buyer_phone,
           shipping_method, shipping_address, shipping_city, shipping_zip,
-          shipping_cost, tracking_number, mp_status, total, status,
+          shipping_province, shipping_cost, tracking_number, mp_status, total, status,
           created_at, updated_at,
-          order_items(id, product_name, design_text, design_font, 
+          order_items(id, product_name, design_text, design_font,
             design_icon_index, design_thumbnail_url, quantity, units_total, subtotal)
         `)
         .order('created_at', { ascending: false });

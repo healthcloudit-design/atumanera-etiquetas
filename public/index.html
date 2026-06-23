@@ -1427,6 +1427,103 @@ function showToast(msg) {
 
 let checkoutModal = null;
 
+// ── Tarifas Andreani por zona de CP ──────────────────────────────────────────
+// Actualizar según cotización vigente con tu cuenta Andreani.
+// Precios en ARS (pesos, no centavos). Paquete tipo: sobre/caja pequeña ≤500g.
+const ANDREANI_TARIFAS = {
+  amba:      { label: 'AMBA (CABA y GBA)',          precio: 4500  },
+  interior1: { label: 'Interior zona 1 (centro)',   precio: 7500  },
+  interior2: { label: 'Interior zona 2 (NOA/Cuyo)', precio: 9500  },
+  patagonia: { label: 'Patagonia',                  precio: 13000 },
+};
+
+function getZonaAndreani(cp) {
+  const n = parseInt(String(cp).replace(/\D/g, ''));
+  if (!n || isNaN(n) || n < 1000 || n > 9999) return null;
+  if (n >= 1000 && n <= 1999) return 'amba';
+  if (n >= 2000 && n <= 5999) return 'interior1';
+  if (n >= 6000 && n <= 8799) return 'interior2';
+  if (n >= 8800 && n <= 9999) return 'patagonia';
+  return null;
+}
+
+let _andreaniQuoteController = null; // para cancelar fetch si el usuario tipea rápido
+
+async function actualizarCostoEnvio() {
+  const method = document.getElementById('shippingMethod')?.value;
+  const addrDiv = document.getElementById('andreaniAddressFields');
+  const infoEl = document.getElementById('shippingCostInfo');
+  if (!method || !addrDiv || !infoEl) return;
+
+  if (method === 'retiro') {
+    addrDiv.style.display = 'none';
+    infoEl.innerHTML = '<div style="background:#e8f5e9;border-radius:8px;padding:10px 13px;font-size:13px;color:#2e7d32;font-weight:700;">🏪 Retiro en Belgrano — Miércoles 16-20hs — <strong>¡Gratis!</strong></div>';
+    infoEl.style.display = 'block';
+    return;
+  }
+
+  addrDiv.style.display = 'block';
+  const cp = document.getElementById('buyerZip')?.value.trim();
+
+  if (!cp) {
+    infoEl.innerHTML = '<div style="background:#f5f5f5;border-radius:8px;padding:10px 13px;font-size:13px;color:#777;">📍 Ingresá tu código postal para ver el costo de envío.</div>';
+    infoEl.style.display = 'block';
+    return;
+  }
+
+  if (!getZonaAndreani(cp)) {
+    infoEl.innerHTML = '<div style="background:#fff3e0;border-radius:8px;padding:10px 13px;font-size:13px;color:#e65100;">⚠️ CP no reconocido — ingresá un código postal argentino válido (4 dígitos).</div>';
+    infoEl.style.display = 'block';
+    return;
+  }
+
+  // Mostrar loading mientras consulta la API
+  infoEl.innerHTML = '<div style="background:#f5f5f5;border-radius:8px;padding:10px 13px;font-size:13px;color:#777;">⏳ Consultando tarifa Andreani...</div>';
+  infoEl.style.display = 'block';
+
+  // Cancelar consulta anterior si hay una en vuelo
+  if (_andreaniQuoteController) _andreaniQuoteController.abort();
+  _andreaniQuoteController = new AbortController();
+
+  try {
+    const res = await fetch('/api/andreani-quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpDestino: cp }),
+      signal: _andreaniQuoteController.signal,
+    });
+    const data = await res.json();
+
+    if (data.ok && data.totalARS) {
+      const esDemo = data.ambiente === 'qa-demo';
+      infoEl.innerHTML = `
+        <div style="background:#e3f2fd;border-radius:8px;padding:10px 13px;font-size:13px;color:#01579b;font-weight:700;">
+          🚚 Envío Andreani — <strong>$${data.totalARS.toLocaleString('es-AR')}</strong> con IVA
+          ${esDemo ? '<span style="font-size:11px;font-weight:400;opacity:0.7;"> · tarifa de referencia</span>' : ''}
+        </div>`;
+    } else {
+      // Fallback a tabla de zonas
+      mostrarZonaFallback(cp, infoEl);
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') return; // cancelado, ignorar
+    // Fallback a tabla de zonas
+    mostrarZonaFallback(cp, infoEl);
+  }
+}
+
+function mostrarZonaFallback(cp, infoEl) {
+  const zona = getZonaAndreani(cp);
+  if (zona) {
+    const t = ANDREANI_TARIFAS[zona];
+    infoEl.innerHTML = `<div style="background:#e3f2fd;border-radius:8px;padding:10px 13px;font-size:13px;color:#01579b;font-weight:700;">🚚 ${t.label} — Costo estimado: <strong>$${t.precio.toLocaleString('es-AR')}</strong> <span style="font-weight:400;opacity:0.75;">(puede variar)</span></div>`;
+  }
+  infoEl.style.display = 'block';
+}
+
+const INPUT_STYLE = "width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:9px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;box-sizing:border-box;";
+const LABEL_STYLE = "font-size:12px;font-weight:800;color:#555;display:block;margin-bottom:4px;";
+
 function buildCheckoutModal() {
   if (document.getElementById('checkoutModal')) return;
   const modal = document.createElement('div');
@@ -1434,26 +1531,89 @@ function buildCheckoutModal() {
   modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400;overflow:auto;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;max-width:480px;width:92%;margin:40px auto;padding:28px;">
-      <h2 style="font-size:18px;font-weight:800;margin-bottom:20px;color:#1A1A1A;">📦 Datos del comprador</h2>
+      <h2 style="font-size:18px;font-weight:800;margin-bottom:20px;color:#1A1A1A;">📦 Datos del pedido</h2>
+
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px;font-weight:800;color:#555;display:block;margin-bottom:5px;">NOMBRE COMPLETO *</label>
-        <input id="buyerName" type="text" placeholder="Tu nombre y apellido" style="width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:10px 13px;font-size:15px;font-family:'Nunito',sans-serif;outline:none;" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+        <label style="${LABEL_STYLE}">NOMBRE COMPLETO *</label>
+        <input id="buyerName" type="text" placeholder="Tu nombre y apellido"
+          style="${INPUT_STYLE}padding:10px 13px;font-size:15px;"
+          onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
       </div>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px;font-weight:800;color:#555;display:block;margin-bottom:5px;">EMAIL *</label>
-        <input id="buyerEmail" type="email" placeholder="tu@email.com" style="width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:10px 13px;font-size:15px;font-family:'Nunito',sans-serif;outline:none;" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+        <label style="${LABEL_STYLE}">EMAIL *</label>
+        <input id="buyerEmail" type="email" placeholder="tu@email.com"
+          style="${INPUT_STYLE}padding:10px 13px;font-size:15px;"
+          onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
       </div>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px;font-weight:800;color:#555;display:block;margin-bottom:5px;">TELÉFONO (opcional)</label>
-        <input id="buyerPhone" type="tel" placeholder="11 1234-5678" style="width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:10px 13px;font-size:15px;font-family:'Nunito',sans-serif;outline:none;" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+        <label style="${LABEL_STYLE}">TELÉFONO (opcional)</label>
+        <input id="buyerPhone" type="tel" placeholder="11 1234-5678"
+          style="${INPUT_STYLE}padding:10px 13px;font-size:15px;"
+          onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
       </div>
-      <div style="margin-bottom:20px;">
-        <label style="font-size:12px;font-weight:800;color:#555;display:block;margin-bottom:5px;">ENVÍO</label>
-        <select id="shippingMethod" style="width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:10px 13px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;background:#fff;">
-          <option value="andreani">Andreani (costo a cotizar)</option>
+
+      <div style="margin-bottom:14px;">
+        <label style="${LABEL_STYLE}">ENVÍO</label>
+        <select id="shippingMethod" onchange="actualizarCostoEnvio()"
+          style="${INPUT_STYLE}padding:10px 13px;font-size:14px;background:#fff;">
+          <option value="andreani">Andreani — envío a domicilio</option>
           <option value="retiro">Retiro en Belgrano — Miércoles 16-20hs (gratis)</option>
         </select>
       </div>
+
+      <!-- Campos de dirección (solo Andreani) -->
+      <div id="andreaniAddressFields" style="margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin-bottom:8px;">
+          <div>
+            <label style="${LABEL_STYLE}">CALLE *</label>
+            <input id="buyerStreet" type="text" placeholder="Av. Corrientes"
+              style="${INPUT_STYLE}" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+          </div>
+          <div>
+            <label style="${LABEL_STYLE}">NÚMERO *</label>
+            <input id="buyerStreetNum" type="text" placeholder="1234"
+              style="${INPUT_STYLE}" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;margin-bottom:8px;">
+          <div>
+            <label style="${LABEL_STYLE}">CIUDAD *</label>
+            <input id="buyerCity" type="text" placeholder="Buenos Aires"
+              style="${INPUT_STYLE}" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+          </div>
+          <div>
+            <label style="${LABEL_STYLE}">COD. POSTAL *</label>
+            <input id="buyerZip" type="text" placeholder="1425" maxlength="4"
+              style="${INPUT_STYLE}"
+              onfocus="this.style.borderColor='#00AEEF'"
+              onblur="this.style.borderColor='#e0e0e0';actualizarCostoEnvio();"
+              oninput="if(this.value.length>=4)actualizarCostoEnvio()">
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <label style="${LABEL_STYLE}">PROVINCIA *</label>
+          <select id="buyerProvince" style="${INPUT_STYLE}background:#fff;">
+            <option value="">— Seleccioná provincia —</option>
+            <option>Buenos Aires</option><option>CABA</option><option>Catamarca</option>
+            <option>Chaco</option><option>Chubut</option><option>Córdoba</option>
+            <option>Corrientes</option><option>Entre Ríos</option><option>Formosa</option>
+            <option>Jujuy</option><option>La Pampa</option><option>La Rioja</option>
+            <option>Mendoza</option><option>Misiones</option><option>Neuquén</option>
+            <option>Río Negro</option><option>Salta</option><option>San Juan</option>
+            <option>San Luis</option><option>Santa Cruz</option><option>Santa Fe</option>
+            <option>Santiago del Estero</option><option>Tierra del Fuego</option><option>Tucumán</option>
+          </select>
+        </div>
+        <div>
+          <label style="${LABEL_STYLE}">PISO / DEPTO (opcional)</label>
+          <input id="buyerFloor" type="text" placeholder="3° A"
+            style="${INPUT_STYLE}" onfocus="this.style.borderColor='#00AEEF'" onblur="this.style.borderColor='#e0e0e0'">
+        </div>
+      </div>
+
+      <!-- Info costo de envío -->
+      <div id="shippingCostInfo" style="margin-bottom:14px;display:none;"></div>
+
       <div id="checkoutError" style="display:none;background:#ffebee;border:1px solid #ef9a9a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#c62828;"></div>
       <div style="display:flex;gap:10px;">
         <button onclick="closeCheckoutModal()" style="flex:1;background:#f5f5f5;color:#555;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">Cancelar</button>
@@ -1466,6 +1626,7 @@ function buildCheckoutModal() {
 function goToCheckout() {
   buildCheckoutModal();
   document.getElementById('checkoutModal').style.display = 'block';
+  actualizarCostoEnvio();
 }
 
 function closeCheckoutModal() {
@@ -1474,26 +1635,57 @@ function closeCheckoutModal() {
 }
 
 async function submitCheckout() {
-  const name = document.getElementById('buyerName').value.trim();
-  const email = document.getElementById('buyerEmail').value.trim();
-  const phone = document.getElementById('buyerPhone').value.trim();
+  const name     = document.getElementById('buyerName').value.trim();
+  const email    = document.getElementById('buyerEmail').value.trim();
+  const phone    = document.getElementById('buyerPhone').value.trim();
   const shipping = document.getElementById('shippingMethod').value;
-  const errEl = document.getElementById('checkoutError');
-  const payBtn = document.getElementById('payBtn');
+  const errEl    = document.getElementById('checkoutError');
+  const payBtn   = document.getElementById('payBtn');
 
-  if (!name || !email) {
-    errEl.textContent = 'Por favor completá nombre y email.';
-    errEl.style.display = 'block';
-    return;
+  // Dirección (solo Andreani)
+  const street    = document.getElementById('buyerStreet')?.value.trim() || '';
+  const streetNum = document.getElementById('buyerStreetNum')?.value.trim() || '';
+  const city      = document.getElementById('buyerCity')?.value.trim() || '';
+  const zip       = document.getElementById('buyerZip')?.value.trim() || '';
+  const province  = document.getElementById('buyerProvince')?.value || '';
+  const floor     = document.getElementById('buyerFloor')?.value.trim() || '';
+
+  // Leer costo de envío del último resultado consultado (API real o tabla de zonas)
+  let shippingCost = 0;
+  if (shipping === 'andreani') {
+    // Intentar parsear el precio que se muestra en pantalla
+    const infoEl = document.getElementById('shippingCostInfo');
+    const priceMatch = infoEl?.innerText?.match(/\$([\d.,]+)/);
+    if (priceMatch) {
+      shippingCost = parseInt(priceMatch[1].replace(/\./g, '').replace(',', ''));
+    }
+    // Si no hay precio en pantalla, usar tabla de zonas como fallback
+    if (!shippingCost) {
+      const zona = getZonaAndreani(zip);
+      shippingCost = zona ? ANDREANI_TARIFAS[zona].precio : 0;
+    }
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errEl.textContent = 'Email inválido.';
-    errEl.style.display = 'block';
-    return;
-  }
+
+  // Validaciones
+  const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
   errEl.style.display = 'none';
+
+  if (!name || !email) { showErr('Por favor completá nombre y email.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('Email inválido.'); return; }
+  if (shipping === 'andreani') {
+    if (!street || !streetNum) { showErr('Completá calle y número.'); return; }
+    if (!city)     { showErr('Completá la ciudad.'); return; }
+    if (!zip || !getZonaAndreani(zip)) { showErr('Ingresá un código postal válido (4 dígitos).'); return; }
+    if (!province) { showErr('Seleccioná la provincia.'); return; }
+  }
+
   payBtn.textContent = '⏳ Procesando...';
   payBtn.disabled = true;
+
+  // Armar dirección completa
+  const fullAddress = shipping === 'andreani'
+    ? `${street} ${streetNum}${floor ? ', ' + floor : ''}`
+    : null;
 
   // Preparar items para la API
   const mpItems = cartItems.map(item => ({
@@ -1510,7 +1702,7 @@ async function submitCheckout() {
     qty: item.qty,
     unitsPerSet: item.unitsPerSet,
     unitPrice: item.price / item.qty * 100, // en centavos
-    price: item.price * 100, // en centavos
+    price: item.price * 100,                // en centavos
   }));
 
   try {
@@ -1523,7 +1715,11 @@ async function submitCheckout() {
         cartItems: mpItems,
         shipping: {
           method: shipping,
-          cost: shipping === 'retiro' ? 0 : 0, // se cotiza después
+          cost: shippingCost * 100,  // la API espera centavos
+          address: fullAddress,
+          city: city || null,
+          zip: zip || null,
+          province: province || null,
         }
       })
     });
@@ -1532,7 +1728,6 @@ async function submitCheckout() {
     const data = await res.json();
 
     if (data.initPoint) {
-      // Redirigir al checkout de Mercado Pago
       sessionStorage.setItem('checkoutPending', '1');
       window.location.href = data.initPoint;
     } else {
@@ -1738,8 +1933,10 @@ function openOrderDetail(id) {
       </div>
       <div>
         <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Envío</div>
-        <div style="font-weight:700;">${o.shipping_method === 'retiro' ? 'Retiro en Belgrano' : 'Andreani'}</div>
-        ${o.shipping_address ? `<div style="font-size:13px;color:#555;">${o.shipping_address}, ${o.shipping_city}</div>` : ''}
+        <div style="font-weight:700;">${o.shipping_method === 'retiro' ? '🏪 Retiro en Belgrano' : '🚚 Andreani'}</div>
+        ${o.shipping_address ? `<div style="font-size:13px;color:#555;">${o.shipping_address}</div>` : ''}
+        ${o.shipping_city ? `<div style="font-size:13px;color:#555;">${o.shipping_city}${o.shipping_zip ? ' (CP ' + o.shipping_zip + ')' : ''}${o.shipping_province ? ', ' + o.shipping_province : ''}</div>` : ''}
+        ${o.shipping_cost > 0 ? `<div style="font-size:13px;color:#1565c0;font-weight:700;">Envío: $${(o.shipping_cost/100).toLocaleString('es-AR')}</div>` : ''}
         ${o.tracking_number ? `<div style="font-size:13px;color:#8DC63F;font-weight:700;">📦 Tracking: ${o.tracking_number}</div>` : ''}
       </div>
     </div>
