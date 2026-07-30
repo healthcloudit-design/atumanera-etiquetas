@@ -1,52 +1,40 @@
 // api/andreani-quote.js
-// Cotiza el costo de envío Andreani para un código postal destino.
-//
-// Variables de entorno necesarias:
-//   ANDREANI_USER      → usuario (email) de la cuenta Andreani
-//   ANDREANI_PASS      → contraseña de la cuenta Andreani
-//   ANDREANI_CONTRATO  → número de contrato empresarial (ej: 300006611)
-//                        Si está vacío, usa el ambiente QA con contrato de prueba
-//   ANDREANI_CP_ORIGEN → CP de origen (el de Sandra). Default: 1646
-//
-// Paquete estimado para etiquetas: 150g, 15×10×2cm = 300cm³
+// Cotiza Andreani para el tenant actual.
+
+const { createClient } = require('@supabase/supabase-js');
+const { applyCors, sendOptions, publicError, getTenantSlug, cleanString } = require('./_utils');
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  applyCors(req, res, 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') return sendOptions(req, res, 'POST, OPTIONS');
+  if (req.method !== 'POST') return publicError(res, 405, 'Method not allowed');
 
-  const { cpDestino } = req.body || {};
-  if (!cpDestino) return res.status(400).json({ ok: false, error: 'cpDestino requerido' });
-
-  const user     = process.env.ANDREANI_USER;
-  const pass     = process.env.ANDREANI_PASS;
-  const contrato = process.env.ANDREANI_CONTRATO;
-  const cpOrigen = process.env.ANDREANI_CP_ORIGEN || '1646';
-
-  // Si no hay credenciales, no podemos llamar a la API
-  if (!user || !pass) {
-    return res.status(200).json({
-      ok: false,
-      fallback: true,
-      error: 'Credenciales Andreani no configuradas',
-    });
+  const cpDestino = cleanString(req.body?.cpDestino, 12);
+  if (!/^\d{4}$/.test(cpDestino || '')) {
+    return res.status(400).json({ ok: false, error: 'cpDestino requerido' });
   }
 
-  // Si no hay contrato, usamos ambiente QA con contrato de prueba (para demo)
+  const tenant = await getTenant(getTenantSlug(req));
+  const user = process.env.ANDREANI_USER;
+  const pass = process.env.ANDREANI_PASS;
+  const contrato = tenant?.andreani_contract || process.env.ANDREANI_CONTRATO;
+  const cpOrigen = process.env.ANDREANI_CP_ORIGEN || '1646';
+
+  if (!user || !pass) {
+    return res.status(200).json({ ok: false, fallback: true, error: 'Credenciales Andreani no configuradas' });
+  }
+
   const usandoQA = !contrato;
   const contratoFinal = contrato || '400006711';
-  const baseUrl = usandoQA
-    ? 'https://apisqa.andreani.com'
-    : 'https://apis.andreani.com';
+  const baseUrl = usandoQA ? 'https://apisqa.andreani.com' : 'https://apis.andreani.com';
 
   try {
-    // 1. Autenticar → obtener token
     const authHeader = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
     const authRes = await fetch(`${baseUrl}/login`, {
       method: 'GET',
-      headers: { 'Authorization': authHeader },
+      headers: { Authorization: authHeader },
     });
 
     if (!authRes.ok) {
@@ -56,27 +44,20 @@ module.exports = async function handler(req, res) {
 
     const token = authRes.headers.get('x-authorization-token') || authRes.headers.get('X-Authorization-token');
     if (!token) {
-      return res.status(200).json({ ok: false, fallback: true, error: 'No se recibió token' });
+      return res.status(200).json({ ok: false, fallback: true, error: 'No se recibio token' });
     }
 
-    // 2. Cotizar — paquete tipo sobre/caja pequeña para etiquetas
-    // Parámetros de bulto: 150g, 15×10×2cm, valorDeclarado=$10.000
-    const bultos = [
-      {
-        kilos: 0.15,
-        largoCm: 15,
-        anchoCm: 10,
-        altoCm: 2,
-        volumen: 300,           // 15×10×2 = 300 cm³
-        valorDeclarado: 10000,  // ARS
-      }
-    ];
+    const bultos = [{
+      kilos: 0.15,
+      largoCm: 15,
+      anchoCm: 10,
+      altoCm: 2,
+      volumen: 300,
+      valorDeclarado: 10000,
+    }];
 
-    // Construir query string manualmente (la API espera bultos[0][kilos]=0.15 etc.)
-    const qs = buildQuery({ cpDestino, contrato: contratoFinal, bultos });
-    const tarifaUrl = `${baseUrl}/v1/tarifas?${qs}`;
-
-    const tarifaRes = await fetch(tarifaUrl, {
+    const qs = buildQuery({ cpDestino, cpOrigen, contrato: contratoFinal, bultos });
+    const tarifaRes = await fetch(`${baseUrl}/v1/tarifas?${qs}`, {
       method: 'GET',
       headers: { 'x-authorization-token': token, 'Content-Type': 'application/json' },
     });
@@ -84,44 +65,46 @@ module.exports = async function handler(req, res) {
     if (!tarifaRes.ok) {
       const errText = await tarifaRes.text();
       console.error('Andreani tarifas error:', tarifaRes.status, errText);
-      return res.status(200).json({ ok: false, fallback: true, error: `Tarifas error ${tarifaRes.status}: ${errText}` });
+      return res.status(200).json({ ok: false, fallback: true, error: `Tarifas error ${tarifaRes.status}` });
     }
 
     const tarifa = await tarifaRes.json();
-
-    // Precio con IVA en ARS (la API devuelve strings con decimales)
     const totalConIva = parseFloat(tarifa?.tarifaConIva?.total || tarifa?.tarifaSinIva?.total || 0);
-
     if (!totalConIva) {
-      return res.status(200).json({ ok: false, fallback: true, error: 'Tarifa vacía', raw: tarifa });
+      return res.status(200).json({ ok: false, fallback: true, error: 'Tarifa vacia' });
     }
 
     return res.status(200).json({
       ok: true,
-      totalARS: Math.ceil(totalConIva),   // pesos ARS, sin decimales
+      totalARS: Math.ceil(totalConIva),
       pesoAforadoKg: tarifa.pesoAforado || null,
       desglose: tarifa.tarifaConIva || null,
       ambiente: usandoQA ? 'qa-demo' : 'produccion',
     });
-
   } catch (err) {
     console.error('andreani-quote error:', err);
-    return res.status(200).json({ ok: false, fallback: true, error: err.message });
+    return res.status(200).json({ ok: false, fallback: true, error: 'No se pudo cotizar Andreani' });
   }
 };
 
-/**
- * Construye un query string compatible con el formato PHP http_build_query
- * para arrays anidados: bultos[0][kilos]=0.15&bultos[0][volumen]=300 etc.
- */
+async function getTenant(slug) {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, slug, andreani_contract')
+    .eq('slug', slug)
+    .eq('active', true)
+    .maybeSingle();
+
+  if (error && error.code !== '42P01') throw error;
+  return data || null;
+}
+
 function buildQuery(params, prefix = '') {
   const parts = [];
   for (const [key, value] of Object.entries(params)) {
     const paramKey = prefix ? `${prefix}[${key}]` : key;
     if (Array.isArray(value)) {
-      value.forEach((item, idx) => {
-        parts.push(buildQuery(item, `${paramKey}[${idx}]`));
-      });
+      value.forEach((item, idx) => parts.push(buildQuery(item, `${paramKey}[${idx}]`)));
     } else if (value !== null && typeof value === 'object') {
       parts.push(buildQuery(value, paramKey));
     } else if (value !== undefined && value !== null) {

@@ -18,6 +18,14 @@
 //   ADMIN_TOKEN              → token del panel admin (para proteger el endpoint)
 
 const { createClient } = require('@supabase/supabase-js');
+const {
+  applyCors,
+  sendOptions,
+  publicError,
+  getTenantSlug,
+  assertAdmin,
+  isUuid,
+} = require('./_utils');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -28,25 +36,24 @@ const BASE_URL_PROD = 'https://apis.andreani.com';
 const BASE_URL_QA   = 'https://apisqa.andreani.com';
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  applyCors(req, res, 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') return sendOptions(req, res, 'POST, OPTIONS');
+  if (req.method !== 'POST') return publicError(res, 405, 'Method not allowed');
 
   // Auth del dashboard
-  const auth = req.headers.authorization;
-  if (!auth || auth !== `Bearer ${process.env.ADMIN_TOKEN}`) {
-    return res.status(401).json({ error: 'No autorizado' });
+  if (!assertAdmin(req, process.env.ADMIN_TOKEN)) {
+    return publicError(res, 401, 'No autorizado');
   }
 
   const { orderId } = req.body || {};
-  if (!orderId) return res.status(400).json({ error: 'orderId requerido' });
+  if (!isUuid(orderId)) return publicError(res, 400, 'orderId invalido');
+
+  const tenant = await getTenant(getTenantSlug(req));
 
   // Verificar configuración de Andreani
   const user     = process.env.ANDREANI_USER;
   const pass     = process.env.ANDREANI_PASS;
-  const contrato = process.env.ANDREANI_CONTRATO;
+  const contrato = tenant?.andreani_contract || process.env.ANDREANI_CONTRATO;
 
   if (!user || !pass || !contrato) {
     return res.status(200).json({
@@ -60,11 +67,12 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1. Obtener datos del pedido desde Supabase
-    const { data: order, error: orderError } = await supabase
+    let orderQuery = supabase
       .from('orders')
       .select('*, order_items(*)')
-      .eq('id', orderId)
-      .single();
+      .eq('id', orderId);
+    if (tenant?.id) orderQuery = orderQuery.eq('tenant_id', tenant.id);
+    const { data: order, error: orderError } = await orderQuery.single();
 
     if (orderError || !order) {
       return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
@@ -132,9 +140,21 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     console.error('andreani-label error:', err);
-    return res.status(500).json({ ok: false, error: err.message });
+    return res.status(500).json({ ok: false, error: 'No se pudo generar la etiqueta' });
   }
 };
+
+async function getTenant(slug) {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, slug, andreani_contract')
+    .eq('slug', slug)
+    .eq('active', true)
+    .maybeSingle();
+
+  if (error && error.code !== '42P01') throw error;
+  return data || null;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

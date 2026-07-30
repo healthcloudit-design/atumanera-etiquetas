@@ -3,6 +3,7 @@
 
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const { createClient } = require('@supabase/supabase-js');
+const { publicError, isUuid } = require('./_utils');
 
 const mp = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 const supabase = createClient(
@@ -11,7 +12,7 @@ const supabase = createClient(
 );
 
 module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') return publicError(res, 405, 'Method not allowed');
 
   try {
     const { type, data } = req.body;
@@ -23,7 +24,24 @@ module.exports = async function handler(req, res) {
     const paymentData = await payment.get({ id: data.id });
 
     const orderId = paymentData.external_reference;
+    if (!isUuid(orderId)) return res.status(200).json({ ok: true });
+
     const mpStatus = paymentData.status; // approved | pending | rejected | cancelled
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id, total, status')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) return res.status(200).json({ ok: true });
+
+    const paidCents = Math.round(Number(paymentData.transaction_amount || 0) * 100);
+    const amountMatches = Math.abs(paidCents - Number(order.total || 0)) <= 1;
+    if (mpStatus === 'approved' && !amountMatches) {
+      console.error(`Payment amount mismatch for order ${orderId}: payment=${paidCents}, order=${order.total}`);
+      return res.status(200).json({ ok: true });
+    }
 
     // Mapear status de MP a nuestros estados
     let orderStatus;
@@ -50,6 +68,6 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     console.error('Webhook error:', err);
-    return res.status(500).json({ error: err.message });
+    return publicError(res, 500, 'Webhook error');
   }
 };

@@ -4,6 +4,15 @@
 // PUT  /api/orders        — actualizar estado o tracking
 
 const { createClient } = require('@supabase/supabase-js');
+const {
+  applyCors,
+  sendOptions,
+  publicError,
+  getTenantSlug,
+  assertAdmin,
+  cleanString,
+  isUuid,
+} = require('./_utils');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -13,28 +22,29 @@ const supabase = createClient(
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN; // token simple para el dashboard
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  applyCors(req, res, 'GET, PUT, OPTIONS');
+  if (req.method === 'OPTIONS') return sendOptions(req, res, 'GET, PUT, OPTIONS');
 
   // Auth simple con token
-  const auth = req.headers.authorization;
-  if (!auth || auth !== `Bearer ${ADMIN_TOKEN}`) {
-    return res.status(401).json({ error: 'No autorizado' });
+  if (!assertAdmin(req, ADMIN_TOKEN)) {
+    return publicError(res, 401, 'No autorizado');
   }
 
   try {
+    const tenant = await getTenant(getTenantSlug(req));
+
     if (req.method === 'GET') {
       const { id, status } = req.query;
 
       if (id) {
+        if (!isUuid(id)) return publicError(res, 400, 'Id invalido');
         // Detalle de un pedido con sus items
-        const { data: order } = await supabase
+        let detailQuery = supabase
           .from('orders')
           .select('*, order_items(*)')
-          .eq('id', id)
-          .single();
+          .eq('id', id);
+        if (tenant?.id) detailQuery = detailQuery.eq('tenant_id', tenant.id);
+        const { data: order } = await detailQuery.single();
         return res.status(200).json(order);
       }
 
@@ -51,6 +61,7 @@ module.exports = async function handler(req, res) {
         `)
         .order('created_at', { ascending: false });
 
+      if (tenant?.id) query = query.eq('tenant_id', tenant.id);
       if (status) query = query.eq('status', status);
 
       const { data: orders } = await query;
@@ -59,16 +70,21 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'PUT') {
       const { id, status, tracking_number } = req.body;
-      if (!id) return res.status(400).json({ error: 'Falta id' });
+      if (!isUuid(id)) return publicError(res, 400, 'Id invalido');
 
       const updates = {};
-      if (status) updates.status = status;
-      if (tracking_number !== undefined) updates.tracking_number = tracking_number;
+      if (status && ['pending_payment', 'paid', 'in_production', 'shipped', 'delivered', 'cancelled'].includes(status)) {
+        updates.status = status;
+      }
+      if (tracking_number !== undefined) updates.tracking_number = cleanString(tracking_number, 80);
 
-      const { data, error } = await supabase
+      let updateQuery = supabase
         .from('orders')
         .update(updates)
-        .eq('id', id)
+        .eq('id', id);
+      if (tenant?.id) updateQuery = updateQuery.eq('tenant_id', tenant.id);
+
+      const { data, error } = await updateQuery
         .select()
         .single();
 
@@ -76,10 +92,22 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    return publicError(res, 405, 'Method not allowed');
 
   } catch (err) {
     console.error('Orders API error:', err);
-    return res.status(500).json({ error: err.message });
+    return publicError(res, 500, 'No se pudieron cargar los pedidos');
   }
 };
+
+async function getTenant(slug) {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, slug')
+    .eq('slug', slug)
+    .eq('active', true)
+    .maybeSingle();
+
+  if (error && error.code !== '42P01') throw error;
+  return data || null;
+}

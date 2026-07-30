@@ -5,13 +5,5 @@
     { "source": "/pago-exitoso", "destination": "/index.html" },
     { "source": "/pago-fallido", "destination": "/index.html" },
     { "source": "/pago-pendiente", "destination": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
-      ]
-    }
   ]
 }

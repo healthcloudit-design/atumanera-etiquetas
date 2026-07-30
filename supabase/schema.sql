@@ -2,9 +2,29 @@
 -- A TU MANERA ETIQUETAS — Supabase Schema
 -- =============================================
 
+-- TENANTS / COMERCIOS
+create table if not exists tenants (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  name text not null,
+  logo_url text,
+  primary_color text default '#00AEEF',
+  secondary_color text default '#EC008C',
+  mp_public_key text,
+  andreani_contract text,
+  default_shipping_cost integer default 0,
+  active boolean default true,
+  created_at timestamptz default now()
+);
+
+insert into tenants (slug, name, primary_color, secondary_color)
+values ('atumanera', 'A Tu Manera Etiquetas', '#00AEEF', '#EC008C')
+on conflict (slug) do nothing;
+
 -- PRODUCTOS
 create table if not exists products (
   id uuid primary key default gen_random_uuid(),
+  tenant_id uuid references tenants(id) on delete cascade,
   name text not null,
   slug text unique not null,
   category text not null,
@@ -22,6 +42,7 @@ create table if not exists products (
 -- PEDIDOS
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
+  tenant_id uuid references tenants(id) on delete cascade,
   order_number serial unique not null,
   -- datos del comprador
   buyer_name text not null,
@@ -53,6 +74,7 @@ create table if not exists order_items (
   id uuid primary key default gen_random_uuid(),
   order_id uuid references orders(id) on delete cascade,
   product_id uuid references products(id),
+  product_slug text,
   product_name text not null,
   -- datos del diseño personalizado
   design_text text not null,
@@ -80,12 +102,31 @@ insert into products (name, slug, category, price, units_per_set, unit_label, ma
   ('Pulseras Cinta Fluor x30', 'pulseras-fluor', 'pulseras', 1990000, 30, 'pulseras', 'Raso flúor', '2,5 × 30 cm', '10-15 días hábiles', 'Colores surtidos: naranja, amarillo, verde, fucsia')
 on conflict (slug) do nothing;
 
+-- Migracion compatible con bases existentes
+alter table products add column if not exists tenant_id uuid references tenants(id) on delete cascade;
+alter table orders add column if not exists tenant_id uuid references tenants(id) on delete cascade;
+alter table order_items add column if not exists product_slug text;
+
+update products
+set tenant_id = (select id from tenants where slug = 'atumanera')
+where tenant_id is null;
+
+update orders
+set tenant_id = (select id from tenants where slug = 'atumanera')
+where tenant_id is null;
+
+create unique index if not exists products_tenant_slug_idx on products(tenant_id, slug);
+create index if not exists orders_tenant_created_idx on orders(tenant_id, created_at desc);
+create index if not exists order_items_order_idx on order_items(order_id);
+
 -- RLS (Row Level Security)
+alter table tenants enable row level security;
 alter table products enable row level security;
 alter table orders enable row level security;
 alter table order_items enable row level security;
 
 -- Productos: lectura pública
+create policy "tenants_public_read" on tenants for select using (active = true);
 create policy "products_public_read" on products for select using (active = true);
 
 -- Pedidos: inserción pública (cualquiera puede crear un pedido)

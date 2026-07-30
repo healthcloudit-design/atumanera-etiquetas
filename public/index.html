@@ -997,11 +997,15 @@ const DIBUJOS_REALES = [
 /* ============================================================
    DATA
    ============================================================ */
+const TENANT_SLUG = new URLSearchParams(location.search).get('tenant') || 'atumanera';
+const tenantHeader = () => ({ 'X-Tenant': TENANT_SLUG });
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
 const PRODUCTS = [
-  { id:'falletina', icon:'🧵', name:'Cintas Falletina', price:15900, unitsPerSet:20, unitLabel:'cintas', mockupBg:'bg-falletina', sizeNote:'6 × 2,5 cm · Cinta falletina · Para coser en la ropa', mockupLabel:'Vista previa · Cinta Falletina (6×2,5 cm)', mockupId:'mockupFalletina', contentId:'contentFalletina', textId:'textFalletina', iconId:'iconFalletina', textDefaultSize:24, iconDefaultSize:32, hasBorderColor:false, hasPulseraColor:false, hasPosition:true, info:[['Material','Falletina'],['Color','Según modelo'],['Texto','Solo negro'],['Elaboración','7 días hábiles'],['Entrega','Andreani / Moto CABA'],['Incluye','+ llavero 3×6cm']] },
-  { id:'termo32', icon:'🔥', name:'Termoadhesivas x32', price:12999, unitsPerSet:32, unitLabel:'etiquetas', mockupBg:'bg-termo', sizeNote:'5 × 1,5 cm · Tela · Plancha (calor)', mockupLabel:'Vista previa · Termoadhesiva (5×1,5 cm)', mockupId:'mockupTermoChica', contentId:'contentTermoChica', textId:'textTermoChica', iconId:'iconTermoChica', textDefaultSize:17, iconDefaultSize:22, hasBorderColor:true, borderEl:'termoBorderChica', hasPulseraColor:false, hasPosition:true, info:[['Material','Tela blanca'],['Medida','5 × 1,5 cm'],['Texto','Solo negro'],['Borde','Color a elegir'],['Elaboración','7 días hábiles'],['¡Ojo!','No apta toallas/polar']] },
-  { id:'termo49', icon:'🔥', name:'Termoadhesivas x49', price:18990, unitsPerSet:49, unitLabel:'etiquetas', mockupBg:'bg-termo', sizeNote:'40 unid. 5×1,5cm + 9 unid. 6,5×3,5cm', mockupLabel:'Vista previa · Termoadhesiva grande (6,5×3,5 cm)', mockupId:'mockupTermoGrande', contentId:'contentTermoGrande', textId:'textTermoGrande', iconId:'iconTermoGrande', textDefaultSize:18, iconDefaultSize:26, hasBorderColor:true, borderEl:'termoBorderGrande', hasPulseraColor:false, hasPosition:true, info:[['Chicas','40 unid. 5×1,5cm'],['Grandes','9 unid. 6,5×3,5cm'],['Texto','Solo negro'],['Borde','Color a elegir'],['Elaboración','7 días hábiles'],['¡Ojo!','No apta toallas/polar']] },
-  { id:'pulsera', icon:'🪢', name:'Pulseras Fluor x30', price:19900, unitsPerSet:30, unitLabel:'pulseras', mockupBg:'bg-pulsera', sizeNote:'2,5 × 30 cm · Raso flúor · Se ata a la mano', mockupLabel:'Vista previa · Pulsera Fluor (2,5×30 cm)', mockupId:'mockupPulsera', contentId:'contentPulsera', textId:'textPulsera', iconId:'iconPulsera', textDefaultSize:15, iconDefaultSize:20, hasBorderColor:false, hasPulseraColor:true, hasPosition:false, info:[['Material','Raso flúor'],['Medida','2,5 × 30 cm'],['Colores','Naranja/amarillo/verde/fucsia'],['Texto','Solo negro'],['Elaboración','10-15 días hábiles'],['Tip','Pasar encendedor a bordes']] },
+  { id:'falletina', slug:'cintas-falletina', icon:'🧵', name:'Cintas Falletina', price:15900, unitsPerSet:20, unitLabel:'cintas', mockupBg:'bg-falletina', sizeNote:'6 × 2,5 cm · Cinta falletina · Para coser en la ropa', mockupLabel:'Vista previa · Cinta Falletina (6×2,5 cm)', mockupId:'mockupFalletina', contentId:'contentFalletina', textId:'textFalletina', iconId:'iconFalletina', textDefaultSize:24, iconDefaultSize:32, hasBorderColor:false, hasPulseraColor:false, hasPosition:true, info:[['Material','Falletina'],['Color','Según modelo'],['Texto','Solo negro'],['Elaboración','7 días hábiles'],['Entrega','Andreani / Moto CABA'],['Incluye','+ llavero 3×6cm']] },
+  { id:'termo32', slug:'termo-32', icon:'🔥', name:'Termoadhesivas x32', price:12999, unitsPerSet:32, unitLabel:'etiquetas', mockupBg:'bg-termo', sizeNote:'5 × 1,5 cm · Tela · Plancha (calor)', mockupLabel:'Vista previa · Termoadhesiva (5×1,5 cm)', mockupId:'mockupTermoChica', contentId:'contentTermoChica', textId:'textTermoChica', iconId:'iconTermoChica', textDefaultSize:17, iconDefaultSize:22, hasBorderColor:true, borderEl:'termoBorderChica', hasPulseraColor:false, hasPosition:true, info:[['Material','Tela blanca'],['Medida','5 × 1,5 cm'],['Texto','Solo negro'],['Borde','Color a elegir'],['Elaboración','7 días hábiles'],['¡Ojo!','No apta toallas/polar']] },
+  { id:'termo49', slug:'termo-49', icon:'🔥', name:'Termoadhesivas x49', price:18990, unitsPerSet:49, unitLabel:'etiquetas', mockupBg:'bg-termo', sizeNote:'40 unid. 5×1,5cm + 9 unid. 6,5×3,5cm', mockupLabel:'Vista previa · Termoadhesiva grande (6,5×3,5 cm)', mockupId:'mockupTermoGrande', contentId:'contentTermoGrande', textId:'textTermoGrande', iconId:'iconTermoGrande', textDefaultSize:18, iconDefaultSize:26, hasBorderColor:true, borderEl:'termoBorderGrande', hasPulseraColor:false, hasPosition:true, info:[['Chicas','40 unid. 5×1,5cm'],['Grandes','9 unid. 6,5×3,5cm'],['Texto','Solo negro'],['Borde','Color a elegir'],['Elaboración','7 días hábiles'],['¡Ojo!','No apta toallas/polar']] },
+  { id:'pulsera', slug:'pulseras-fluor', icon:'🪢', name:'Pulseras Fluor x30', price:19900, unitsPerSet:30, unitLabel:'pulseras', mockupBg:'bg-pulsera', sizeNote:'2,5 × 30 cm · Raso flúor · Se ata a la mano', mockupLabel:'Vista previa · Pulsera Fluor (2,5×30 cm)', mockupId:'mockupPulsera', contentId:'contentPulsera', textId:'textPulsera', iconId:'iconPulsera', textDefaultSize:15, iconDefaultSize:20, hasBorderColor:false, hasPulseraColor:true, hasPosition:false, info:[['Material','Raso flúor'],['Medida','2,5 × 30 cm'],['Colores','Naranja/amarillo/verde/fucsia'],['Texto','Solo negro'],['Elaboración','10-15 días hábiles'],['Tip','Pasar encendedor a bordes']] },
 ];
 
 const PROD_CARDS = [
@@ -1340,12 +1344,17 @@ async function addToCart() {
 
   const item = {
     id: Date.now(),
+    productSlug: p.slug,
     product: p.name,
     text: state.text || '(sin texto)',
     font: state.font,
+    textColor: state.textColor,
     icon: state.iconSrc,
     iconIdx: state.icon ? parseInt(state.icon.replace('real_', '')) : null,
     thumbnail: thumbnail,
+    position: state.position,
+    borderColor: p.hasBorderColor ? state.borderColor : null,
+    pulseraColor: p.hasPulseraColor ? state.pulseraColor : null,
     qty: state.qty,
     price: state.qty * p.price,
     unitsPerSet: p.unitsPerSet,
@@ -1416,7 +1425,7 @@ function openEditor(prodIdx) {
    CHECKOUT — MERCADO PAGO
    ============================================================ */
 const MP_PUBLIC_KEY = 'APP_USR-85c6f6cd-07ba-4126-9605-66b32a05edf7';
-const API_URL = 'https://atumanera-etiquetas.vercel.app/api/create-preference';
+const API_URL = '/api/create-preference';
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -1488,7 +1497,7 @@ async function actualizarCostoEnvio() {
   try {
     const res = await fetch('/api/andreani-quote', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...tenantHeader() },
       body: JSON.stringify({ cpDestino: cp }),
       signal: _andreaniQuoteController.signal,
     });
@@ -1689,7 +1698,8 @@ async function submitCheckout() {
 
   // Preparar items para la API
   const mpItems = cartItems.map(item => ({
-    productId: item.product,
+    productId: item.productSlug || item.product,
+    productSlug: item.productSlug,
     product: item.product,
     text: item.text,
     font: item.font,
@@ -1701,15 +1711,14 @@ async function submitCheckout() {
     pulseraColor: item.pulseraColor || null,
     qty: item.qty,
     unitsPerSet: item.unitsPerSet,
-    unitPrice: item.price / item.qty * 100, // en centavos
-    price: item.price * 100,                // en centavos
   }));
 
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...tenantHeader() },
       body: JSON.stringify({
+        tenant: TENANT_SLUG,
         buyer: { name, email, phone },
         items: mpItems,
         cartItems: mpItems,
@@ -1782,7 +1791,7 @@ init();
 /* ============================================================
    DASHBOARD ADMIN
    ============================================================ */
-const API_ORDERS = 'https://atumanera-etiquetas.vercel.app/api/orders';
+const API_ORDERS = '/api/orders';
 let adminToken = '';
 let allOrders = [];
 let filterStatus = 'all';
@@ -1804,7 +1813,7 @@ async function adminLogin() {
 
   try {
     const res = await fetch(API_ORDERS + '?limit=1', {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token, ...tenantHeader() }
     });
     if (res.status === 401) throw new Error('Token incorrecto');
     if (!res.ok) throw new Error('Error del servidor');
@@ -1824,7 +1833,7 @@ async function loadOrders() {
   document.getElementById('ordersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;">⏳ Cargando pedidos...</td></tr>';
   try {
     const url = filterStatus !== 'all' ? API_ORDERS + '?status=' + filterStatus : API_ORDERS;
-    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + adminToken } });
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + adminToken, ...tenantHeader() } });
     if (!res.ok) throw new Error('Error ' + res.status);
     allOrders = await res.json();
     renderOrders(allOrders);
@@ -1842,14 +1851,14 @@ function renderOrders(orders) {
   }
   tbody.innerHTML = orders.map(o => {
     const item = o.order_items && o.order_items[0];
-    const mockupSrc = item && item.design_thumbnail_url;
+    const mockupSrc = item && escapeHTML(item.design_thumbnail_url);
     const iconIdx = item && item.design_icon_index != null ? item.design_icon_index : null;
     const iconSrc = iconIdx != null ? DIBUJOS_REALES[iconIdx] : null;
     const thumb = mockupSrc
       ? `<img src="${mockupSrc}" onclick="openImgLightbox(this.src)" style="width:160px;height:108px;object-fit:contain;border-radius:8px;border:1px solid #eee;background:#f5f5f5;cursor:zoom-in;">`
       : iconSrc
         ? `<img src="${iconSrc}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;">`
-        : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${item ? item.design_text || '—' : '—'}</div>`;
+        : `<div style="background:#f5f5f5;border-radius:4px;padding:4px 8px;font-size:11px;color:#aaa;font-family:'Nunito',sans-serif;">${escapeHTML(item ? item.design_text || '�' : '�')}</div>`;
     const date = new Date(o.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit'});
     const statusBadge = {
       pending_payment: '<span style="background:#fff3e0;color:#e65100;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">⏳ Pago pendiente</span>',
@@ -1863,7 +1872,7 @@ function renderOrders(orders) {
     return `<tr style="border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
       <td style="padding:12px 10px;font-size:13px;font-weight:700;color:#00AEEF;">#${o.order_number}</td>
       <td style="padding:12px 10px;font-size:12px;color:#555;">${date}</td>
-      <td style="padding:12px 10px;font-size:13px;font-weight:600;">${o.buyer_name}<br><span style="font-size:11px;color:#aaa;font-weight:400;">${o.buyer_email}</span></td>
+      <td style="padding:12px 10px;font-size:13px;font-weight:600;">${escapeHTML(o.buyer_name)}<br><span style="font-size:11px;color:#aaa;font-weight:400;">${escapeHTML(o.buyer_email)}</span></td>
       <td style="padding:12px 10px;">${thumb}</td>
       <td style="padding:12px 10px;font-size:13px;font-weight:700;">${total}</td>
       <td style="padding:12px 10px;">${statusBadge}</td>
@@ -1898,19 +1907,20 @@ function openOrderDetail(id) {
   const itemsHtml = items.map(it => {
     const thumbSrc = it.design_thumbnail_url
       || (it.design_icon_index != null ? DIBUJOS_REALES[it.design_icon_index] : null);
+    const safeThumbSrc = thumbSrc ? escapeHTML(thumbSrc) : null;
     return `
     <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:10px;">
       <div style="display:flex;gap:14px;align-items:flex-start;">
-        ${thumbSrc ? `<img src="${thumbSrc}" style="width:110px;height:74px;object-fit:cover;border-radius:8px;border:1px solid #eee;flex-shrink:0;">` : ''}
+        ${safeThumbSrc ? `<img src="${safeThumbSrc}" style="width:110px;height:74px;object-fit:cover;border-radius:8px;border:1px solid #eee;flex-shrink:0;">` : ''}
         <div style="flex:1;">
-          <div style="font-weight:700;margin-bottom:8px;">${it.product_name} × ${it.quantity} set (${it.units_total} unidades)</div>
+          <div style="font-weight:700;margin-bottom:8px;">${escapeHTML(it.product_name)} × ${it.quantity} set (${it.units_total} unidades)</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;color:#555;">
-            <div>Texto: <strong>${it.design_text}</strong></div>
-            <div>Fuente: <strong>${it.design_font}</strong></div>
-            <div>Color texto: <strong>${it.design_text_color || '—'}</strong></div>
-            <div>Posición ícono: <strong>${it.design_position || '—'}</strong></div>
-            ${it.design_border_color ? `<div>Color borde: <strong>${it.design_border_color}</strong></div>` : ''}
-            ${it.design_pulsera_color ? `<div>Color pulsera: <strong>${it.design_pulsera_color}</strong></div>` : ''}
+            <div>Texto: <strong>${escapeHTML(it.design_text)}</strong></div>
+            <div>Fuente: <strong>${escapeHTML(it.design_font)}</strong></div>
+            <div>Color texto: <strong>${escapeHTML(it.design_text_color || '—')}</strong></div>
+            <div>Posición ícono: <strong>${escapeHTML(it.design_position || '—')}</strong></div>
+            ${it.design_border_color ? `<div>Color borde: <strong>${escapeHTML(it.design_border_color)}</strong></div>` : ''}
+            ${it.design_pulsera_color ? `<div>Color pulsera: <strong>${escapeHTML(it.design_pulsera_color)}</strong></div>` : ''}
             <div>Subtotal: <strong>$${(it.subtotal/100).toLocaleString('es-AR')}</strong></div>
           </div>
         </div>
@@ -1927,17 +1937,17 @@ function openOrderDetail(id) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
       <div>
         <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Comprador</div>
-        <div style="font-weight:700;">${o.buyer_name}</div>
-        <div style="font-size:13px;color:#555;">${o.buyer_email}</div>
-        <div style="font-size:13px;color:#555;">${o.buyer_phone || '—'}</div>
+        <div style="font-weight:700;">${escapeHTML(o.buyer_name)}</div>
+        <div style="font-size:13px;color:#555;">${escapeHTML(o.buyer_email)}</div>
+        <div style="font-size:13px;color:#555;">${escapeHTML(o.buyer_phone || '—')}</div>
       </div>
       <div>
         <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Envío</div>
         <div style="font-weight:700;">${o.shipping_method === 'retiro' ? '🏪 Retiro en Belgrano' : '🚚 Andreani'}</div>
-        ${o.shipping_address ? `<div style="font-size:13px;color:#555;">${o.shipping_address}</div>` : ''}
-        ${o.shipping_city ? `<div style="font-size:13px;color:#555;">${o.shipping_city}${o.shipping_zip ? ' (CP ' + o.shipping_zip + ')' : ''}${o.shipping_province ? ', ' + o.shipping_province : ''}</div>` : ''}
+        ${o.shipping_address ? `<div style="font-size:13px;color:#555;">${escapeHTML(o.shipping_address)}</div>` : ''}
+        ${o.shipping_city ? `<div style="font-size:13px;color:#555;">${escapeHTML(o.shipping_city)}${o.shipping_zip ? ' (CP ' + escapeHTML(o.shipping_zip) + ')' : ''}${o.shipping_province ? ', ' + escapeHTML(o.shipping_province) : ''}</div>` : ''}
         ${o.shipping_cost > 0 ? `<div style="font-size:13px;color:#1565c0;font-weight:700;">Envío: $${(o.shipping_cost/100).toLocaleString('es-AR')}</div>` : ''}
-        ${o.tracking_number ? `<div style="font-size:13px;color:#8DC63F;font-weight:700;">📦 Tracking: ${o.tracking_number}</div>` : ''}
+        ${o.tracking_number ? `<div style="font-size:13px;color:#8DC63F;font-weight:700;">📦 Tracking: ${escapeHTML(o.tracking_number)}</div>` : ''}
       </div>
     </div>
     <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:10px;">Diseños del pedido</div>
@@ -1959,7 +1969,7 @@ function openOrderDetail(id) {
         <div id="labelMsg_${o.id}" style="margin-top:8px;font-size:12px;color:#777;display:none;"></div>
       </div>` : ''}
       <div style="display:flex;gap:8px;">
-        <input id="trackingInput" type="text" placeholder="Número de seguimiento Andreani" value="${o.tracking_number||''}" style="flex:1;border:2px solid #e0e0e0;border-radius:8px;padding:9px 13px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;">
+        <input id="trackingInput" type="text" placeholder="Número de seguimiento Andreani" value="${escapeHTML(o.tracking_number||'')}" style="flex:1;border:2px solid #e0e0e0;border-radius:8px;padding:9px 13px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;">
         <button onclick="saveTracking('${o.id}')" style="background:#8DC63F;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Guardar</button>
       </div>
     </div>`;
@@ -1970,7 +1980,7 @@ async function updateStatus(id, status) {
   try {
     const res = await fetch(API_ORDERS, {
       method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json', ...tenantHeader() },
       body: JSON.stringify({ id, status })
     });
     if (!res.ok) throw new Error('Error');
@@ -1985,7 +1995,7 @@ async function saveTracking(id) {
   try {
     const res = await fetch(API_ORDERS, {
       method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json', ...tenantHeader() },
       body: JSON.stringify({ id, tracking_number: tracking, status: 'shipped' })
     });
     if (!res.ok) throw new Error('Error');
@@ -2005,11 +2015,12 @@ async function generarEtiqueta(orderId) {
   msg.style.display = 'none';
 
   try {
-    const res = await fetch('https://atumanera-etiquetas.vercel.app/api/andreani-label', {
+    const res = await fetch('/api/andreani-label', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + adminToken,
+        ...tenantHeader(),
       },
       body: JSON.stringify({ orderId }),
     });
@@ -2113,3 +2124,4 @@ if (sessionStorage.getItem('checkoutPending')) resetCheckoutBtn();
 </script>
 </body>
 </html>
+
