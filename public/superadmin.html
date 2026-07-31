@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Praxis Personaliza · Superadmin</title>
+<style>
+  :root{ --bg:#0b1220; --panel:#131c2e; --panel2:#1b2740; --line:#26324d; --txt:#e7ecf5; --mut:#8ea0bd; --pri:#00AEEF; --sec:#EC008C; --ok:#2ecc71; --warn:#f39c12; --danger:#e74c3c; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%, #16223c 0%, var(--bg) 55%);color:var(--txt);min-height:100vh}
+  a{color:var(--pri)}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 18px 60px}
+  header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--sec));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+  .brand h1{font-size:17px;margin:0;letter-spacing:.3px}
+  .brand small{color:var(--mut);font-size:11px}
+  .btn{cursor:pointer;border:0;border-radius:9px;padding:9px 15px;font-weight:600;font-size:13.5px;background:var(--pri);color:#04121b;transition:.15s}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .btn.pink{background:var(--sec);color:#fff}
+  .btn.ghost{background:transparent;color:var(--mut);border:1px solid var(--line)}
+  .btn.sm{padding:6px 11px;font-size:12.5px;border-radius:7px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input,select{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:#0e1727;color:var(--txt);font-size:13.5px}
+  input:focus,select:focus{outline:0;border-color:var(--pri)}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .grid{display:grid;gap:14px}
+  .muted{color:var(--mut)}
+  .pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700}
+  .pill.on{background:rgba(46,204,113,.15);color:var(--ok)}
+  .pill.off{background:rgba(231,76,60,.15);color:var(--danger)}
+  .tenant-row{display:flex;align-items:center;gap:14px;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;transition:.15s}
+  .tenant-row:hover{border-color:var(--pri);transform:translateY(-1px)}
+  .swatch{width:34px;height:34px;border-radius:9px;flex:none;border:2px solid #ffffff22}
+  .tname{font-weight:700} .tslug{color:var(--mut);font-size:12px}
+  .counts{margin-left:auto;text-align:right;font-size:12px;color:var(--mut)}
+  .toast{position:fixed;right:18px;bottom:18px;padding:12px 16px;border-radius:10px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px #0008;opacity:0;transform:translateY(10px);transition:.25s;z-index:50}
+  .toast.show{opacity:1;transform:none}
+  .toast.ok{background:#123d29;color:#8ef0b8;border:1px solid #1f7a4d}
+  .toast.err{background:#411c1c;color:#ffb4a8;border:1px solid #a23b2f}
+  .tabs{display:flex;gap:6px;margin:4px 0 14px;flex-wrap:wrap}
+  .tab{padding:8px 13px;border-radius:9px;background:transparent;border:1px solid var(--line);color:var(--mut);cursor:pointer;font-size:13px;font-weight:600}
+  .tab.active{background:var(--pri);color:#04121b;border-color:var(--pri)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-bg{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:18px;z-index:40}
+  .modal-bg.show{display:flex}
+  .modal{width:100%;max-width:460px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  .center{min-height:80vh;display:flex;align-items:center;justify-content:center}
+  .login{width:100%;max-width:380px}
+  .hint{font-size:11.5px;color:var(--mut);margin-top:6px}
+  .set{color:var(--ok);font-weight:700} .unset{color:var(--warn)}
+  .backlink{background:none;border:0;color:var(--mut);cursor:pointer;font-size:13px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="center">
+    <div class="card login">
+      <div class="brand" style="margin-bottom:16px">
+        <div class="logo">P</div>
+        <div><h1>Praxis Personaliza</h1><small>Panel Superadmin</small></div>
+      </div>
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="username" placeholder="superuser@praxisoperativa.com">
+      <label>Contraseña</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="margin-top:16px"><button class="btn" style="width:100%" onclick="doLogin()" id="loginBtn">Ingresar</button></div>
+      <div id="loginErr" class="hint" style="color:var(--danger)"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">P</div>
+        <div><h1>Praxis Personaliza</h1><small id="whoami">Superadmin</small></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn pink sm" onclick="openNewTenant()">+ Nuevo tenant</button>
+        <button class="btn ghost sm" onclick="doLogout()">Salir</button>
+      </div>
+    </header>
+
+    <!-- LISTA -->
+    <div id="listView">
+      <div class="muted" style="margin-bottom:10px;font-size:13px">Tenants de la plataforma</div>
+      <div id="tenantList" class="grid"></div>
+    </div>
+
+    <!-- DETALLE -->
+    <div id="detailView" style="display:none">
+      <button class="backlink" onclick="showList()">← Volver a tenants</button>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div id="dSwatch" class="swatch"></div>
+          <div><div id="dName" class="tname" style="font-size:18px"></div><div id="dSlug" class="tslug"></div></div>
+          <div id="dActive" style="margin-left:auto"></div>
+        </div>
+        <div class="tabs">
+          <button class="tab active" data-tab="config" onclick="switchTab('config')">Configuración</button>
+          <button class="tab" data-tab="users" onclick="switchTab('users')">Usuarios</button>
+          <button class="tab" data-tab="creds" onclick="switchTab('creds')">Credenciales</button>
+        </div>
+
+        <!-- CONFIG -->
+        <div id="tab-config" class="tabpane">
+          <div class="row2">
+            <div><label>Nombre</label><input id="cName"></div>
+            <div><label>Dominio propio (opcional)</label><input id="cDomain" placeholder="atumanera.com.ar"></div>
+          </div>
+          <div class="row2">
+            <div><label>Color primario</label><input id="cPri" type="text" placeholder="#00AEEF"></div>
+            <div><label>Color secundario</label><input id="cSec" type="text" placeholder="#EC008C"></div>
+          </div>
+          <div class="row2">
+            <div><label>Costo de envío por defecto (centavos ARS)</label><input id="cShip" type="number" min="0"></div>
+            <div><label>Contrato Andreani</label><input id="cContract"></div>
+          </div>
+          <div><label>MP Public Key (no secreta)</label><input id="cMpPub" placeholder="APP_USR-..."></div>
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+            <button class="btn" onclick="saveConfig()">Guardar configuración</button>
+            <button class="btn sec sm" onclick="toggleActive()" id="toggleActiveBtn"></button>
+            <span class="hint" id="routeHint"></span>
+          </div>
+        </div>
+
+        <!-- USERS -->
+        <div id="tab-users" class="tabpane" style="display:none">
+          <table><thead><tr><th>Email</th><th>Rol</th><th>Alta</th></tr></thead><tbody id="usersBody"></tbody></table>
+          <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+            <div class="muted" style="font-size:13px;margin-bottom:6px">Crear usuario para este tenant</div>
+            <div class="row2">
+              <div><label>Email</label><input id="uEmail" type="email"></div>
+              <div><label>Contraseña (min 8)</label><input id="uPass" type="text"></div>
+            </div>
+            <div class="row2">
+              <div><label>Rol</label><select id="uRole"><option value="admin">admin</option><option value="staff">staff</option></select></div>
+              <div style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="createUser()">Crear usuario</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CREDS -->
+        <div id="tab-creds" class="tabpane" style="display:none">
+          <p class="hint">Los valores se guardan cifrados en Supabase Vault. Acá solo se ve si están configurados, nunca el valor.</p>
+          <div id="credStatus" style="margin-bottom:10px"></div>
+          <div class="row2">
+            <div><label>MP Access Token</label><input id="sMpToken" type="password" placeholder="APP_USR-... (secreto)"></div>
+            <div style="display:flex;align-items:flex-end"><button class="btn sm" style="width:100%" onclick="saveSecret('mp_access_token','sMpToken')">Guardar token MP</button></div>
+          </div>
+          <div class="row2">
+            <div><label>Andreani usuario</label><input id="sAndUser" type="text"></div>
+            <div style="display:flex;align-items:flex-end"><button class="btn sm" style="width:100%" onclick="saveSecret('andreani_user','sAndUser')">Guardar usuario</button></div>
+          </div>
+          <div class="row2">
+            <div><label>Andreani contraseña</label><input id="sAndPass" type="password"></div>
+            <div style="display:flex;align-items:flex-end"><button class="btn sm" style="width:100%" onclick="saveSecret('andreani_pass','sAndPass')">Guardar contraseña</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NUEVO TENANT -->
+<div id="newTenantModal" class="modal-bg">
+  <div class="card modal">
+    <h3 style="margin:0 0 10px">Nuevo tenant</h3>
+    <label>Nombre del comercio</label><input id="ntName" placeholder="Tazas Personalizadas">
+    <label>Slug (URL)</label><input id="ntSlug" placeholder="tazas">
+    <div class="hint">Quedará en <span id="ntPreview" class="muted"></span></div>
+    <div class="row2">
+      <div><label>Color primario</label><input id="ntPri" value="#00AEEF"></div>
+      <div><label>Color secundario</label><input id="ntSec" value="#EC008C"></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn ghost" onclick="closeNewTenant()">Cancelar</button>
+      <button class="btn pink" onclick="createTenant()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://qsynlqxhoxhvzjzkyqaj.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeW5scXhob3hodnpqemt5cWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDYyOTgsImV4cCI6MjA5NzcyMjI5OH0.hYMIzolTFqUFGgbwPx-1PgzVcgzQwghX2XQQcmSmTXs';
+const PLATFORM_BASE = 'platform.praxisoperativa.com/personaliza';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let tenants = [];
+let current = null;
+
+function toast(msg, ok=true){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+(ok?'ok':'err'); setTimeout(()=>t.className='toast',2600); }
+function $(id){ return document.getElementById(id); }
+
+async function token(){ const { data } = await sb.auth.getSession(); return data.session?.access_token || null; }
+async function api(path, opts={}){
+  const t = await token();
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+t, ...(opts.headers||{}) } });
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error || ('Error '+r.status));
+  return j;
+}
+
+async function doLogin(){
+  $('loginErr').textContent=''; $('loginBtn').disabled=true;
+  const email=$('email').value.trim(), password=$('password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $('loginBtn').disabled=false;
+  if(error){ $('loginErr').textContent = 'No se pudo ingresar: '+error.message; return; }
+  await boot();
+}
+async function doLogout(){ await sb.auth.signOut(); location.reload(); }
+
+async function boot(){
+  const { data } = await sb.auth.getSession();
+  if(!data.session){ $('loginScreen').style.display='flex'; $('app').style.display='none'; return; }
+  // verificar que sea platform admin cargando tenants
+  try{
+    tenants = await api('/api/admin-tenants');
+  }catch(e){
+    $('loginErr').textContent = 'Tu usuario no tiene permisos de superadmin.';
+    await sb.auth.signOut(); $('loginScreen').style.display='flex'; $('app').style.display='none'; return;
+  }
+  $('whoami').textContent = data.session.user.email;
+  $('loginScreen').style.display='none'; $('app').style.display='block';
+  showList();
+}
+
+function showList(){
+  $('detailView').style.display='none'; $('listView').style.display='block';
+  const box=$('tenantList'); box.innerHTML='';
+  if(!tenants.length){ box.innerHTML='<div class="muted">Todavía no hay tenants.</div>'; return; }
+  tenants.forEach(t=>{
+    const el=document.createElement('div'); el.className='tenant-row'; el.onclick=()=>openTenant(t.id);
+    el.innerHTML = `<div class="swatch" style="background:linear-gradient(135deg,${esc(t.primary_color)},${esc(t.secondary_color)})"></div>
+      <div><div class="tname">${esc(t.name)}</div><div class="tslug">/${esc(t.slug)}${t.custom_domain?' · '+esc(t.custom_domain):''}</div></div>
+      <div class="counts">${t.products_count} productos<br>${t.orders_count} pedidos</div>
+      <div style="margin-left:14px">${t.active?'<span class="pill on">activo</span>':'<span class="pill off">inactivo</span>'}</div>`;
+    box.appendChild(el);
+  });
+}
+
+function openTenant(id){
+  current = tenants.find(t=>t.id===id); if(!current) return;
+  $('listView').style.display='none'; $('detailView').style.display='block';
+  switchTab('config');
+  $('dName').textContent=current.name; $('dSlug').textContent='/'+current.slug;
+  $('dSwatch').style.background=`linear-gradient(135deg,${current.primary_color},${current.secondary_color})`;
+  $('dActive').innerHTML = current.active?'<span class="pill on">activo</span>':'<span class="pill off">inactivo</span>';
+  $('cName').value=current.name||''; $('cDomain').value=current.custom_domain||'';
+  $('cPri').value=current.primary_color||''; $('cSec').value=current.secondary_color||'';
+  $('cShip').value=current.default_shipping_cost||0; $('cContract').value=current.andreani_contract||'';
+  $('cMpPub').value=current.mp_public_key||'';
+  $('toggleActiveBtn').textContent = current.active?'Desactivar':'Activar';
+  $('routeHint').textContent = current.custom_domain ? ('→ '+current.custom_domain) : ('→ '+PLATFORM_BASE+'/'+current.slug);
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.tabpane').forEach(p=>p.style.display='none');
+  $('tab-'+name).style.display='block';
+  if(name==='users') loadUsers();
+  if(name==='creds') loadSecrets();
+}
+
+async function saveConfig(){
+  try{
+    const body={ id:current.id, name:$('cName').value.trim(), custom_domain:$('cDomain').value.trim()||null,
+      primary_color:$('cPri').value.trim(), secondary_color:$('cSec').value.trim(),
+      default_shipping_cost:$('cShip').value, andreani_contract:$('cContract').value.trim(), mp_public_key:$('cMpPub').value.trim() };
+    const updated=await api('/api/admin-tenants',{method:'PUT',body:JSON.stringify(body)});
+    Object.assign(current, updated); const i=tenants.findIndex(t=>t.id===current.id); if(i>=0) Object.assign(tenants[i],updated);
+    openTenant(current.id); toast('Configuración guardada');
+  }catch(e){ toast(e.message,false); }
+}
+async function toggleActive(){
+  try{ const updated=await api('/api/admin-tenants',{method:'PUT',body:JSON.stringify({id:current.id,active:!current.active})});
+    Object.assign(current,updated); const i=tenants.findIndex(t=>t.id===current.id); if(i>=0) Object.assign(tenants[i],updated);
+    openTenant(current.id); toast('Estado actualizado');
+  }catch(e){ toast(e.message,false); }
+}
+
+async function loadUsers(){
+  const body=$('usersBody'); body.innerHTML='<tr><td colspan="3" class="muted">Cargando…</td></tr>';
+  try{ const users=await api('/api/admin-users?tenant_id='+current.id);
+    body.innerHTML = users.length ? '' : '<tr><td colspan="3" class="muted">Sin usuarios.</td></tr>';
+    users.forEach(u=>{ const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${esc(u.email||'—')}</td><td><span class="pill on">${esc(u.role)}</span></td><td class="muted">${(u.created_at||'').slice(0,10)}</td>`; body.appendChild(tr); });
+  }catch(e){ body.innerHTML='<tr><td colspan="3" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+async function createUser(){
+  try{ const body={tenant_id:current.id,email:$('uEmail').value.trim(),password:$('uPass').value,role:$('uRole').value};
+    await api('/api/admin-users',{method:'POST',body:JSON.stringify(body)});
+    $('uEmail').value='';$('uPass').value=''; toast('Usuario creado'); loadUsers();
+  }catch(e){ toast(e.message,false); }
+}
+
+async function loadSecrets(){
+  const box=$('credStatus'); box.innerHTML='<span class="muted">Cargando…</span>';
+  try{ const secrets=await api('/api/admin-secrets?tenant_id='+current.id);
+    const names=secrets.map(s=>s.name);
+    const item=(n,lbl)=>`${lbl}: ${names.includes(n)?'<span class="set">configurado ✓</span>':'<span class="unset">sin configurar</span>'}`;
+    box.innerHTML = [item('mp_access_token','MP Access Token'),item('andreani_user','Andreani usuario'),item('andreani_pass','Andreani contraseña')].join(' &nbsp;·&nbsp; ');
+  }catch(e){ box.innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+async function saveSecret(name, inputId){
+  const value=$(inputId).value; if(!value){ toast('Ingresá un valor',false); return; }
+  try{ await api('/api/admin-secrets',{method:'POST',body:JSON.stringify({tenant_id:current.id,name,value})});
+    $(inputId).value=''; toast('Secreto guardado'); loadSecrets();
+  }catch(e){ toast(e.message,false); }
+}
+
+function openNewTenant(){ $('newTenantModal').classList.add('show'); $('ntName').value='';$('ntSlug').value=''; updatePreview(); }
+function closeNewTenant(){ $('newTenantModal').classList.remove('show'); }
+function slugify(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[^\x00-\x7f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,63); }
+function updatePreview(){ const s=slugify($('ntSlug').value||$('ntName').value); $('ntPreview').textContent=PLATFORM_BASE+'/'+(s||'…'); }
+async function createTenant(){
+  try{ const body={ name:$('ntName').value.trim(), slug:slugify($('ntSlug').value||$('ntName').value),
+      primary_color:$('ntPri').value.trim(), secondary_color:$('ntSec').value.trim() };
+    if(!body.name||!body.slug){ toast('Nombre y slug requeridos',false); return; }
+    const t=await api('/api/admin-tenants',{method:'POST',body:JSON.stringify(body)});
+    tenants.push({...t,products_count:0,orders_count:0}); closeNewTenant(); showList(); toast('Tenant creado'); openTenant(t.id);
+  }catch(e){ toast(e.message,false); }
+}
+document.addEventListener('input',e=>{ if(e.target.id==='ntName'||e.target.id==='ntSlug') updatePreview(); });
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+boot();
+</script>
+</body>
+</html>

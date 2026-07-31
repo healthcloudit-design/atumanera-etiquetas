@@ -173,3 +173,138 @@ create trigger orders_updated_at
 -- Sin políticas públicas de insert/listado (se removieron por seguridad).
 insert into storage.buckets (id, name, public) values ('designs', 'designs', false)
 on conflict (id) do update set public = false;
+
+-- =============================================================================
+-- IDENTIDAD Y RUTEO (Fase 2)
+-- =============================================================================
+
+-- Ruteo híbrido:
+--   Default : platform.praxisoperativa.com/personaliza/<slug>   (usa tenants.slug)
+--   Opcional: dominio propio del comercio (ej. atumanera.com.ar) → tenants.custom_domain
+alter table public.tenants add column if not exists custom_domain text;
+alter table public.tenants add column if not exists custom_domain_verified boolean default false;
+create unique index if not exists tenants_custom_domain_idx
+  on public.tenants (lower(custom_domain)) where custom_domain is not null;
+
+-- Superadmins de la plataforma (Praxis Personaliza)
+create table if not exists public.platform_admins (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz default now()
+);
+
+-- Membresía usuario ↔ tenant con rol
+create table if not exists public.tenant_users (
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  tenant_id  uuid not null references public.tenants(id) on delete cascade,
+  role       text not null default 'staff' check (role in ('admin','staff')),
+  created_at timestamptz default now(),
+  primary key (user_id, tenant_id)
+);
+create index if not exists tenant_users_tenant_idx on public.tenant_users(tenant_id);
+
+-- Helpers en schema privado (PostgREST NO expone `private` → no son RPC-invocables).
+-- security definer: evalúan sin recursión de RLS.
+create schema if not exists private;
+
+create or replace function private.is_platform_admin()
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.platform_admins where user_id = auth.uid());
+$$;
+
+create or replace function private.has_tenant_access(tid uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select private.is_platform_admin()
+      or exists (select 1 from public.tenant_users
+                 where user_id = auth.uid() and tenant_id = tid);
+$$;
+
+create or replace function private.order_tenant(oid uuid)
+returns uuid language sql stable security definer set search_path = '' as $$
+  select tenant_id from public.orders where id = oid;
+$$;
+
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+grant execute on function private.is_platform_admin()     to authenticated;
+grant execute on function private.has_tenant_access(uuid) to authenticated;
+grant execute on function private.order_tenant(uuid)      to authenticated;
+
+alter table public.platform_admins enable row level security;
+alter table public.tenant_users    enable row level security;
+
+drop policy if exists "platform_admins_su" on public.platform_admins;
+create policy "platform_admins_su" on public.platform_admins
+  for all to authenticated using (private.is_platform_admin());
+
+drop policy if exists "tenant_users_su" on public.tenant_users;
+create policy "tenant_users_su" on public.tenant_users
+  for all to authenticated using (private.is_platform_admin());
+
+drop policy if exists "tenant_users_self_read" on public.tenant_users;
+create policy "tenant_users_self_read" on public.tenant_users
+  for select to authenticated using (user_id = auth.uid());
+
+-- RLS efectiva por tenant (segunda barrera; la app server-side usa service_role).
+-- Acotadas al rol `authenticated` para no interferir con la lectura pública anon.
+drop policy if exists "products_tenant_rw" on public.products;
+create policy "products_tenant_rw" on public.products
+  for all to authenticated
+  using (private.has_tenant_access(tenant_id))
+  with check (private.has_tenant_access(tenant_id));
+
+drop policy if exists "orders_tenant_rw" on public.orders;
+create policy "orders_tenant_rw" on public.orders
+  for all to authenticated
+  using (private.has_tenant_access(tenant_id))
+  with check (private.has_tenant_access(tenant_id));
+
+drop policy if exists "order_items_tenant_rw" on public.order_items;
+create policy "order_items_tenant_rw" on public.order_items
+  for all to authenticated
+  using (private.has_tenant_access(private.order_tenant(order_id)))
+  with check (private.has_tenant_access(private.order_tenant(order_id)));
+
+-- =============================================================================
+-- SECRETOS POR TENANT (Supabase Vault) — Fase 2
+-- =============================================================================
+-- Credenciales sensibles por tenant (MP access token, pass de Andreani, etc.)
+-- cifradas en vault.secrets. Solo el service_role (endpoints server-side) puede
+-- leerlas/escribirlas mediante las funciones de abajo.
+create table if not exists public.tenant_secrets (
+  tenant_id  uuid not null references public.tenants(id) on delete cascade,
+  name       text not null,   -- 'mp_access_token' | 'andreani_pass' | ...
+  secret_id  uuid not null,   -- referencia a vault.secrets(id)
+  created_at timestamptz default now(),
+  primary key (tenant_id, name)
+);
+alter table public.tenant_secrets enable row level security;
+drop policy if exists "tenant_secrets_deny" on public.tenant_secrets;
+create policy "tenant_secrets_deny" on public.tenant_secrets
+  for all to anon, authenticated using (false) with check (false);
+
+create or replace function public.get_tenant_secret(p_tenant uuid, p_name text)
+returns text language sql stable security definer set search_path = '' as $$
+  select ds.decrypted_secret
+  from public.tenant_secrets ts
+  join vault.decrypted_secrets ds on ds.id = ts.secret_id
+  where ts.tenant_id = p_tenant and ts.name = p_name;
+$$;
+
+create or replace function public.set_tenant_secret(p_tenant uuid, p_name text, p_value text)
+returns void language plpgsql security definer set search_path = '' as $$
+declare sid uuid;
+begin
+  select secret_id into sid from public.tenant_secrets where tenant_id = p_tenant and name = p_name;
+  if sid is null then
+    sid := vault.create_secret(p_value, p_tenant::text || ':' || p_name, 'praxis tenant secret');
+    insert into public.tenant_secrets(tenant_id, name, secret_id) values (p_tenant, p_name, sid);
+  else
+    perform vault.update_secret(sid, p_value);
+  end if;
+end $$;
+
+-- Solo service_role puede ejecutar estas funciones
+revoke all on function public.get_tenant_secret(uuid, text)       from public, anon, authenticated;
+revoke all on function public.set_tenant_secret(uuid, text, text) from public, anon, authenticated;
+grant execute on function public.get_tenant_secret(uuid, text)       to service_role;
+grant execute on function public.set_tenant_secret(uuid, text, text) to service_role;
