@@ -6,6 +6,12 @@ const { applyCors, sendOptions, publicError, getTenantSlug, cleanString } = requ
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+async function getTenantSecret(tenantId, name) {
+  const { data, error } = await supabase.rpc('get_tenant_secret', { p_tenant: tenantId, p_name: name });
+  if (error) { console.error('get_tenant_secret', name, error.message); return null; }
+  return data || null;
+}
+
 module.exports = async function handler(req, res) {
   applyCors(req, res, 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return sendOptions(req, res, 'POST, OPTIONS');
@@ -18,8 +24,8 @@ module.exports = async function handler(req, res) {
 
   const tenant = await getTenant(getTenantSlug(req));
   if (!tenant) return res.status(400).json({ ok: false, error: 'Comercio no valido' });
-  const user = process.env.ANDREANI_USER;
-  const pass = process.env.ANDREANI_PASS;
+  const user = (await getTenantSecret(tenant.id, 'andreani_user')) || process.env.ANDREANI_USER;
+  const pass = (await getTenantSecret(tenant.id, 'andreani_pass')) || process.env.ANDREANI_PASS;
   const contrato = tenant?.andreani_contract || process.env.ANDREANI_CONTRATO;
   const cpOrigen = process.env.ANDREANI_CP_ORIGEN || '1646';
 

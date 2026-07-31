@@ -14,8 +14,14 @@ const {
   cents,
 } = require('./_utils');
 
-const mp = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+// Lee un secreto del tenant desde Vault (o null si no está configurado).
+async function getTenantSecret(tenantId, name) {
+  const { data, error } = await supabase.rpc('get_tenant_secret', { p_tenant: tenantId, p_name: name });
+  if (error) { console.error('get_tenant_secret', name, error.message); return null; }
+  return data || null;
+}
 
 // NOTA: no hay productos "fallback" hardcodeados. Cada tenant solo puede vender
 // productos que existan en su propia fila de la tabla `products`, a su precio real.
@@ -30,6 +36,15 @@ module.exports = async function handler(req, res) {
     const tenantSlug = getTenantSlug(req);
     const tenant = await getTenant(tenantSlug);
     if (!tenant) return publicError(res, 400, 'Comercio no valido');
+
+    // Credenciales POR TENANT (Vault) con fallback a env para atumanera durante la transición
+    const mpAccessToken = (await getTenantSecret(tenant.id, 'mp_access_token')) || process.env.MP_ACCESS_TOKEN;
+    if (!mpAccessToken) return publicError(res, 400, 'El comercio no tiene medios de pago configurados');
+    const andreaniCreds = {
+      user: (await getTenantSecret(tenant.id, 'andreani_user')) || process.env.ANDREANI_USER,
+      pass: (await getTenantSecret(tenant.id, 'andreani_pass')) || process.env.ANDREANI_PASS,
+    };
+
     const { buyer = {}, shipping = {}, cartItems = [] } = req.body || {};
 
     if (!Array.isArray(cartItems) || cartItems.length === 0 || cartItems.length > 30) {
@@ -50,7 +65,7 @@ module.exports = async function handler(req, res) {
     const orderItems = await buildOrderItems(cartItems, tenant.id);
     const itemsSubtotal = orderItems.reduce((acc, item) => acc + item.subtotal, 0);
     const shippingCost = shippingMethod === 'andreani'
-      ? await quoteShippingCents(shippingZip, tenant)
+      ? await quoteShippingCents(shippingZip, tenant, andreaniCreds)
       : 0;
     const total = itemsSubtotal + shippingCost;
 
@@ -79,6 +94,7 @@ module.exports = async function handler(req, res) {
     const { error: itemsError } = await supabase.from('order_items').insert(rows);
     if (itemsError) throw itemsError;
 
+    const mp = new MercadoPagoConfig({ accessToken: mpAccessToken });
     const preference = new Preference(mp);
     const mpItems = orderItems.map(item => ({
       id: item.product_slug || item.product_id || item.product_name,
@@ -114,7 +130,7 @@ module.exports = async function handler(req, res) {
         },
         auto_return: 'approved',
         external_reference: order.id,
-        notification_url: `${siteUrl}/api/mp-webhook`,
+        notification_url: `${siteUrl}/api/mp-webhook?tenant=${encodeURIComponent(tenantSlug)}`,
         statement_descriptor: cleanString(tenant?.name || 'A TU MANERA', 22),
         metadata: { tenant_slug: tenantSlug },
       },
@@ -223,16 +239,18 @@ function normalizeProductSlug(value) {
   return aliases[raw] || raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-async function quoteShippingCents(zip, tenant) {
+async function quoteShippingCents(zip, tenant, andreaniCreds = {}) {
   const fallback = cents(tenant?.default_shipping_cost || process.env.DEFAULT_SHIPPING_COST_CENTS || 0);
-  if (!process.env.ANDREANI_USER || !process.env.ANDREANI_PASS) return fallback;
+  const user = andreaniCreds.user;
+  const pass = andreaniCreds.pass;
+  if (!user || !pass) return fallback;
 
   const contrato = tenant?.andreani_contract || process.env.ANDREANI_CONTRATO;
   if (!contrato) return fallback;
 
   const baseUrl = 'https://apis.andreani.com';
   try {
-    const authHeader = 'Basic ' + Buffer.from(`${process.env.ANDREANI_USER}:${process.env.ANDREANI_PASS}`).toString('base64');
+    const authHeader = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
     const authRes = await fetch(`${baseUrl}/login`, { method: 'GET', headers: { Authorization: authHeader } });
     if (!authRes.ok) return fallback;
 

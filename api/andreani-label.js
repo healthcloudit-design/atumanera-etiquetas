@@ -32,6 +32,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+async function getTenantSecret(tenantId, name) {
+  const { data, error } = await supabase.rpc('get_tenant_secret', { p_tenant: tenantId, p_name: name });
+  if (error) { console.error('get_tenant_secret', name, error.message); return null; }
+  return data || null;
+}
+
 const BASE_URL_PROD = 'https://apis.andreani.com';
 const BASE_URL_QA   = 'https://apisqa.andreani.com';
 
@@ -51,9 +57,9 @@ module.exports = async function handler(req, res) {
   const tenant = await getTenant(getTenantSlug(req));
   if (!tenant) return publicError(res, 400, 'Comercio no valido');
 
-  // Verificar configuración de Andreani
-  const user     = process.env.ANDREANI_USER;
-  const pass     = process.env.ANDREANI_PASS;
+  // Verificar configuración de Andreani (credenciales por tenant vía Vault, fallback env)
+  const user     = (await getTenantSecret(tenant.id, 'andreani_user')) || process.env.ANDREANI_USER;
+  const pass     = (await getTenantSecret(tenant.id, 'andreani_pass')) || process.env.ANDREANI_PASS;
   const contrato = tenant?.andreani_contract || process.env.ANDREANI_CONTRATO;
 
   if (!user || !pass || !contrato) {
