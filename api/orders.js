@@ -32,19 +32,20 @@ module.exports = async function handler(req, res) {
 
   try {
     const tenant = await getTenant(getTenantSlug(req));
+    if (!tenant) return publicError(res, 400, 'Comercio no valido');
 
     if (req.method === 'GET') {
       const { id, status } = req.query;
 
       if (id) {
         if (!isUuid(id)) return publicError(res, 400, 'Id invalido');
-        // Detalle de un pedido con sus items
-        let detailQuery = supabase
+        // Detalle de un pedido con sus items (siempre acotado al tenant)
+        const { data: order } = await supabase
           .from('orders')
           .select('*, order_items(*)')
-          .eq('id', id);
-        if (tenant?.id) detailQuery = detailQuery.eq('tenant_id', tenant.id);
-        const { data: order } = await detailQuery.single();
+          .eq('id', id)
+          .eq('tenant_id', tenant.id)
+          .single();
         return res.status(200).json(order);
       }
 
@@ -61,7 +62,7 @@ module.exports = async function handler(req, res) {
         `)
         .order('created_at', { ascending: false });
 
-      if (tenant?.id) query = query.eq('tenant_id', tenant.id);
+      query = query.eq('tenant_id', tenant.id);
       if (status) query = query.eq('status', status);
 
       const { data: orders } = await query;
@@ -78,13 +79,11 @@ module.exports = async function handler(req, res) {
       }
       if (tracking_number !== undefined) updates.tracking_number = cleanString(tracking_number, 80);
 
-      let updateQuery = supabase
+      const { data, error } = await supabase
         .from('orders')
         .update(updates)
-        .eq('id', id);
-      if (tenant?.id) updateQuery = updateQuery.eq('tenant_id', tenant.id);
-
-      const { data, error } = await updateQuery
+        .eq('id', id)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
 

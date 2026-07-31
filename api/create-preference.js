@@ -17,12 +17,9 @@ const {
 const mp = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-const FALLBACK_PRODUCTS = {
-  'cintas-falletina': { name: 'Cintas Falletina', price: 1590000, units_per_set: 20, unit_label: 'cintas' },
-  'termo-32': { name: '32 Etiquetas Termoadhesivas', price: 1299900, units_per_set: 32, unit_label: 'etiquetas' },
-  'termo-49': { name: '49 Etiquetas Termoadhesivas (plancha mixta)', price: 1899000, units_per_set: 49, unit_label: 'etiquetas' },
-  'pulseras-fluor': { name: 'Pulseras Cinta Fluor x30', price: 1990000, units_per_set: 30, unit_label: 'pulseras' },
-};
+// NOTA: no hay productos "fallback" hardcodeados. Cada tenant solo puede vender
+// productos que existan en su propia fila de la tabla `products`, a su precio real.
+// Esto evita fugas entre tenants y precios desactualizados.
 
 module.exports = async function handler(req, res) {
   applyCors(req, res, 'POST, OPTIONS');
@@ -32,6 +29,7 @@ module.exports = async function handler(req, res) {
   try {
     const tenantSlug = getTenantSlug(req);
     const tenant = await getTenant(tenantSlug);
+    if (!tenant) return publicError(res, 400, 'Comercio no valido');
     const { buyer = {}, shipping = {}, cartItems = [] } = req.body || {};
 
     if (!Array.isArray(cartItems) || cartItems.length === 0 || cartItems.length > 30) {
@@ -49,7 +47,7 @@ module.exports = async function handler(req, res) {
       return publicError(res, 400, 'Codigo postal invalido');
     }
 
-    const orderItems = await buildOrderItems(cartItems, tenant?.id);
+    const orderItems = await buildOrderItems(cartItems, tenant.id);
     const itemsSubtotal = orderItems.reduce((acc, item) => acc + item.subtotal, 0);
     const shippingCost = shippingMethod === 'andreani'
       ? await quoteShippingCents(shippingZip, tenant)
@@ -59,7 +57,7 @@ module.exports = async function handler(req, res) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        tenant_id: tenant?.id || null,
+        tenant_id: tenant.id,
         buyer_name: buyerName,
         buyer_email: buyerEmail,
         buyer_phone: buyerPhone,
@@ -154,15 +152,14 @@ async function getTenant(slug) {
 async function getProductsBySlug(slugs, tenantId) {
   if (!slugs.length) return new Map();
 
-  let query = supabase
+  // El filtro por tenant_id es OBLIGATORIO: un tenant solo puede resolver
+  // sus propios productos. Sin esto, dos tenants con el mismo slug se pisan.
+  const { data, error } = await supabase
     .from('products')
     .select('id, tenant_id, name, slug, price, units_per_set, unit_label, active')
     .in('slug', slugs)
-    .eq('active', true);
-
-  if (tenantId) query = query.eq('tenant_id', tenantId);
-
-  const { data, error } = await query;
+    .eq('active', true)
+    .eq('tenant_id', tenantId);
   if (error) throw error;
 
   return new Map((data || []).map(product => [product.slug, product]));
@@ -186,7 +183,7 @@ async function buildOrderItems(cartItems, tenantId) {
   const products = await getProductsBySlug(slugs, tenantId);
 
   return normalized.map(item => {
-    const product = products.get(item.productSlug) || FALLBACK_PRODUCTS[item.productSlug];
+    const product = products.get(item.productSlug);
     if (!product) throw new Error(`Producto invalido: ${item.productSlug || 'sin slug'}`);
 
     const unitPrice = cents(product.price);

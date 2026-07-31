@@ -17,6 +17,7 @@ module.exports = async function handler(req, res) {
   }
 
   const tenant = await getTenant(getTenantSlug(req));
+  if (!tenant) return res.status(400).json({ ok: false, error: 'Comercio no valido' });
   const user = process.env.ANDREANI_USER;
   const pass = process.env.ANDREANI_PASS;
   const contrato = tenant?.andreani_contract || process.env.ANDREANI_CONTRATO;

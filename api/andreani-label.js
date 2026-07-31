@@ -49,6 +49,7 @@ module.exports = async function handler(req, res) {
   if (!isUuid(orderId)) return publicError(res, 400, 'orderId invalido');
 
   const tenant = await getTenant(getTenantSlug(req));
+  if (!tenant) return publicError(res, 400, 'Comercio no valido');
 
   // Verificar configuración de Andreani
   const user     = process.env.ANDREANI_USER;
@@ -67,12 +68,12 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1. Obtener datos del pedido desde Supabase
-    let orderQuery = supabase
+    const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*, order_items(*)')
-      .eq('id', orderId);
-    if (tenant?.id) orderQuery = orderQuery.eq('tenant_id', tenant.id);
-    const { data: order, error: orderError } = await orderQuery.single();
+      .eq('id', orderId)
+      .eq('tenant_id', tenant.id)
+      .single();
 
     if (orderError || !order) {
       return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
@@ -129,7 +130,8 @@ module.exports = async function handler(req, res) {
     await supabase
       .from('orders')
       .update({ tracking_number: numeroDeEnvio, status: 'in_production' })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .eq('tenant_id', tenant.id);
 
     return res.status(200).json({
       ok: true,
