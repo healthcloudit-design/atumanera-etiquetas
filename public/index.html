@@ -141,15 +141,16 @@ img{max-width:100%;}
 /* ===== CATEGORIAS ===== */
 .categorias{padding:40px 24px;background:var(--gris-claro);}
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:900px;margin:0 auto;}
-.cat-card{background:#fff;border-radius:16px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid transparent;}
+.cat-card{position:relative;border-radius:16px;padding:0;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid transparent;min-height:160px;background-size:cover;background-position:center;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;}
+.cat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,.15) 55%,rgba(0,0,0,0));}
 .cat-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,0.1);}
 .cat-card:nth-child(1):hover{border-color:#00AEEF;}
 .cat-card:nth-child(2):hover{border-color:#8DC63F;}
 .cat-card:nth-child(3):hover{border-color:#FFC107;}
 .cat-card:nth-child(4):hover{border-color:#EC008C;}
-.cat-icon{font-size:40px;margin-bottom:10px;}
-.cat-name{font-size:13px;font-weight:800;color:#1A1A1A;line-height:1.3;}
-.cat-count{font-size:11px;color:#aaa;margin-top:4px;}
+.cat-icon{display:none;}
+.cat-name{position:relative;z-index:1;font-size:18px;font-weight:800;color:#fff;line-height:1.2;padding:0 12px;text-shadow:0 1px 5px rgba(0,0,0,.5);}
+.cat-count{position:relative;z-index:1;font-size:12px;color:#fff;opacity:.92;margin-top:4px;padding:0 12px 16px;}
 
 /* ===== PRODUCTOS DESTACADOS ===== */
 .productos-section{padding:40px 24px;background:#fff;}
@@ -162,7 +163,7 @@ img{max-width:100%;}
 .prod-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-bottom:6px;text-transform:uppercase;}
 .badge-off{background:#EC008C;color:#fff;}
 .badge-nuevo{background:#8DC63F;color:#fff;}
-.prod-name{font-size:13px;font-weight:800;color:#1A1A1A;line-height:1.3;margin-bottom:6px;}
+.prod-name{font-size:16px;font-weight:800;color:#1A1A1A;line-height:1.3;margin-bottom:6px;}
 .prod-price-old{font-size:11px;color:#aaa;text-decoration:line-through;}
 .prod-price{font-size:18px;font-weight:800;color:#1A1A1A;}
 .prod-price span{color:#00AEEF;}
@@ -445,24 +446,20 @@ img{max-width:100%;}
       <div class="section-sub">Encontrá lo que necesitás para identificar todo</div>
     </div>
     <div class="cat-grid">
-      <div class="cat-card" onclick="openEditor(0)">
-        <div class="cat-icon">🧵</div>
-        <div class="cat-name">Etiquetas<br>para coser</div>
+      <div class="cat-card" onclick="openEditor(0)" style="background-image:url('/assets/img/coser.jpg')">
+        <div class="cat-name">Etiquetas para coser</div>
         <div class="cat-count">Cinta falletina</div>
       </div>
-      <div class="cat-card" onclick="openEditor(1)">
-        <div class="cat-icon">🔥</div>
-        <div class="cat-name">Etiquetas<br>termoadhesivas</div>
+      <div class="cat-card" onclick="openEditor(1)" style="background-image:url('/assets/img/termo-nombre.jpg')">
+        <div class="cat-name">Etiquetas termoadhesivas</div>
         <div class="cat-count">Se pegan con plancha</div>
       </div>
-      <div class="cat-card" onclick="openEditor(3)">
-        <div class="cat-icon">🪢</div>
-        <div class="cat-name">Pulseras<br>Fluor</div>
+      <div class="cat-card" onclick="openEditor(3)" style="background-image:url('/assets/img/pulseras.png')">
+        <div class="cat-name">Pulseras Fluor</div>
         <div class="cat-count">Para eventos</div>
       </div>
-      <div class="cat-card" onclick="openEditor(0)">
-        <div class="cat-icon">🏷️</div>
-        <div class="cat-name">Combos<br>y packs</div>
+      <div class="cat-card" onclick="openEditor(0)" style="background-image:url('/assets/img/coser-llavero.png')">
+        <div class="cat-name">Combos y packs</div>
         <div class="cat-count">Mejor precio</div>
       </div>
     </div>
@@ -989,12 +986,12 @@ const PRODUCTS = [
 ];
 
 const PROD_CARDS = [
-  { name:'68 Stickers + 35 Cintas + Llavero', price:14900, oldPrice:25900, badge:'42% OFF', badgeClass:'badge-off', emoji:'📦', prodIdx:0 },
-  { name:'Cintas para coser + Llavero', price:15900, badge:null, emoji:'🧵', prodIdx:0 },
-  { name:'Combo 32 Termoadhesivas + Llavero', price:15900, badge:null, emoji:'🔥', prodIdx:1 },
-  { name:'49 Termoadhesivas (plancha mixta)', price:18990, badge:null, emoji:'🔥', prodIdx:2 },
-  { name:'Pulseras Cinta Fluor x30', price:19900, badge:null, emoji:'🪢', prodIdx:3 },
-  { name:'100 Etiquetas con tu Logo 1,5cm', price:19900, badge:null, emoji:'🏷️', prodIdx:0 },
+  { name:'68 Stickers + 35 Cintas + Llavero', price:14900, oldPrice:25900, badge:'42% OFF', badgeClass:'badge-off', img:'/assets/img/coser-llavero.png', prodIdx:0 },
+  { name:'Cintas para coser + Llavero', price:15900, badge:null, img:'/assets/img/coser-llavero.png', prodIdx:0 },
+  { name:'Combo 32 Termoadhesivas + Llavero', price:15900, badge:null, img:'/assets/img/termo-nombre.jpg', prodIdx:1 },
+  { name:'49 Termoadhesivas (plancha mixta)', price:18990, badge:null, img:'/assets/img/pastel.png', prodIdx:2 },
+  { name:'Pulseras Cinta Fluor x30', price:19900, badge:null, img:'/assets/img/pulseras.png', prodIdx:3 },
+  { name:'100 Etiquetas con tu Logo 1,5cm', price:19900, badge:null, img:'/assets/img/logo-etiquetas.jpg', prodIdx:0 },
 ];
 
 const FONTS = [
@@ -1054,7 +1051,7 @@ function buildProdCards() {
     div.className = 'prod-card';
     div.onclick = () => openEditor(c.prodIdx);
     div.innerHTML = `
-      <div class="prod-img" style="font-size:64px;display:flex;align-items:center;justify-content:center;height:160px;">${c.emoji}</div>
+      <div class="prod-img" style="height:200px;"><img src="${c.img}" alt="${c.name}" loading="lazy" style="width:100%;height:100%;object-fit:cover;"></div>
       <div class="prod-info">
         ${c.badge ? `<span class="prod-badge ${c.badgeClass}">${c.badge}</span>` : ''}
         <div class="prod-name">${c.name}</div>
