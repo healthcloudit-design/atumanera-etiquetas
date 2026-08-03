@@ -46,6 +46,7 @@ module.exports = async function handler(req, res) {
           .eq('id', id)
           .eq('tenant_id', tenant.id)
           .single();
+        await signThumbs(order);
         return res.status(200).json(order);
       }
 
@@ -66,6 +67,7 @@ module.exports = async function handler(req, res) {
       if (status) query = query.eq('status', status);
 
       const { data: orders } = await query;
+      await Promise.all((orders || []).map(signThumbs));
       return res.status(200).json(orders || []);
     }
 
@@ -98,6 +100,24 @@ module.exports = async function handler(req, res) {
     return publicError(res, 500, 'No se pudieron cargar los pedidos');
   }
 };
+
+// Convierte rutas 'storage:designs/<path>' en URLs firmadas (1h). Deja pasar
+// los data-URI base64 antiguos y las URLs http.
+async function signThumb(value) {
+  if (typeof value === 'string' && value.startsWith('storage:designs/')) {
+    const path = value.slice('storage:designs/'.length);
+    const { data } = await supabase.storage.from('designs').createSignedUrl(path, 3600);
+    return data?.signedUrl || null;
+  }
+  return value;
+}
+async function signThumbs(order) {
+  if (!order || !Array.isArray(order.order_items)) return order;
+  await Promise.all(order.order_items.map(async (it) => {
+    it.design_thumbnail_url = await signThumb(it.design_thumbnail_url);
+  }));
+  return order;
+}
 
 async function getTenant(slug) {
   const { data, error } = await supabase

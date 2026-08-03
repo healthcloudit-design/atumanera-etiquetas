@@ -90,7 +90,13 @@ module.exports = async function handler(req, res) {
 
     if (orderError) throw orderError;
 
-    const rows = orderItems.map(item => ({ ...item, order_id: order.id }));
+    // Mover miniaturas base64 al bucket privado 'designs' (F7). Si falla, se
+    // conserva el data-URI para no romper el checkout.
+    const rows = await Promise.all(orderItems.map(async (item, idx) => ({
+      ...item,
+      order_id: order.id,
+      design_thumbnail_url: await storeThumbnail(tenant.id, order.id, idx, item.design_thumbnail_url),
+    })));
     const { error: itemsError } = await supabase.from('order_items').insert(rows);
     if (itemsError) throw itemsError;
 
@@ -152,6 +158,27 @@ module.exports = async function handler(req, res) {
     return publicError(res, 500, 'No se pudo crear el pago');
   }
 };
+
+// Sube una miniatura data-URI al bucket privado y devuelve la ruta de storage.
+// Si el valor no es data-URI o falla, devuelve el valor original sin romper nada.
+async function storeThumbnail(tenantId, orderId, idx, value) {
+  if (typeof value !== 'string' || !value.startsWith('data:image')) return value || null;
+  try {
+    const m = value.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (!m) return value;
+    const contentType = m[1];
+    const ext = (contentType.split('/')[1] || 'png').replace('+xml', '');
+    const buffer = Buffer.from(m[2], 'base64');
+    if (buffer.length > 5 * 1024 * 1024) return value; // >5MB: no subir
+    const path = `${tenantId}/${orderId}/${idx}.${ext}`;
+    const { error } = await supabase.storage.from('designs').upload(path, buffer, { contentType, upsert: true });
+    if (error) { console.error('thumbnail upload', error.message); return value; }
+    return `storage:designs/${path}`;
+  } catch (e) {
+    console.error('storeThumbnail', e.message);
+    return value;
+  }
+}
 
 async function getTenant(slug) {
   const { data, error } = await supabase
