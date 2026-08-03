@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tienda</title>
+<style>
+  :root{ --pri:#00AEEF; --sec:#EC008C; --ink:#1a2230; --mut:#6b7688; --line:#e6eaf0; --bg:#f6f8fb; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  a{color:inherit}
+  .hero{background:linear-gradient(135deg,var(--pri),var(--sec));color:#fff;padding:34px 20px 40px}
+  .hero .in{max-width:1040px;margin:0 auto;display:flex;align-items:center;gap:16px}
+  .hlogo{width:56px;height:56px;border-radius:14px;background:#ffffff22;border:1px solid #ffffff44;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;overflow:hidden}
+  .hlogo img{width:100%;height:100%;object-fit:cover}
+  .hero h1{margin:0;font-size:26px;letter-spacing:.2px}
+  .hero p{margin:4px 0 0;opacity:.9;font-size:14px}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 20px 80px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:8px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;box-shadow:0 1px 3px #0000000a}
+  .cat{font-size:11px;font-weight:700;color:var(--pri);text-transform:uppercase;letter-spacing:.5px}
+  .pname{font-weight:700;font-size:16px;margin:3px 0 6px}
+  .price{font-size:20px;font-weight:800}
+  .per{font-size:12px;color:var(--mut);font-weight:600}
+  .meta{font-size:12.5px;color:var(--mut);margin:8px 0 12px;line-height:1.5;flex:1}
+  .btn{cursor:pointer;border:0;border-radius:10px;padding:11px 15px;font-weight:700;font-size:14px;background:var(--pri);color:#fff;transition:.15s}
+  .btn:hover{filter:brightness(1.06)} .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.block{width:100%} .btn:disabled{opacity:.5;cursor:not-allowed}
+  input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+  .modal-bg{position:fixed;inset:0;background:#0007;display:none;align-items:flex-end;justify-content:center;z-index:30}
+  .modal-bg.show{display:flex}
+  .sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:20px;max-height:92vh;overflow:auto}
+  @media(min-width:640px){.modal-bg{align-items:center}.sheet{border-radius:18px}}
+  .sheet h3{margin:0 0 4px}
+  .cartbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 20px;display:none;align-items:center;justify-content:space-between;z-index:20;box-shadow:0 -4px 20px #0000000f}
+  .cartbar.show{display:flex}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .citem{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .muted{color:var(--mut)} .center{min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+  .qty{display:flex;align-items:center;gap:8px}.qty button{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:18px;cursor:pointer}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:80px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;transition:.25s;z-index:50}
+  .toast.show{opacity:1}
+  .err{color:#c0392b;font-size:13px;margin-top:8px}
+  .powered{ text-align:center;color:var(--mut);font-size:11.5px;margin-top:30px }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="center"><div><div class="muted">Cargando tienda…</div></div></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const slug = (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])[1]
+  || new URLSearchParams(location.search).get('tenant') || '';
+let TENANT=null, PRODUCTS=[], cart=[];
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function money(c){return '$'+((Number(c)||0)/100).toLocaleString('es-AR',{minimumFractionDigits:0})}
+function toast(m){const t=$('toast');t.textContent=m;t.className='toast show';setTimeout(()=>t.className='toast',2200)}
+
+async function init(){
+  if(!slug){ return renderError('Falta el identificador de la tienda.'); }
+  try{
+    const r = await fetch('/api/storefront?tenant='+encodeURIComponent(slug));
+    if(!r.ok){ return renderError('Tienda no encontrada.'); }
+    const d = await r.json();
+    TENANT=d.tenant; PRODUCTS=d.products||[];
+    document.documentElement.style.setProperty('--pri',TENANT.primary_color);
+    document.documentElement.style.setProperty('--sec',TENANT.secondary_color);
+    document.title = TENANT.name;
+    renderStore();
+  }catch(e){ renderError('No se pudo cargar la tienda.'); }
+}
+function renderError(msg){ $('root').innerHTML='<div class="center"><div><h2>Ups</h2><p class="muted">'+esc(msg)+'</p></div></div>'; }
+
+function renderStore(){
+  const initial=(TENANT.name||'?').trim().charAt(0).toUpperCase();
+  const logo = TENANT.logo_url ? `<img src="${esc(TENANT.logo_url)}" alt="">` : esc(initial);
+  $('root').innerHTML = `
+    <div class="hero"><div class="in"><div class="hlogo">${logo}</div>
+      <div><h1>${esc(TENANT.name)}</h1><p>Productos personalizados</p></div></div></div>
+    <div class="wrap">
+      ${PRODUCTS.length? '<div class="grid" id="grid"></div>' : '<p class="muted" style="margin-top:20px">Esta tienda todavía no cargó productos.</p>'}
+      <div class="powered">Tienda impulsada por Praxis Personaliza</div>
+    </div>
+    <div class="cartbar" id="cartbar">
+      <div><strong id="cartCount">0</strong> <span class="muted">en el carrito</span> · <strong id="cartTotal">$0</strong></div>
+      <button class="btn" onclick="openCheckout()">Finalizar compra</button>
+    </div>
+    <div class="modal-bg" id="custModal"><div class="sheet" id="custSheet"></div></div>
+    <div class="modal-bg" id="checkoutModal"><div class="sheet" id="checkoutSheet"></div></div>`;
+  const g=$('grid');
+  if(g) PRODUCTS.forEach((p,i)=>{
+    const meta=[p.size_description,p.material,p.units_per_set&&(p.units_per_set+' '+(p.unit_label||'u')),p.elaboration_days].filter(Boolean).join(' · ');
+    const el=document.createElement('div');el.className='card';
+    el.innerHTML=`<div class="cat">${esc(p.category||'')}</div><div class="pname">${esc(p.name)}</div>
+      <div class="price">${money(p.price)} <span class="per">/ ${esc(p.unit_label||'set')}</span></div>
+      <div class="meta">${esc(meta)}${p.notes?'<br>'+esc(p.notes):''}</div>
+      <button class="btn block" onclick="openCust(${i})">Personalizar</button>`;
+    g.appendChild(el);
+  });
+}
+
+let custIdx=null, custQty=1;
+function openCust(i){ custIdx=i; custQty=1; const p=PRODUCTS[i];
+  $('custSheet').innerHTML=`<h3>${esc(p.name)}</h3><p class="muted" style="margin-top:2px">${money(p.price)} / ${esc(p.unit_label||'set')}</p>
+    <label>Texto a personalizar (nombre, frase…)</label>
+    <input id="custText" maxlength="60" placeholder="Ej: Familia Pérez">
+    <label>Cantidad (sets)</label>
+    <div class="qty"><button onclick="chQty(-1)">−</button><strong id="qv">1</strong><button onclick="chQty(1)">+</button></div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn sec block" onclick="closeModal('custModal')">Cancelar</button>
+      <button class="btn block" onclick="addToCart()">Agregar</button></div>`;
+  $('custModal').classList.add('show');
+}
+function chQty(d){ custQty=Math.max(1,Math.min(10,custQty+d)); $('qv').textContent=custQty; }
+function addToCart(){ const p=PRODUCTS[custIdx]; const text=($('custText').value||'').trim();
+  cart.push({ productSlug:p.slug, product:p.name, text:text||'(sin texto)', qty:custQty, unitPrice:p.price, price:p.price*custQty });
+  closeModal('custModal'); updateCart(); toast('Agregado al carrito');
+}
+function updateCart(){ const count=cart.reduce((a,i)=>a+i.qty,0); const total=cart.reduce((a,i)=>a+i.price,0);
+  $('cartCount').textContent=count; $('cartTotal').textContent=money(total);
+  $('cartbar').className='cartbar'+(cart.length?' show':'');
+}
+function closeModal(id){ $(id).classList.remove('show'); }
+
+function openCheckout(){
+  if(!cart.length) return;
+  const rows=cart.map((it,i)=>`<div class="citem"><div>${esc(it.product)} <span class="muted">×${it.qty}</span><br><span class="muted">"${esc(it.text)}"</span></div><div>${money(it.price)} <button onclick="rmItem(${i})" class="btn sec" style="padding:2px 8px;margin-left:6px">✕</button></div></div>`).join('');
+  const total=cart.reduce((a,i)=>a+i.price,0);
+  $('checkoutSheet').innerHTML=`<h3>Finalizar compra</h3>
+    <div style="margin:10px 0">${rows}<div class="citem" style="border:0"><strong>Total productos</strong><strong>${money(total)}</strong></div></div>
+    <label>Nombre y apellido</label><input id="bName">
+    <label>Email</label><input id="bEmail" type="email">
+    <label>Teléfono</label><input id="bPhone">
+    <label>Entrega</label>
+    <select id="shipMethod" onchange="toggleShip()"><option value="retiro">Retiro / a coordinar</option><option value="andreani">Envío Andreani</option></select>
+    <div id="shipFields" style="display:none">
+      <div class="row2"><div><label>Código postal</label><input id="shipZip" maxlength="4"></div><div><label>Provincia</label><input id="shipProv"></div></div>
+      <label>Dirección</label><input id="shipAddr"><label>Ciudad</label><input id="shipCity">
+    </div>
+    <div class="err" id="coErr"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn sec block" onclick="closeModal('checkoutModal')">Volver</button>
+      <button class="btn block" id="payBtn" onclick="pay()">Ir a pagar</button></div>`;
+  $('checkoutModal').classList.add('show');
+}
+function rmItem(i){ cart.splice(i,1); updateCart(); if(!cart.length){closeModal('checkoutModal');} else openCheckout(); }
+function toggleShip(){ $('shipFields').style.display=$('shipMethod').value==='andreani'?'block':'none'; }
+
+async function pay(){
+  const err=$('coErr'); err.textContent='';
+  const method=$('shipMethod').value;
+  const buyer={ name:($('bName').value||'').trim(), email:($('bEmail').value||'').trim(), phone:($('bPhone').value||'').trim() };
+  if(!buyer.name||!buyer.email){ err.textContent='Completá nombre y email.'; return; }
+  const shipping={ method };
+  if(method==='andreani'){ shipping.zip=($('shipZip').value||'').trim(); shipping.province=($('shipProv').value||'').trim(); shipping.address=($('shipAddr').value||'').trim(); shipping.city=($('shipCity').value||'').trim();
+    if(!/^\d{4}$/.test(shipping.zip)){ err.textContent='Ingresá un código postal válido (4 dígitos).'; return; } }
+  const cartItems=cart.map(it=>({ productSlug:it.productSlug, text:it.text, qty:it.qty }));
+  $('payBtn').disabled=true; $('payBtn').textContent='Procesando…';
+  try{
+    const r=await fetch('/api/create-preference',{ method:'POST', headers:{'Content-Type':'application/json','X-Tenant':slug}, body:JSON.stringify({buyer,shipping,cartItems}) });
+    const d=await r.json();
+    if(!r.ok||!d.initPoint){ throw new Error(d.error||'No se pudo iniciar el pago'); }
+    location.href=d.initPoint;
+  }catch(e){ err.textContent=e.message; $('payBtn').disabled=false; $('payBtn').textContent='Ir a pagar'; }
+}
+
+init();
+</script>
+</body>
+</html>
