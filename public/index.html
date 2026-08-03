@@ -290,14 +290,14 @@ img{max-width:100%;}
 .lt-body{position:absolute;inset:0;border-radius:4px;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,0.15);}
 .lt-bg{width:100%;height:100%;background:#fff;}
 .lt-bg::before{content:'';position:absolute;inset:11.6% 5%;border:1px dashed rgba(0,0,0,0.18);border-radius:2px;pointer-events:none;}
-.lt-border{position:absolute;inset:0;border-radius:4px;border:4px solid #00AEEF;pointer-events:none;}
+.lt-border{position:absolute;inset:0;border-radius:4px;border:3px dashed #00AEEF;pointer-events:none;}
 .lt-content{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:5px 12px;gap:6px;}
 
 .label-termo-grande{position:relative;width:271px;height:125px;}
 .ltg-body{position:absolute;inset:0;border-radius:5px;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,0.15);}
 .ltg-bg{width:100%;height:100%;background:#fff;}
 .ltg-bg::before{content:'';position:absolute;inset:8.3% 3.8%;border:1px dashed rgba(0,0,0,0.18);border-radius:2px;pointer-events:none;}
-.ltg-border{position:absolute;inset:0;border-radius:5px;border:4px solid #00AEEF;pointer-events:none;}
+.ltg-border{position:absolute;inset:0;border-radius:5px;border:3px dashed #00AEEF;pointer-events:none;}
 .ltg-content{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:9px 14px;gap:7px;}
 
 .label-pulsera-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;}
@@ -574,6 +574,9 @@ img{max-width:100%;}
         <label>Dibujito <span style="font-size:10px;color:#aaa;font-weight:400;text-transform:none">(30 de los 122 diseños exclusivos)</span></label>
         <div class="icon-cats" id="iconCats"></div>
         <div class="icon-grid" id="iconGrid"></div>
+        <input type="file" id="logoUpload" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+        <button type="button" onclick="document.getElementById('logoUpload').click()" style="margin-top:9px;width:100%;background:#fff;border:2px dashed #00AEEF;color:#0090c4;border-radius:9px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">⬆️ Subir mi logo o imagen</button>
+        <div id="logoName" style="font-size:11px;color:#8DC63F;font-weight:700;margin-top:5px;text-align:center;"></div>
       </div>
       <div class="field">
         <label>Cantidad de sets</label>
@@ -1164,6 +1167,25 @@ function buildIconGrid() {
   });
 }
 
+function uploadLogo(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Subí un archivo de imagen'); return; }
+  if (file.size > 3 * 1024 * 1024) { showToast('La imagen es muy pesada (máx 3MB)'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.icon = 'logo';
+    state.iconSrc = e.target.result;
+    if (state.position === 'none') state.position = 'left';
+    buildIconGrid();
+    if (typeof renderPositionRow === 'function') renderPositionRow();
+    updatePreview();
+    const n = document.getElementById('logoName');
+    if (n) n.textContent = '✓ Logo cargado — reemplaza el dibujo';
+  };
+  reader.readAsDataURL(file);
+}
+
 /* RENDER HELPERS */
 function renderFontGrid() { document.querySelectorAll('#fontGrid .font-btn').forEach((b,i) => { b.className='font-btn'+(FONTS[i].name===state.font?' active':''); }); }
 function renderColorRow() { document.querySelectorAll('#colorRow .color-dot').forEach((d,i) => { d.className='color-dot'+(TEXT_COLORS[i].hex===state.textColor?' active':''); }); }
@@ -1216,11 +1238,12 @@ function tog(id, show) {
 /* ============================================================
    PREVIEW UPDATE
    ============================================================ */
-function calcSize(words, base) {
-  const longest = words.reduce((a,b) => a.length>b.length?a:b, '');
-  const l = longest.length;
-  const f = l<=5?1:l<=7?0.87:l<=9?0.75:l<=11?0.64:l<=14?0.54:0.45;
-  return Math.round(base * f);
+function calcSize(lines, base) {
+  // Se mide por la LÍNEA más larga (no palabra suelta) para autoajustar al
+  // área de impresión: más caracteres → fuente más chica.
+  const l = lines.reduce((m,s) => Math.max(m, (s||'').length), 0);
+  const f = l<=5?1 : l<=7?0.87 : l<=9?0.75 : l<=11?0.64 : l<=13?0.56 : l<=16?0.48 : l<=20?0.40 : 0.34;
+  return Math.max(8, Math.round(base * f));
 }
 
 function applyToMockup(textId, iconId, contentId, rawText, p) {
@@ -1230,20 +1253,19 @@ function applyToMockup(textId, iconId, contentId, rawText, p) {
   const base = p.textDefaultSize;
   const iBase = p.iconDefaultSize;
   const isPulsera = p.id === 'pulsera';
-  const tColor = isPulsera ? state.pulseraTextColor : state.textColor;
+  const tColor = isPulsera ? '#000000' : state.textColor;
 
   if (rawText.trim()) {
-    const parts = rawText.trim().split(' ').filter(x=>x.length>0);
-    if (parts.length >= 2) {
-      const a = parts[0], b = parts.slice(1).join(' ');
-      textEl.innerHTML = a + '<br>' + b;
-      textEl.style.fontSize = calcSize([a,b], base) + 'px';
-      textEl.style.lineHeight = '1.2';
-    } else {
-      textEl.textContent = parts[0];
-      textEl.style.fontSize = calcSize([parts[0]], base) + 'px';
-      textEl.style.lineHeight = '1.1';
-    }
+    // Máx 4 palabras, repartidas en hasta 2 líneas (2 arriba nombres, 2 abajo apellidos)
+    const words = rawText.trim().split(/\s+/).filter(Boolean).slice(0, 4);
+    let lines;
+    if (words.length <= 1) lines = [words[0] || ''];
+    else if (words.length === 2) lines = [words[0], words[1]];
+    else if (words.length === 3) lines = [words[0] + ' ' + words[1], words[2]];
+    else lines = [words[0] + ' ' + words[1], words[2] + ' ' + words[3]];
+    textEl.innerHTML = lines.map(escapeHTML).join('<br>');
+    textEl.style.fontSize = calcSize(lines, base) + 'px';
+    textEl.style.lineHeight = lines.length > 1 ? '1.15' : '1.1';
     textEl.style.color = tColor;
     textEl.style.fontStyle = 'normal';
   } else {
@@ -1255,7 +1277,7 @@ function applyToMockup(textId, iconId, contentId, rawText, p) {
   }
   textEl.style.fontFamily = "'" + state.font + "', cursive";
 
-  const showIcon = state.position !== 'none' && state.iconSrc;
+  const showIcon = !isPulsera && state.position !== 'none' && state.iconSrc;
   if (showIcon) {
     iconEl.style.display = 'flex';
     iconEl.innerHTML = '';
@@ -1285,7 +1307,7 @@ function updatePreview() {
   cc.className = 'char-count' + (len>=30?' full':len>=22?' near':'');
   applyToMockup(p.textId, p.iconId, p.contentId, rawText, p);
   if (p.hasBorderColor && p.borderEl) document.getElementById(p.borderEl).style.borderColor = state.borderColor;
-  if (p.hasPulseraColor) { document.getElementById('pulseraBg').style.background = state.pulseraColor; if(rawText.trim()) document.getElementById(p.textId).style.color = state.pulseraTextColor; }
+  if (p.hasPulseraColor) { document.getElementById('pulseraBg').style.background = state.pulseraColor; if(rawText.trim()) document.getElementById(p.textId).style.color = '#000000'; }
 }
 
 /* ============================================================
@@ -1329,7 +1351,7 @@ async function addToCart() {
     font: state.font,
     textColor: state.textColor,
     icon: state.iconSrc,
-    iconIdx: state.icon ? parseInt(state.icon.replace('real_', '')) : null,
+    iconIdx: (state.icon && state.icon.indexOf('real_') === 0) ? parseInt(state.icon.replace('real_', '')) : null,
     thumbnail: thumbnail,
     position: state.position,
     borderColor: p.hasBorderColor ? state.borderColor : null,
