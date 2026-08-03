@@ -52,6 +52,8 @@
   .kpi{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
   .kpi .n{font-size:22px;font-weight:800} .kpi .l{color:var(--mut);font-size:11.5px}
   .priceEdit{width:110px;display:inline-block}
+  .lb{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:60;padding:20px;cursor:zoom-out}
+  .lb.show{display:flex} .lb img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:0 10px 50px #000a}
 </style>
 </head>
 <body>
@@ -139,7 +141,7 @@
           <button class="tab" data-tt="products" onclick="tnTab('products')">Productos y precios</button>
         </div>
         <div id="tt-orders" class="ttpane">
-          <table><thead><tr><th>#</th><th>Comprador</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="ordersBody"></tbody></table>
+          <table><thead><tr><th>#</th><th>Comprador</th><th>Diseño</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="ordersBody"></tbody></table>
         </div>
         <div id="tt-products" class="ttpane" style="display:none">
           <p class="hint">Editá el precio (en pesos) y guardá. Se aplica al instante en tu tienda.</p>
@@ -163,6 +165,7 @@
 </div>
 
 <div id="toast" class="toast"></div>
+<div id="lb" class="lb" onclick="this.classList.remove('show')"><img alt="Diseño"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -250,8 +253,8 @@ async function initTenant(){
   await tnLoad();
 }
 async function tnLoad(){
-  const[{data:orders},{data:products}]=await Promise.all([
-    sb.from('orders').select('id,order_number,buyer_name,total,status,created_at').eq('tenant_id',myTenant.id).order('created_at',{ascending:false}).limit(200),
+  const[orders,{data:products}]=await Promise.all([
+    api('/api/tenant-orders').catch(()=>[]),
     sb.from('products').select('id,name,price,active,slug').eq('tenant_id',myTenant.id).order('name')
   ]);
   window._orders=orders||[]; window._products=products||[];
@@ -265,9 +268,14 @@ async function tnLoad(){
   tnRenderOrders(); tnRenderProducts();
 }
 const STATES=['pending_payment','paid','in_production','shipped','delivered','cancelled'];
-function tnRenderOrders(){const b=$('ordersBody');const os=window._orders||[];b.innerHTML=os.length?'':'<tr><td colspan="5" class="muted">Sin pedidos todavía.</td></tr>';
-  os.forEach(o=>{const tr=document.createElement('tr');const sel=myRole==='admin'?`<select onchange="tnSetStatus('${o.id}',this.value)" style="width:auto">${STATES.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>`:`<span class="pill ${o.status==='paid'?'on':'off'}">${esc(o.status)}</span>`;
-    tr.innerHTML=`<td>#${o.order_number}</td><td>${esc(o.buyer_name)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
+const STATE_LABELS={pending_payment:'Pendiente de pago',paid:'Pagado',in_production:'En producción',shipped:'Enviado',delivered:'Entregado',cancelled:'Cancelado'};
+function thumbCell(o){const it=(o.order_items||[]).find(x=>x.design_thumbnail_url);
+  if(!it)return '<span class="muted">—</span>';
+  return `<img src="${esc(it.design_thumbnail_url)}" onclick="lightbox(this.src)" title="Ampliar" style="width:44px;height:44px;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid var(--line)">`;}
+function lightbox(url){const m=$('lb');m.querySelector('img').src=url;m.classList.add('show');}
+function tnRenderOrders(){const b=$('ordersBody');const os=window._orders||[];b.innerHTML=os.length?'':'<tr><td colspan="6" class="muted">Sin pedidos todavía.</td></tr>';
+  os.forEach(o=>{const tr=document.createElement('tr');const sel=myRole==='admin'?`<select onchange="tnSetStatus('${o.id}',this.value)" style="width:auto">${STATES.map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATE_LABELS[s]||s}</option>`).join('')}</select>`:`<span class="pill ${o.status==='paid'?'on':'off'}">${esc(STATE_LABELS[o.status]||o.status)}</span>`;
+    tr.innerHTML=`<td>#${o.order_number}</td><td>${esc(o.buyer_name)}</td><td>${thumbCell(o)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
 async function tnSetStatus(id,status){try{const{error}=await sb.from('orders').update({status}).eq('id',id);if(error)throw error;const o=(window._orders||[]).find(x=>x.id===id);if(o)o.status=status;toast('Pedido actualizado');}catch(e){toast(e.message,false);}}
 function tnRenderProducts(){const b=$('productsBody');const ps=window._products||[];b.innerHTML=ps.length?'':'<tr><td colspan="4" class="muted">Sin productos.</td></tr>';
   ps.forEach(p=>{const tr=document.createElement('tr');const canEdit=myRole==='admin';
