@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Praxis Personaliza</title>
+<style>
+  :root{ --bg:#0b1220; --panel:#131c2e; --panel2:#1b2740; --line:#26324d; --txt:#e7ecf5; --mut:#8ea0bd; --pri:#00AEEF; --sec:#EC008C; --ok:#2ecc71; --warn:#f39c12; --danger:#e74c3c; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%, #16223c 0%, var(--bg) 55%);color:var(--txt);min-height:100vh}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 18px 60px}
+  header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--sec));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+  .brand h1{font-size:17px;margin:0;letter-spacing:.3px}
+  .brand small{color:var(--mut);font-size:11px}
+  .btn{cursor:pointer;border:0;border-radius:9px;padding:9px 15px;font-weight:600;font-size:13.5px;background:var(--pri);color:#04121b;transition:.15s}
+  .btn:hover{filter:brightness(1.08)} .btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .btn.pink{background:var(--sec);color:#fff} .btn.ghost{background:transparent;color:var(--mut);border:1px solid var(--line)}
+  .btn.sm{padding:6px 11px;font-size:12.5px;border-radius:7px} .btn:disabled{opacity:.5;cursor:not-allowed}
+  input,select{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:#0e1727;color:var(--txt);font-size:13.5px}
+  input:focus,select:focus{outline:0;border-color:var(--pri)}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .grid{display:grid;gap:14px} .muted{color:var(--mut)}
+  .pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700}
+  .pill.on{background:rgba(46,204,113,.15);color:var(--ok)} .pill.off{background:rgba(231,76,60,.15);color:var(--danger)}
+  .pill.role{background:rgba(0,174,239,.15);color:var(--pri)}
+  .tenant-row{display:flex;align-items:center;gap:14px;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;transition:.15s}
+  .tenant-row:hover{border-color:var(--pri);transform:translateY(-1px)}
+  .swatch{width:34px;height:34px;border-radius:9px;flex:none;border:2px solid #ffffff22}
+  .tname{font-weight:700} .tslug{color:var(--mut);font-size:12px}
+  .counts{margin-left:auto;text-align:right;font-size:12px;color:var(--mut)}
+  .toast{position:fixed;right:18px;bottom:18px;padding:12px 16px;border-radius:10px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px #0008;opacity:0;transform:translateY(10px);transition:.25s;z-index:50}
+  .toast.show{opacity:1;transform:none}
+  .toast.ok{background:#123d29;color:#8ef0b8;border:1px solid #1f7a4d} .toast.err{background:#411c1c;color:#ffb4a8;border:1px solid #a23b2f}
+  .tabs{display:flex;gap:6px;margin:4px 0 14px;flex-wrap:wrap}
+  .tab{padding:8px 13px;border-radius:9px;background:transparent;border:1px solid var(--line);color:var(--mut);cursor:pointer;font-size:13px;font-weight:600}
+  .tab.active{background:var(--pri);color:#04121b;border-color:var(--pri)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-bg{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:18px;z-index:40}
+  .modal-bg.show{display:flex} .modal{width:100%;max-width:460px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  .center{min-height:80vh;display:flex;align-items:center;justify-content:center} .login{width:100%;max-width:380px}
+  .hint{font-size:11.5px;color:var(--mut);margin-top:6px}
+  .set{color:var(--ok);font-weight:700} .unset{color:var(--warn)}
+  .backlink{background:none;border:0;color:var(--mut);cursor:pointer;font-size:13px;margin-bottom:12px}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .kpi{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .kpi .n{font-size:22px;font-weight:800} .kpi .l{color:var(--mut);font-size:11.5px}
+  .priceEdit{width:110px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="center">
+    <div class="card login">
+      <div class="brand" style="margin-bottom:16px">
+        <div class="logo">P</div>
+        <div><h1>Praxis Personaliza</h1><small>Ingreso</small></div>
+      </div>
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="username" placeholder="tu@email.com">
+      <label>Contraseña</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="margin-top:16px"><button class="btn" style="width:100%" onclick="doLogin()" id="loginBtn">Ingresar</button></div>
+      <div id="loginErr" class="hint" style="color:var(--danger)"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none">
+    <header class="top">
+      <div class="brand"><div class="logo">P</div><div><h1 id="appTitle">Praxis Personaliza</h1><small id="whoami"></small></div></div>
+      <div style="display:flex;gap:8px" id="topActions"></div>
+    </header>
+
+    <!-- ===== SUPERADMIN ===== -->
+    <div id="suView" style="display:none">
+      <div id="suList">
+        <div class="muted" style="margin-bottom:10px;font-size:13px">Tenants de la plataforma</div>
+        <div id="tenantList" class="grid"></div>
+      </div>
+      <div id="suDetail" style="display:none">
+        <button class="backlink" onclick="suShowList()">← Volver a tenants</button>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <div id="dSwatch" class="swatch"></div>
+            <div><div id="dName" class="tname" style="font-size:18px"></div><div id="dSlug" class="tslug"></div></div>
+            <div id="dActive" style="margin-left:auto"></div>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-tab="config" onclick="suTab('config')">Configuración</button>
+            <button class="tab" data-tab="users" onclick="suTab('users')">Usuarios</button>
+            <button class="tab" data-tab="creds" onclick="suTab('creds')">Credenciales</button>
+          </div>
+          <div id="tab-config" class="tabpane">
+            <div class="row2"><div><label>Nombre</label><input id="cName"></div><div><label>Dominio propio</label><input id="cDomain" placeholder="atumanera.com.ar"></div></div>
+            <div class="row2"><div><label>Color primario</label><input id="cPri"></div><div><label>Color secundario</label><input id="cSec"></div></div>
+            <div class="row2"><div><label>Envío por defecto (centavos)</label><input id="cShip" type="number" min="0"></div><div><label>Contrato Andreani</label><input id="cContract"></div></div>
+            <div><label>MP Public Key</label><input id="cMpPub" placeholder="APP_USR-..."></div>
+            <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+              <button class="btn" onclick="suSaveConfig()">Guardar</button>
+              <button class="btn sec sm" onclick="suToggleActive()" id="toggleActiveBtn"></button>
+              <span class="hint" id="routeHint"></span>
+            </div>
+          </div>
+          <div id="tab-users" class="tabpane" style="display:none">
+            <table><thead><tr><th>Email</th><th>Rol</th><th>Alta</th></tr></thead><tbody id="usersBody"></tbody></table>
+            <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+              <div class="muted" style="font-size:13px;margin-bottom:6px">Crear usuario para este tenant</div>
+              <div class="row2"><div><label>Email</label><input id="uEmail" type="email"></div><div><label>Contraseña (min 8)</label><input id="uPass" type="text"></div></div>
+              <div class="row2"><div><label>Rol</label><select id="uRole"><option value="admin">admin</option><option value="staff">staff</option></select></div>
+              <div style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="suCreateUser()">Crear usuario</button></div></div>
+            </div>
+          </div>
+          <div id="tab-creds" class="tabpane" style="display:none">
+            <p class="hint">Se guardan cifrados en Supabase Vault. Solo se ve si están configurados, nunca el valor.</p>
+            <div id="credStatus" style="margin-bottom:10px"></div>
+            <div class="row2"><div><label>MP Access Token</label><input id="sMpToken" type="password" placeholder="APP_USR-... (secreto)"></div><div style="display:flex;align-items:flex-end"><button class="btn sm" style="width:100%" onclick="suSaveSecret('mp_access_token','sMpToken')">Guardar token MP</button></div></div>
+            <div class="row2"><div><label>Andreani usuario</label><input id="sAndUser"></div><div style="display:flex;align-items:flex-end"><button class="btn sm" style="width:100%" onclick="suSaveSecret('andreani_user','sAndUser')">Guardar</button></div></div>
+            <div class="row2"><div><label>Andreani contraseña</label><input id="sAndPass" type="password"></div><div style="display:flex;align-items:flex-end"><button class="btn sm" style="width:100%" onclick="suSaveSecret('andreani_pass','sAndPass')">Guardar</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DASHBOARD DE TENANT ===== -->
+    <div id="tnView" style="display:none">
+      <div class="kpis" id="tnKpis"></div>
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" data-tt="orders" onclick="tnTab('orders')">Pedidos</button>
+          <button class="tab" data-tt="products" onclick="tnTab('products')">Productos y precios</button>
+        </div>
+        <div id="tt-orders" class="ttpane">
+          <table><thead><tr><th>#</th><th>Comprador</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="ordersBody"></tbody></table>
+        </div>
+        <div id="tt-products" class="ttpane" style="display:none">
+          <p class="hint">Editá el precio (en pesos) y guardá. Se aplica al instante en tu tienda.</p>
+          <table><thead><tr><th>Producto</th><th>Precio $</th><th>Activo</th><th></th></tr></thead><tbody id="productsBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NUEVO TENANT -->
+<div id="newTenantModal" class="modal-bg">
+  <div class="card modal">
+    <h3 style="margin:0 0 10px">Nuevo tenant</h3>
+    <label>Nombre del comercio</label><input id="ntName" placeholder="Tazas Personalizadas">
+    <label>Slug (URL)</label><input id="ntSlug" placeholder="tazas">
+    <div class="hint">Tienda en <span id="ntPreview" class="muted"></span></div>
+    <div class="row2"><div><label>Color primario</label><input id="ntPri" value="#00AEEF"></div><div><label>Color secundario</label><input id="ntSec" value="#EC008C"></div></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" onclick="closeNewTenant()">Cancelar</button><button class="btn pink" onclick="suCreateTenant()">Crear</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://qsynlqxhoxhvzjzkyqaj.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeW5scXhob3hodnpqemt5cWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDYyOTgsImV4cCI6MjA5NzcyMjI5OH0.hYMIzolTFqUFGgbwPx-1PgzVcgzQwghX2XQQcmSmTXs';
+const STORE_BASE='personaliza.praxisoperativa.com/t';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+let tenants=[], current=null, myTenant=null, myRole=null;
+
+function toast(m,ok=true){const t=$('toast');t.textContent=m;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',2600);}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function money(cents){return '$'+((Number(cents)||0)/100).toLocaleString('es-AR',{minimumFractionDigits:0});}
+async function token(){const{data}=await sb.auth.getSession();return data.session?.access_token||null;}
+async function api(path,opts={}){const t=await token();const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+t,...(opts.headers||{})}});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('Error '+r.status));return j;}
+
+async function doLogin(){$('loginErr').textContent='';$('loginBtn').disabled=true;
+  const{error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+  $('loginBtn').disabled=false; if(error){$('loginErr').textContent='No se pudo ingresar: '+error.message;return;} await boot();}
+async function doLogout(){await sb.auth.signOut();location.reload();}
+
+async function boot(){
+  const{data}=await sb.auth.getSession();
+  if(!data.session){$('loginScreen').style.display='flex';$('app').style.display='none';return;}
+  $('whoami').textContent=data.session.user.email;
+  // ¿superadmin?
+  let isSuper=false;
+  try{ const{data:pa}=await sb.from('platform_admins').select('user_id').eq('user_id',data.session.user.id).maybeSingle(); isSuper=!!pa; }catch(e){ isSuper=false; }
+  $('loginScreen').style.display='none';$('app').style.display='block';
+  if(isSuper){ await initSuper(); } else { await initTenant(); }
+}
+
+/* ========== SUPERADMIN ========== */
+async function initSuper(){
+  $('appTitle').textContent='Praxis Personaliza · Superadmin';
+  $('suView').style.display='block'; $('tnView').style.display='none';
+  $('topActions').innerHTML='<button class="btn pink sm" onclick="openNewTenant()">+ Nuevo tenant</button><button class="btn ghost sm" onclick="doLogout()">Salir</button>';
+  try{ tenants=await api('/api/admin-tenants'); }catch(e){ toast('Sin permisos de superadmin',false); return doLogout(); }
+  suShowList();
+}
+function suShowList(){$('suDetail').style.display='none';$('suList').style.display='block';
+  const box=$('tenantList');box.innerHTML=tenants.length?'':'<div class="muted">Sin tenants.</div>';
+  tenants.forEach(t=>{const el=document.createElement('div');el.className='tenant-row';el.onclick=()=>suOpen(t.id);
+    el.innerHTML=`<div class="swatch" style="background:linear-gradient(135deg,${esc(t.primary_color)},${esc(t.secondary_color)})"></div>
+      <div><div class="tname">${esc(t.name)}</div><div class="tslug">/t/${esc(t.slug)}${t.custom_domain?' · '+esc(t.custom_domain):''}</div></div>
+      <div class="counts">${t.products_count} productos<br>${t.orders_count} pedidos</div>
+      <div style="margin-left:14px">${t.active?'<span class="pill on">activo</span>':'<span class="pill off">inactivo</span>'}</div>`;box.appendChild(el);});}
+function suOpen(id){current=tenants.find(t=>t.id===id);if(!current)return;$('suList').style.display='none';$('suDetail').style.display='block';suTab('config');
+  $('dName').textContent=current.name;$('dSlug').textContent='/t/'+current.slug;
+  $('dSwatch').style.background=`linear-gradient(135deg,${current.primary_color},${current.secondary_color})`;
+  $('dActive').innerHTML=current.active?'<span class="pill on">activo</span>':'<span class="pill off">inactivo</span>';
+  $('cName').value=current.name||'';$('cDomain').value=current.custom_domain||'';$('cPri').value=current.primary_color||'';$('cSec').value=current.secondary_color||'';
+  $('cShip').value=current.default_shipping_cost||0;$('cContract').value=current.andreani_contract||'';$('cMpPub').value=current.mp_public_key||'';
+  $('toggleActiveBtn').textContent=current.active?'Desactivar':'Activar';
+  $('routeHint').textContent=current.custom_domain?('→ '+current.custom_domain):('→ '+STORE_BASE+'/'+current.slug);}
+function suTab(n){document.querySelectorAll('#suDetail .tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===n));
+  document.querySelectorAll('#suDetail .tabpane').forEach(p=>p.style.display='none');$('tab-'+n).style.display='block';
+  if(n==='users')suLoadUsers(); if(n==='creds')suLoadSecrets();}
+async function suSaveConfig(){try{const body={id:current.id,name:$('cName').value.trim(),custom_domain:$('cDomain').value.trim()||null,primary_color:$('cPri').value.trim(),secondary_color:$('cSec').value.trim(),default_shipping_cost:$('cShip').value,andreani_contract:$('cContract').value.trim(),mp_public_key:$('cMpPub').value.trim()};
+  const u=await api('/api/admin-tenants',{method:'PUT',body:JSON.stringify(body)});Object.assign(current,u);const i=tenants.findIndex(t=>t.id===current.id);if(i>=0)Object.assign(tenants[i],u);suOpen(current.id);toast('Configuración guardada');}catch(e){toast(e.message,false);}}
+async function suToggleActive(){try{const u=await api('/api/admin-tenants',{method:'PUT',body:JSON.stringify({id:current.id,active:!current.active})});Object.assign(current,u);const i=tenants.findIndex(t=>t.id===current.id);if(i>=0)Object.assign(tenants[i],u);suOpen(current.id);toast('Estado actualizado');}catch(e){toast(e.message,false);}}
+async function suLoadUsers(){const b=$('usersBody');b.innerHTML='<tr><td colspan="3" class="muted">Cargando…</td></tr>';try{const us=await api('/api/admin-users?tenant_id='+current.id);b.innerHTML=us.length?'':'<tr><td colspan="3" class="muted">Sin usuarios.</td></tr>';us.forEach(u=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${esc(u.email||'—')}</td><td><span class="pill role">${esc(u.role)}</span></td><td class="muted">${(u.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}catch(e){b.innerHTML='<tr><td colspan="3" style="color:var(--danger)">'+esc(e.message)+'</td></tr>';}}
+async function suCreateUser(){try{await api('/api/admin-users',{method:'POST',body:JSON.stringify({tenant_id:current.id,email:$('uEmail').value.trim(),password:$('uPass').value,role:$('uRole').value})});$('uEmail').value='';$('uPass').value='';toast('Usuario creado');suLoadUsers();}catch(e){toast(e.message,false);}}
+async function suLoadSecrets(){const box=$('credStatus');box.innerHTML='<span class="muted">Cargando…</span>';try{const s=await api('/api/admin-secrets?tenant_id='+current.id);const n=s.map(x=>x.name);const it=(k,l)=>`${l}: ${n.includes(k)?'<span class="set">configurado ✓</span>':'<span class="unset">sin configurar</span>'}`;box.innerHTML=[it('mp_access_token','MP Access Token'),it('andreani_user','Andreani usuario'),it('andreani_pass','Andreani contraseña')].join(' &nbsp;·&nbsp; ');}catch(e){box.innerHTML='<span style="color:var(--danger)">'+esc(e.message)+'</span>';}}
+async function suSaveSecret(name,inp){const v=$(inp).value;if(!v){toast('Ingresá un valor',false);return;}try{await api('/api/admin-secrets',{method:'POST',body:JSON.stringify({tenant_id:current.id,name,value:v})});$(inp).value='';toast('Secreto guardado');suLoadSecrets();}catch(e){toast(e.message,false);}}
+function openNewTenant(){$('newTenantModal').classList.add('show');$('ntName').value='';$('ntSlug').value='';ntPrev();}
+function closeNewTenant(){$('newTenantModal').classList.remove('show');}
+function slugify(s){return(s||'').toLowerCase().normalize('NFD').replace(/[^\x00-\x7f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,63);}
+function ntPrev(){$('ntPreview').textContent=STORE_BASE+'/'+(slugify($('ntSlug').value||$('ntName').value)||'…');}
+async function suCreateTenant(){try{const body={name:$('ntName').value.trim(),slug:slugify($('ntSlug').value||$('ntName').value),primary_color:$('ntPri').value.trim(),secondary_color:$('ntSec').value.trim()};if(!body.name||!body.slug){toast('Nombre y slug requeridos',false);return;}const t=await api('/api/admin-tenants',{method:'POST',body:JSON.stringify(body)});tenants.push({...t,products_count:0,orders_count:0});closeNewTenant();suShowList();toast('Tenant creado');suOpen(t.id);}catch(e){toast(e.message,false);}}
+document.addEventListener('input',e=>{if(e.target.id==='ntName'||e.target.id==='ntSlug')ntPrev();});
+
+/* ========== DASHBOARD DE TENANT ========== */
+async function initTenant(){
+  // membresía del usuario (RLS: self_read)
+  const{data:mem,error}=await sb.from('tenant_users').select('tenant_id, role');
+  if(error||!mem||!mem.length){$('app').innerHTML='<div class="center"><div class="card login"><h3>Sin acceso</h3><p class="muted">Tu usuario no está asignado a ningún comercio. Contactá al administrador.</p><button class="btn ghost sm" onclick="doLogout()">Salir</button></div></div>';return;}
+  myRole=mem[0].role;
+  const{data:t}=await sb.from('tenants').select('*').eq('id',mem[0].tenant_id).maybeSingle();
+  myTenant=t||{id:mem[0].tenant_id,name:'Mi comercio',slug:''};
+  $('appTitle').textContent=myTenant.name;
+  $('whoami').innerHTML=`<span class="pill role">${esc(myRole)}</span> · tienda: /t/${esc(myTenant.slug)}`;
+  $('topActions').innerHTML='<button class="btn ghost sm" onclick="doLogout()">Salir</button>';
+  $('suView').style.display='none';$('tnView').style.display='block';
+  await tnLoad();
+}
+async function tnLoad(){
+  const[{data:orders},{data:products}]=await Promise.all([
+    sb.from('orders').select('id,order_number,buyer_name,total,status,created_at').eq('tenant_id',myTenant.id).order('created_at',{ascending:false}).limit(200),
+    sb.from('products').select('id,name,price,active,slug').eq('tenant_id',myTenant.id).order('name')
+  ]);
+  window._orders=orders||[]; window._products=products||[];
+  const paid=(orders||[]).filter(o=>o.status==='paid'||o.status==='in_production'||o.status==='shipped'||o.status==='delivered');
+  const revenue=paid.reduce((a,o)=>a+(o.total||0),0);
+  $('tnKpis').innerHTML=`
+    <div class="kpi"><div class="n">${(orders||[]).length}</div><div class="l">Pedidos</div></div>
+    <div class="kpi"><div class="n">${paid.length}</div><div class="l">Pagados</div></div>
+    <div class="kpi"><div class="n">${money(revenue)}</div><div class="l">Facturado</div></div>
+    <div class="kpi"><div class="n">${(products||[]).length}</div><div class="l">Productos</div></div>`;
+  tnRenderOrders(); tnRenderProducts();
+}
+const STATES=['pending_payment','paid','in_production','shipped','delivered','cancelled'];
+function tnRenderOrders(){const b=$('ordersBody');const os=window._orders||[];b.innerHTML=os.length?'':'<tr><td colspan="5" class="muted">Sin pedidos todavía.</td></tr>';
+  os.forEach(o=>{const tr=document.createElement('tr');const sel=myRole==='admin'?`<select onchange="tnSetStatus('${o.id}',this.value)" style="width:auto">${STATES.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>`:`<span class="pill ${o.status==='paid'?'on':'off'}">${esc(o.status)}</span>`;
+    tr.innerHTML=`<td>#${o.order_number}</td><td>${esc(o.buyer_name)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
+async function tnSetStatus(id,status){try{const{error}=await sb.from('orders').update({status}).eq('id',id);if(error)throw error;const o=(window._orders||[]).find(x=>x.id===id);if(o)o.status=status;toast('Pedido actualizado');}catch(e){toast(e.message,false);}}
+function tnRenderProducts(){const b=$('productsBody');const ps=window._products||[];b.innerHTML=ps.length?'':'<tr><td colspan="4" class="muted">Sin productos.</td></tr>';
+  ps.forEach(p=>{const tr=document.createElement('tr');const canEdit=myRole==='admin';
+    tr.innerHTML=`<td>${esc(p.name)}</td>
+      <td>${canEdit?`<input class="priceEdit" id="pp_${p.id}" type="number" min="0" step="0.01" value="${(p.price/100).toFixed(2)}">`:money(p.price)}</td>
+      <td>${p.active?'<span class="pill on">sí</span>':'<span class="pill off">no</span>'}</td>
+      <td>${canEdit?`<button class="btn sm" onclick="tnSavePrice('${p.id}')">Guardar</button> <button class="btn sec sm" onclick="tnToggleProduct('${p.id}')">${p.active?'Desactivar':'Activar'}</button>`:''}</td>`;b.appendChild(tr);});}
+async function tnSavePrice(id){const v=$('pp_'+id).value;const cents=Math.max(0,Math.round(parseFloat(v)*100));try{const{error}=await sb.from('products').update({price:cents}).eq('id',id);if(error)throw error;const p=(window._products||[]).find(x=>x.id===id);if(p)p.price=cents;toast('Precio actualizado');}catch(e){toast(e.message,false);}}
+async function tnToggleProduct(id){const p=(window._products||[]).find(x=>x.id===id);if(!p)return;try{const{error}=await sb.from('products').update({active:!p.active}).eq('id',id);if(error)throw error;p.active=!p.active;tnRenderProducts();toast('Producto actualizado');}catch(e){toast(e.message,false);}}
+function tnTab(n){document.querySelectorAll('[data-tt]').forEach(b=>b.classList.toggle('active',b.dataset.tt===n));document.querySelectorAll('.ttpane').forEach(p=>p.style.display='none');$('tt-'+n).style.display='block';}
+
+boot();
+</script>
+</body>
+</html>

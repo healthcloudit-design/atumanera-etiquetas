@@ -997,7 +997,9 @@ const DIBUJOS_REALES = [
 /* ============================================================
    DATA
    ============================================================ */
-const TENANT_SLUG = new URLSearchParams(location.search).get('tenant') || 'atumanera';
+const TENANT_SLUG = (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])[1]
+  || new URLSearchParams(location.search).get('tenant')
+  || 'atumanera';
 const tenantHeader = () => ({ 'X-Tenant': TENANT_SLUG });
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 

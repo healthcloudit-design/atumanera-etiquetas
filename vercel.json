@@ -1,7 +1,12 @@
 {
+  "redirects": [
+    { "source": "/", "has": [{ "type": "host", "value": "personaliza.praxisoperativa.com" }], "destination": "/panel", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/superadmin", "destination": "/superadmin.html" },
+    { "source": "/panel", "destination": "/personaliza.html" },
+    { "source": "/superadmin", "destination": "/personaliza.html" },
+    { "source": "/t/:slug", "destination": "/index.html" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/pago-exitoso", "destination": "/index.html" },
     { "source": "/pago-fallido", "destination": "/index.html" },
