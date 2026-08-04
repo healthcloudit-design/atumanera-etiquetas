@@ -578,8 +578,8 @@ img{max-width:100%;}
         <div class="pulsera-colors" id="pulseraColorRow"></div>
       </div>
       <div class="field" id="posField">
-        <label>Posición del dibujito</label>
-        <div class="pos-row" id="posRow"></div>
+        <label style="display:none">Posición del dibujito</label>
+        <div class="pos-row" id="posRow" style="display:none"></div>
       </div>
       <div class="field">
         <label>Dibujito <span style="font-size:10px;color:#aaa;font-weight:400;text-transform:none">(30 de los 122 diseños exclusivos)</span></label>
@@ -1051,6 +1051,18 @@ async function composePhotoMockup(p, cv) {
   }
 
   const rx = cfg.region.x*W, ry = cfg.region.y*H, rw = cfg.region.w*W, rh = cfg.region.h*H;
+
+  // Borde "camino de hormiga" (punteado) para termoadhesivas, en el color elegido
+  if (p.hasBorderColor) {
+    const mx = rw*0.10, my = rh*0.28;
+    ctx.save();
+    ctx.strokeStyle = state.borderColor || '#00AEEF';
+    ctx.lineWidth = Math.max(2, rh*0.055);
+    ctx.setLineDash([rh*0.14, rh*0.09]);
+    ctx.strokeRect(rx - mx, ry - my, rw + mx*2, rh + my*2);
+    ctx.restore();
+  }
+
   const tColor = isPulsera ? '#000000' : state.textColor;
   const font = state.font || 'Nunito';
   try { await document.fonts.load(`700 40px "${font}"`); } catch(e) {}
