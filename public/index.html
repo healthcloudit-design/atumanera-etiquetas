@@ -1082,10 +1082,9 @@ async function composePhotoMockup(p, cv) {
   // Texto: máx 4 palabras en hasta 2 líneas
   const words = (state.text || '').trim().split(/\s+/).filter(Boolean).slice(0, 4);
   let lines;
-  if (words.length <= 1) lines = [words[0] || ''];
-  else if (words.length === 2) lines = [words[0], words[1]];
+  if (words.length <= 2) lines = [words.join(' ')];             // 1-2 palabras → 1 línea
   else if (words.length === 3) lines = [words[0]+' '+words[1], words[2]];
-  else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];
+  else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];  // máx 2 palabras por línea
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = tColor;
   let size = Math.floor(rh / (lines.length > 1 ? 2.3 : 1.15));
@@ -1385,10 +1384,9 @@ function applyToMockup(textId, iconId, contentId, rawText, p) {
     // Máx 4 palabras, repartidas en hasta 2 líneas (2 arriba nombres, 2 abajo apellidos)
     const words = rawText.trim().split(/\s+/).filter(Boolean).slice(0, 4);
     let lines;
-    if (words.length <= 1) lines = [words[0] || ''];
-    else if (words.length === 2) lines = [words[0], words[1]];
+    if (words.length <= 2) lines = [words.join(' ')];            // 1-2 palabras → 1 línea
     else if (words.length === 3) lines = [words[0] + ' ' + words[1], words[2]];
-    else lines = [words[0] + ' ' + words[1], words[2] + ' ' + words[3]];
+    else lines = [words[0] + ' ' + words[1], words[2] + ' ' + words[3]]; // máx 2 por línea
     textEl.innerHTML = lines.map(escapeHTML).join('<br>');
     textEl.style.fontSize = calcSize(lines, base) + 'px';
     textEl.style.lineHeight = lines.length > 1 ? '1.15' : '1.1';
