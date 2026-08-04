@@ -1007,8 +1007,8 @@ const PRODUCTS = [
 // Ajustables a ojo: son solo números 0..1.
 const PHOTO_MOCKUPS = {
   falletina: { src:'/assets/mockups/falletina.png', region:{x:0.30,y:0.415,w:0.42,h:0.15}, tint:null },
-  termo32:   { src:'/assets/mockups/termo32.png',   region:{x:0.31,y:0.46,w:0.38,h:0.14}, tint:null },
-  termo49:   { src:'/assets/mockups/termo49.png',   region:{x:0.28,y:0.42,w:0.44,h:0.18}, tint:null },
+  termo32:   { src:'/assets/mockups/termo32.png',   region:{x:0.335,y:0.462,w:0.33,h:0.085}, border:{x:0.31,y:0.445,w:0.38,h:0.12},  tint:null },
+  termo49:   { src:'/assets/mockups/termo49.png',   region:{x:0.325,y:0.45,w:0.35,h:0.135}, border:{x:0.30,y:0.425,w:0.40,h:0.185}, tint:null },
   pulsera:   { src:'/assets/mockups/pulsera.png',   region:{x:0.33,y:0.45,w:0.34,h:0.10}, tint:{x:0,y:0.43,w:1,h:0.145} },
 };
 
@@ -1052,14 +1052,14 @@ async function composePhotoMockup(p, cv) {
 
   const rx = cfg.region.x*W, ry = cfg.region.y*H, rw = cfg.region.w*W, rh = cfg.region.h*H;
 
-  // Borde "camino de hormiga" (punteado) para termoadhesivas, en el color elegido
-  if (p.hasBorderColor) {
-    const mx = rw*0.10, my = rh*0.28;
+  // Borde "camino de hormiga" (punteado) para termoadhesivas, dentro de la etiqueta
+  if (p.hasBorderColor && cfg.border) {
+    const b = cfg.border;
     ctx.save();
     ctx.strokeStyle = state.borderColor || '#00AEEF';
-    ctx.lineWidth = Math.max(2, rh*0.055);
-    ctx.setLineDash([rh*0.14, rh*0.09]);
-    ctx.strokeRect(rx - mx, ry - my, rw + mx*2, rh + my*2);
+    ctx.lineWidth = Math.max(2, H*0.006);
+    ctx.setLineDash([H*0.02, H*0.013]);
+    ctx.strokeRect(b.x*W, b.y*H, b.w*W, b.h*H);
     ctx.restore();
   }
 
