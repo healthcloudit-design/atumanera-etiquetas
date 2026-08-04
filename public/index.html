@@ -281,6 +281,7 @@ img{max-width:100%;}
 /* El editor muestra el mockup sobre la FOTO real: ocultamos las etiquetas CSS */
 #mockupCard .label-falletina,#mockupCard .label-termo-chica,#mockupCard .label-termo-grande,#mockupCard .label-pulsera-wrap{display:none !important;}
 #photoMockup{width:100%;max-width:460px;display:block;margin:0 auto;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);}
+#prodTabs{display:none;}
 /* LABEL MOCKUPS */
 .label-falletina{position:relative;width:320px;height:133px;}
 .lf-fabric{position:absolute;inset:0;border-radius:5px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.18);}
@@ -576,6 +577,10 @@ img{max-width:100%;}
       <div class="field sn-hidden" id="pulseraColorField">
         <label>Color de la cinta</label>
         <div class="pulsera-colors" id="pulseraColorRow"></div>
+      </div>
+      <div class="field sn-hidden" id="cintaColorField">
+        <label>Color de la cinta</label>
+        <div class="pulsera-colors" id="cintaColorRow"></div>
       </div>
       <div class="field" id="posField">
         <label style="display:none">Posición del dibujito</label>
@@ -1002,11 +1007,42 @@ const PRODUCTS = [
   { id:'pulsera', slug:'pulseras-fluor', icon:'🪢', name:'Pulseras Fluor x30', price:19900, unitsPerSet:30, unitLabel:'pulseras', mockupBg:'bg-pulsera', sizeNote:'2,5 × 30 cm · Raso flúor · Se ata a la mano', mockupLabel:'Vista previa · Pulsera Fluor (2,5×30 cm)', mockupId:'mockupPulsera', contentId:'contentPulsera', textId:'textPulsera', iconId:'iconPulsera', textDefaultSize:19, iconDefaultSize:20, hasBorderColor:false, hasPulseraColor:true, hasPosition:false, info:[['Material','Raso flúor'],['Medida','2,5 × 30 cm'],['Colores','Naranja/amarillo/verde/fucsia'],['Texto','Solo negro'],['Elaboración','10-15 días hábiles'],['Tip','Pasar encendedor a bordes']] },
 ];
 
+// Catálogo real (13 SKUs). Cada uno referencia un "type" (índice en PRODUCTS)
+// que define el editor/mockup. price en pesos, units = cantidad del set.
+const CATALOG = [
+  { name:'Etiquetas para coser en la ropa',         price:10990, slug:'coser-basica',          img:'/assets/img/coser.jpg',              type:0, units:20,  cat:'coser' },
+  { name:'35 Etiquetas personalizadas con nombre',  price:11990, slug:'coser-35-nombre',        img:'/assets/img/termo-nombre.jpg',       type:0, units:35,  cat:'coser' },
+  { name:'50 Etiquetas con nombre en rollo',        price:14999, slug:'coser-50-rollo',         img:'/assets/img/rollo.jpg',              type:0, units:50,  cat:'coser' },
+  { name:'Cintas para coser + Llavero',             price:15900, slug:'cintas-falletina',       img:'/assets/img/coser-llavero.png',      type:0, units:20,  cat:'coser' },
+  { name:'100 Etiquetas con tu Logo',               price:19900, slug:'coser-100-logo',         img:'/assets/img/logo-etiquetas.jpg',     type:0, units:100, cat:'coser' },
+  { name:'100 Etiquetas con tu Logo 1,5cm',         price:19900, slug:'coser-100-logo-15',      img:'/assets/img/coser-100-logo-15.png',  type:0, units:100, cat:'coser' },
+  { name:'100 Etiquetas con tu Logo 1,5cm Pastel',  price:19900, slug:'coser-100-logo-15-pas',  img:'/assets/img/pastel.png',             type:0, units:100, cat:'coser' },
+  { name:'200 Etiquetas para coser con Logo',       price:35900, slug:'coser-200-logo',         img:'/assets/img/coser-200-logo.png',     type:0, units:200, cat:'coser' },
+  { name:'200 Etiquetas con tu Logo 1,5cm',         price:35900, slug:'coser-200-logo-15',      img:'/assets/img/coser-200-logo-15.png',  type:0, units:200, cat:'coser' },
+  { name:'200 Etiquetas con tu Logo 1,5cm Pastel',  price:35900, slug:'coser-200-logo-15-pas',  img:'/assets/img/coser-200-pastel.png',   type:0, units:200, cat:'coser' },
+  { name:'32 Etiquetas Termoadhesivas con nombre',  price:12999, slug:'termo-32',               img:'/assets/img/termo-nombre.jpg',       type:1, units:32,  cat:'termo' },
+  { name:'49 Etiquetas Termoadhesivas con nombre',  price:18990, slug:'termo-49',               img:'/assets/img/termo-nombre.jpg',       type:2, units:49,  cat:'termo' },
+  { name:'Pulseras Cinta Fluor x30',                price:19900, slug:'pulseras-fluor',         img:'/assets/img/pulseras.png',           type:3, units:30,  cat:'pulseras' },
+];
+
+// SKU activo del editor (o null = usar los valores por defecto del type)
+function curPrice(){ return state.sku ? state.sku.price : PRODUCTS[state.productIdx].price; }
+function curUnits(){ return state.sku ? state.sku.units : PRODUCTS[state.productIdx].unitsPerSet; }
+function curName(){  return state.sku ? state.sku.name  : PRODUCTS[state.productIdx].name; }
+function curSlug(){  return state.sku ? state.sku.slug  : PRODUCTS[state.productIdx].slug; }
+function curUnitLabel(){ return PRODUCTS[state.productIdx].unitLabel; }
+
+function openSku(i) {
+  state.sku = CATALOG[i];
+  showPage('editor');
+  switchProduct(state.sku.type);
+}
+
 // Mockup foto real por producto. `region` = zona de impresión (fracciones de la
 // imagen) donde va el diseño; `tint` (pulsera) = zona de la cinta a colorear.
 // Ajustables a ojo: son solo números 0..1.
 const PHOTO_MOCKUPS = {
-  falletina: { src:'/assets/mockups/falletina.png', region:{x:0.30,y:0.415,w:0.42,h:0.15}, tint:null },
+  falletina: { src:'/assets/mockups/falletina.png', region:{x:0.30,y:0.415,w:0.42,h:0.15}, tint:{x:0,y:0.398,w:1,h:0.198} },
   termo32:   { src:'/assets/mockups/termo32.png',   region:{x:0.335,y:0.462,w:0.33,h:0.085}, border:{x:0.31,y:0.445,w:0.38,h:0.12},  tint:null },
   termo49:   { src:'/assets/mockups/termo49.png',   region:{x:0.325,y:0.45,w:0.35,h:0.135}, border:{x:0.30,y:0.425,w:0.40,h:0.185}, tint:null },
   pulsera:   { src:'/assets/mockups/pulsera.png',   region:{x:0.33,y:0.45,w:0.34,h:0.10}, tint:{x:0,y:0.43,w:1,h:0.145} },
@@ -1041,11 +1077,12 @@ async function composePhotoMockup(p, cv) {
   ctx.drawImage(base, 0, 0, W, H);
 
   const isPulsera = p.id === 'pulsera';
-  if (cfg.tint && isPulsera) {
+  const tintColor = isPulsera ? state.pulseraColor : (p.id === 'falletina' ? state.cintaColor : null);
+  if (cfg.tint && tintColor && tintColor.toUpperCase() !== '#FFFFFF') {
     const t = cfg.tint;
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = state.pulseraColor || '#FF7A00';
+    ctx.fillStyle = tintColor;
     ctx.fillRect(t.x*W, t.y*H, t.w*W, t.h*H);
     ctx.restore();
   }
@@ -1154,8 +1191,16 @@ const PULSERA_COLORS = [
   { hex:'#7CB342', label:'Verde', textColor:'#fff' },
   { hex:'#EC008C', label:'Fucsia', textColor:'#fff' },
 ];
+const CINTA_COLORS = [
+  { hex:'#FFFFFF', label:'Blanco',   textColor:'#1A1A1A' },
+  { hex:'#C9A0DC', label:'Lila',     textColor:'#fff' },
+  { hex:'#F49CB6', label:'Rosa',     textColor:'#fff' },
+  { hex:'#A5D66E', label:'Verde',    textColor:'#1A1A1A' },
+  { hex:'#7FCDEE', label:'Celeste',  textColor:'#1A1A1A' },
+  { hex:'#F4D35E', label:'Amarillo', textColor:'#1A1A1A' },
+];
 
-let state = { productIdx:0, text:'', font:'Pacifico', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', icon:'', iconSrc:null, position:'left', qty:1 };
+let state = { productIdx:0, text:'', font:'Pacifico', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', qty:1 };
 let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
 
 /* ============================================================
@@ -1168,6 +1213,7 @@ function init() {
   buildColorRow();
   buildBorderColorRow();
   buildPulseraColorRow();
+  buildCintaColorRow();
   buildPositionRow();
   buildIconGrid();
   switchProduct(0);
@@ -1175,16 +1221,15 @@ function init() {
 
 function buildProdCards() {
   const grid = document.getElementById('prodGrid');
-  PROD_CARDS.forEach(c => {
+  grid.innerHTML = '';
+  CATALOG.forEach((c, i) => {
     const div = document.createElement('div');
     div.className = 'prod-card';
-    div.onclick = () => openEditor(c.prodIdx);
+    div.onclick = () => openSku(i);
     div.innerHTML = `
       <div class="prod-img" style="height:200px;"><img src="${c.img}" alt="${c.name}" loading="lazy" style="width:100%;height:100%;object-fit:cover;"></div>
       <div class="prod-info">
-        ${c.badge ? `<span class="prod-badge ${c.badgeClass}">${c.badge}</span>` : ''}
         <div class="prod-name">${c.name}</div>
-        ${c.oldPrice ? `<div class="prod-price-old">$${c.oldPrice.toLocaleString('es-AR')}</div>` : ''}
         <div class="prod-price">$<span>${c.price.toLocaleString('es-AR')}</span></div>
         <div class="prod-mp">💳 Mercado Pago</div>
         <button class="prod-btn">✏️ Personalizar y comprar</button>
@@ -1315,6 +1360,20 @@ function renderFontGrid() { document.querySelectorAll('#fontGrid .font-btn').for
 function renderColorRow() { document.querySelectorAll('#colorRow .color-dot').forEach((d,i) => { d.className='color-dot'+(TEXT_COLORS[i].hex===state.textColor?' active':''); }); }
 function renderBorderRow() { document.querySelectorAll('#borderColorRow .border-chip').forEach((c,i) => { c.className='border-chip'+(BORDER_COLORS[i].hex===state.borderColor?' active':''); }); }
 function renderPulseraRow() { document.querySelectorAll('#pulseraColorRow .pcolor-btn').forEach((b,i) => { b.className='pcolor-btn'+(PULSERA_COLORS[i].hex===state.pulseraColor?' active':''); }); }
+function buildCintaColorRow() {
+  const row = document.getElementById('cintaColorRow');
+  if (!row) return;
+  row.innerHTML = '';
+  CINTA_COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'pcolor-btn' + (c.hex===state.cintaColor?' active':'');
+    btn.style.background = c.hex; btn.style.color = c.textColor; btn.style.border = '1px solid #e0e0e0';
+    btn.textContent = c.label;
+    btn.onclick = () => { state.cintaColor=c.hex; renderCintaRow(); updatePreview(); };
+    row.appendChild(btn);
+  });
+}
+function renderCintaRow() { document.querySelectorAll('#cintaColorRow .pcolor-btn').forEach((b,i) => { b.className='pcolor-btn'+(CINTA_COLORS[i].hex===state.cintaColor?' active':''); }); }
 function renderPositionRow() { document.querySelectorAll('#posRow .pos-btn').forEach((b,i) => { const positions=['left','right','top','bottom','none']; b.className='pos-btn'+(positions[i]===state.position?' active':''); }); }
 function renderProdTabs() { document.querySelectorAll('.ptab').forEach((t,i) => { t.className='ptab'+(i===state.productIdx?' active':''); }); }
 
@@ -1332,10 +1391,11 @@ function switchProduct(idx) {
   document.getElementById(p.mockupId).classList.remove('sn-hidden');
   document.getElementById('mockupLabel').textContent = p.mockupLabel;
   document.getElementById('sizeNote').textContent = p.sizeNote;
-  document.getElementById('editorTitle').textContent = '✏️ ' + p.name;
+  document.getElementById('editorTitle').textContent = '✏️ ' + curName();
   tog('textColorField', !p.hasPulseraColor);
   tog('borderColorField', p.hasBorderColor);
   tog('pulseraColorField', p.hasPulseraColor);
+  tog('cintaColorField', p.id==='falletina');
   tog('posField', p.hasPosition);
   // Info grid
   const ig = document.getElementById('infoGrid2');
@@ -1346,11 +1406,11 @@ function switchProduct(idx) {
     item.innerHTML = `<span class="info-lbl">${lbl}:&nbsp;</span><strong>${val}</strong>`;
     ig.appendChild(item);
   });
-  document.getElementById('priceBase2').textContent = p.price.toLocaleString('es-AR');
-  document.getElementById('priceUnit2').textContent = 'Set de ' + p.unitsPerSet + ' ' + p.unitLabel + ':';
-  document.getElementById('priceTotal2').textContent = p.price.toLocaleString('es-AR');
+  document.getElementById('priceBase2').textContent = curPrice().toLocaleString('es-AR');
+  document.getElementById('priceUnit2').textContent = 'Set de ' + curUnits() + ' ' + curUnitLabel() + ':';
+  document.getElementById('priceTotal2').textContent = curPrice().toLocaleString('es-AR');
   document.getElementById('qtyDisplay').textContent = 1;
-  document.getElementById('qtySub').innerHTML = '× '+p.unitsPerSet+' '+p.unitLabel+' = <strong id="totalUnits">'+p.unitsPerSet+'</strong>';
+  document.getElementById('qtySub').innerHTML = '× '+curUnits()+' '+curUnitLabel()+' = <strong id="totalUnits">'+curUnits()+'</strong>';
   updatePreview();
 }
 
@@ -1439,11 +1499,10 @@ function updatePreview() {
    QTY
    ============================================================ */
 function changeQty(delta) {
-  const p = PRODUCTS[state.productIdx];
   state.qty = Math.max(1, Math.min(10, state.qty + delta));
   document.getElementById('qtyDisplay').textContent = state.qty;
-  document.getElementById('qtySub').innerHTML = '× '+p.unitsPerSet+' '+p.unitLabel+' = <strong id="totalUnits">'+(state.qty*p.unitsPerSet)+'</strong>';
-  document.getElementById('priceTotal2').textContent = (state.qty*p.price).toLocaleString('es-AR');
+  document.getElementById('qtySub').innerHTML = '× '+curUnits()+' '+curUnitLabel()+' = <strong id="totalUnits">'+(state.qty*curUnits())+'</strong>';
+  document.getElementById('priceTotal2').textContent = (state.qty*curPrice()).toLocaleString('es-AR');
 }
 
 /* ============================================================
@@ -1467,8 +1526,8 @@ async function addToCart() {
 
   const item = {
     id: Date.now(),
-    productSlug: p.slug,
-    product: p.name,
+    productSlug: curSlug(),
+    product: curName(),
     text: state.text || '(sin texto)',
     font: state.font,
     textColor: state.textColor,
@@ -1476,12 +1535,12 @@ async function addToCart() {
     iconIdx: (state.icon && state.icon.indexOf('real_') === 0) ? parseInt(state.icon.replace('real_', '')) : null,
     thumbnail: thumbnail,
     position: state.position,
-    borderColor: p.hasBorderColor ? state.borderColor : null,
+    borderColor: p.hasBorderColor ? state.borderColor : (p.id==='falletina' ? state.cintaColor : null),
     pulseraColor: p.hasPulseraColor ? state.pulseraColor : null,
     qty: state.qty,
-    price: state.qty * p.price,
-    unitsPerSet: p.unitsPerSet,
-    unitLabel: p.unitLabel,
+    price: state.qty * curPrice(),
+    unitsPerSet: curUnits(),
+    unitLabel: curUnitLabel(),
   };
   cartItems.push(item);
   updateCartUI();
@@ -1540,6 +1599,7 @@ function showPage(name) {
 }
 
 function openEditor(prodIdx) {
+  state.sku = null;
   showPage('editor');
   switchProduct(prodIdx);
 }
