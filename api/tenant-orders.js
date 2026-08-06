@@ -29,6 +29,15 @@ async function signThumb(v) {
   }
   return v;
 }
+// Deriva la ruta del archivo de impresión (<idx>-print.jpg) desde la miniatura y la firma.
+async function signPrint(v) {
+  if (typeof v !== 'string' || !v.startsWith('storage:designs/')) return null;
+  const path = v.slice('storage:designs/'.length);
+  const printPath = path.replace(/\/([^/]+)\.[a-zA-Z0-9]+$/, '/$1-print.jpg');
+  if (printPath === path) return null;
+  const { data } = await supabase.storage.from('designs').createSignedUrl(printPath, 3600);
+  return data?.signedUrl || null;
+}
 
 module.exports = async function handler(req, res) {
   applyCors(req, res, 'GET, OPTIONS');
@@ -41,7 +50,7 @@ module.exports = async function handler(req, res) {
   try {
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('id, order_number, buyer_name, buyer_email, total, status, created_at, order_items(product_name, design_text, design_thumbnail_url, quantity)')
+      .select('id, order_number, buyer_name, buyer_email, buyer_phone, shipping_method, shipping_address, shipping_city, shipping_zip, shipping_province, shipping_cost, tracking_number, mp_status, mp_payment_id, total, status, created_at, order_items(product_name, product_slug, design_text, design_font, design_border_color, design_thumbnail_url, quantity, units_total, unit_price, subtotal)')
       .eq('tenant_id', ctx.tenantId)
       .order('created_at', { ascending: false })
       .limit(300);
@@ -50,7 +59,9 @@ module.exports = async function handler(req, res) {
     await Promise.all((orders || []).map(async (o) => {
       if (Array.isArray(o.order_items)) {
         await Promise.all(o.order_items.map(async (it) => {
-          it.design_thumbnail_url = await signThumb(it.design_thumbnail_url);
+          const raw = it.design_thumbnail_url;
+          it.design_thumbnail_url = await signThumb(raw);
+          it.design_print_url = await signPrint(raw);
         }));
       }
     }));

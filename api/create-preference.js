@@ -92,11 +92,13 @@ module.exports = async function handler(req, res) {
 
     // Mover miniaturas base64 al bucket privado 'designs' (F7). Si falla, se
     // conserva el data-URI para no romper el checkout.
-    const rows = await Promise.all(orderItems.map(async (item, idx) => ({
-      ...item,
-      order_id: order.id,
-      design_thumbnail_url: await storeThumbnail(tenant.id, order.id, idx, item.design_thumbnail_url),
-    })));
+    const rows = await Promise.all(orderItems.map(async (item, idx) => {
+      const { _printFile, ...rest } = item;
+      const thumb = await storeThumbnail(tenant.id, order.id, idx, item.design_thumbnail_url);
+      // Archivo de impresión a tamaño real → ruta derivable "<idx>-print.jpg" (sin columna nueva)
+      if (_printFile) await storeThumbnail(tenant.id, order.id, idx + '-print', _printFile);
+      return { ...rest, order_id: order.id, design_thumbnail_url: thumb };
+    }));
     const { error: itemsError } = await supabase.from('order_items').insert(rows);
     if (itemsError) throw itemsError;
 
@@ -219,6 +221,7 @@ async function buildOrderItems(cartItems, tenantId) {
     borderColor: cleanString(item.borderColor, 20),
     pulseraColor: cleanString(item.pulseraColor, 20),
     thumbnailUrl: cleanString(item.thumbnailUrl, 250000),
+    printFile: cleanString(item.printFile, 600000),
     qty: Math.max(1, Math.min(10, Number.parseInt(item.qty, 10) || 1)),
   }));
 
@@ -242,6 +245,7 @@ async function buildOrderItems(cartItems, tenantId) {
       design_border_color: item.borderColor,
       design_pulsera_color: item.pulseraColor,
       design_thumbnail_url: item.thumbnailUrl,
+      _printFile: item.printFile,
       quantity: item.qty,
       units_total: item.qty * Number(product.units_per_set || 1),
       unit_price: unitPrice,

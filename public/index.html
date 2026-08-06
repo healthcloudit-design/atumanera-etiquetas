@@ -41,7 +41,7 @@ img{max-width:100%;}
 .nav-item{padding:8px 12px;font-size:13px;font-weight:700;color:#555;border-radius:8px;cursor:pointer;transition:all 0.15s;position:relative;}
 .nav-item:hover{color:#00AEEF;background:#f0faff;}
 .nav-item.active{color:#00AEEF;}
-.nav-dropdown{position:absolute;top:100%;left:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:220px;display:none;flex-direction:column;z-index:200;overflow:hidden;margin-top:4px;}
+.nav-dropdown{position:absolute;top:100%;left:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:220px;display:none;flex-direction:column;z-index:200;overflow:hidden;margin-top:0;}
 .nav-item:hover .nav-dropdown{display:flex;}
 .nav-dd-item{padding:10px 16px;font-size:13px;font-weight:600;color:#555;cursor:pointer;transition:background 0.1s;}
 .nav-dd-item:hover{background:#f0faff;color:#00AEEF;}
@@ -281,7 +281,6 @@ img{max-width:100%;}
 /* El editor muestra el mockup sobre la FOTO real: ocultamos las etiquetas CSS */
 #mockupCard .label-falletina,#mockupCard .label-termo-chica,#mockupCard .label-termo-grande,#mockupCard .label-pulsera-wrap{display:none !important;}
 #photoMockup{width:100%;max-width:460px;display:block;margin:0 auto;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);}
-#prodTabs{display:none;}
 /* LABEL MOCKUPS */
 .label-falletina{position:relative;width:320px;height:133px;}
 .lf-fabric{position:absolute;inset:0;border-radius:5px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.18);}
@@ -382,11 +381,7 @@ img{max-width:100%;}
 <!-- HEADER -->
 <div class="header">
   <div class="logo-wrap" onclick="showPage('home')">
-    <div class="logo-circles">
-      <div class="lc1"></div><div class="lc2"></div>
-      <div class="lc3"></div><div class="lc4"></div>
-    </div>
-    <div class="logo-text">a tu manera<br><span>gráfica</span></div>
+    <img src="/assets/img/logo-header.png" alt="A tu manera Gráfica" style="height:42px;width:auto;display:block;">
   </div>
   <nav class="nav">
     <div class="nav-item" onclick="showPage('home')">Inicio</div>
@@ -1088,6 +1083,7 @@ async function composePhotoMockup(p, cv) {
   }
 
   const rx = cfg.region.x*W, ry = cfg.region.y*H, rw = cfg.region.w*W, rh = cfg.region.h*H;
+  const tColorForce = '#000000'; // el texto siempre va en negro (spec del producto)
 
   // Borde "camino de hormiga" (punteado) para termoadhesivas, dentro de la etiqueta
   if (p.hasBorderColor && cfg.border) {
@@ -1100,7 +1096,7 @@ async function composePhotoMockup(p, cv) {
     ctx.restore();
   }
 
-  const tColor = isPulsera ? '#000000' : state.textColor;
+  const tColor = tColorForce;
   const font = state.font || 'Nunito';
   try { await document.fonts.load(`700 40px "${font}"`); } catch(e) {}
 
@@ -1111,7 +1107,7 @@ async function composePhotoMockup(p, cv) {
       const ic = await loadImgCached(state.iconSrc);
       const isz = rh * 0.98;
       ctx.drawImage(ic, rx, ry + (rh - isz)/2, isz, isz);
-      const gap = rw * 0.05;
+      const gap = rw * 0.015;
       textX = rx + isz + gap; textW = rw - isz - gap;
     } catch(e) {}
   }
@@ -1149,6 +1145,55 @@ async function renderPhotoMockup(p) {   // miniatura para el carrito
   const cv = document.createElement('canvas');
   try { await composePhotoMockup(p, cv); return cv.toDataURL('image/jpeg', 0.92); }
   catch (e) { console.warn('mockup foto', e); return null; }
+}
+
+// Área de impresión REAL por tipo (cm). Para el archivo listo para producción.
+const PRINT_SPECS = {
+  falletina: { w:4.5, h:1.5 },
+  termo32:   { w:4.5, h:1.15 },
+  termo49:   { w:6,   h:2.5 },
+  pulsera:   { w:12,  h:2.5 },
+};
+
+// Diseño (capa 2) SOLO, al tamaño físico real del área de impresión, negro sobre
+// blanco — es el archivo que la vendedora usa para producir.
+async function renderPrintReady(p) {
+  const spec = PRINT_SPECS[p.id]; if (!spec) return null;
+  const DPI = 300;
+  const W = Math.round(spec.w/2.54*DPI), H = Math.round(spec.h/2.54*DPI);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const pad = H*0.06, rx = pad, ry = pad, rw = W - pad*2, rh = H - pad*2;
+  const isPulsera = p.id === 'pulsera';
+  let textX = rx, textW = rw;
+  if (!isPulsera && state.position !== 'none' && state.iconSrc) {
+    try {
+      const ic = await loadImgCached(state.iconSrc);
+      const isz = rh*0.98;
+      ctx.drawImage(ic, rx, ry + (rh-isz)/2, isz, isz);
+      const gap = rw*0.015;
+      textX = rx + isz + gap; textW = rw - isz - gap;
+    } catch(e) {}
+  }
+  const font = state.font || 'Nunito';
+  try { await document.fonts.load(`700 80px "${font}"`); } catch(e) {}
+  const words = (state.text || '').trim().split(/\s+/).filter(Boolean).slice(0, 4);
+  let lines;
+  if (words.length <= 2) lines = [words.join(' ')];
+  else if (words.length === 3) lines = [words[0]+' '+words[1], words[2]];
+  else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000000';
+  let size = Math.floor(rh / (lines.length > 1 ? 2.3 : 1.15));
+  for (; size > 8; size--) {
+    ctx.font = `700 ${size}px "${font}", cursive`;
+    const mw = Math.max(...lines.map(l => ctx.measureText(l).width));
+    if (mw <= textW*0.98 && size*lines.length*1.22 <= rh) break;
+  }
+  ctx.font = `700 ${size}px "${font}", cursive`;
+  const cx = textX + textW/2, lh = size*1.2, sy = ry + rh/2 - (lines.length-1)*lh/2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, sy + i*lh));
+  return cv.toDataURL('image/jpeg', 0.95);
 }
 
 const PROD_CARDS = [
@@ -1244,7 +1289,7 @@ function buildProdTabs() {
     const tab = document.createElement('div');
     tab.className = 'ptab' + (i===0?' active':'');
     tab.innerHTML = `<span class="pt-icon">${p.icon}</span><span>${p.name}</span><span class="pt-price">$${p.price.toLocaleString('es-AR')}</span>`;
-    tab.onclick = () => switchProduct(i);
+    tab.onclick = () => { state.sku = null; switchProduct(i); };
     tabs.appendChild(tab);
   });
 }
@@ -1392,7 +1437,7 @@ function switchProduct(idx) {
   document.getElementById('mockupLabel').textContent = p.mockupLabel;
   document.getElementById('sizeNote').textContent = p.sizeNote;
   document.getElementById('editorTitle').textContent = '✏️ ' + curName();
-  tog('textColorField', !p.hasPulseraColor);
+  tog('textColorField', false);
   tog('borderColorField', p.hasBorderColor);
   tog('pulseraColorField', p.hasPulseraColor);
   tog('cintaColorField', p.id==='falletina');
@@ -1523,6 +1568,8 @@ async function addToCart() {
       thumbnail = canvas.toDataURL('image/jpeg', 0.9);
     } catch(e) { console.warn('Miniatura no disponible:', e); }
   }
+  let printFile = null;
+  try { printFile = await renderPrintReady(p); } catch(e) { console.warn('printFile:', e); }
 
   const item = {
     id: Date.now(),
@@ -1534,6 +1581,7 @@ async function addToCart() {
     icon: state.iconSrc,
     iconIdx: (state.icon && state.icon.indexOf('real_') === 0) ? parseInt(state.icon.replace('real_', '')) : null,
     thumbnail: thumbnail,
+    printFile: printFile,
     position: state.position,
     borderColor: p.hasBorderColor ? state.borderColor : (p.id==='falletina' ? state.cintaColor : null),
     pulseraColor: p.hasPulseraColor ? state.pulseraColor : null,
@@ -1889,6 +1937,7 @@ async function submitCheckout() {
     textColor: item.textColor || '#1A1A1A',
     iconIndex: item.iconIdx ?? null,
     thumbnailUrl: item.thumbnail ?? null,
+    printFile: item.printFile ?? null,
     position: item.position || 'left',
     borderColor: item.borderColor || null,
     pulseraColor: item.pulseraColor || null,

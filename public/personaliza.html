@@ -54,6 +54,8 @@
   .priceEdit{width:110px;display:inline-block}
   .lb{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:60;padding:20px;cursor:zoom-out}
   .lb.show{display:flex} .lb img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:0 10px 50px #000a}
+  .odgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:13.5px}
+  .odk{font-size:11px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 </style>
 </head>
 <body>
@@ -166,6 +168,12 @@
 
 <div id="toast" class="toast"></div>
 <div id="lb" class="lb" onclick="this.classList.remove('show')"><img alt="Diseño"></div>
+<div id="odModal" class="modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="card" style="max-width:780px;width:100%;max-height:90vh;overflow:auto">
+    <div id="odBody"></div>
+    <div style="text-align:right;margin-top:14px"><button class="btn ghost sm" onclick="$('odModal').classList.remove('show')">Cerrar</button></div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -275,7 +283,29 @@ function thumbCell(o){const it=(o.order_items||[]).find(x=>x.design_thumbnail_ur
 function lightbox(url){const m=$('lb');m.querySelector('img').src=url;m.classList.add('show');}
 function tnRenderOrders(){const b=$('ordersBody');const os=window._orders||[];b.innerHTML=os.length?'':'<tr><td colspan="6" class="muted">Sin pedidos todavía.</td></tr>';
   os.forEach(o=>{const tr=document.createElement('tr');const sel=myRole==='admin'?`<select onchange="tnSetStatus('${o.id}',this.value)" style="width:auto">${STATES.map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATE_LABELS[s]||s}</option>`).join('')}</select>`:`<span class="pill ${o.status==='paid'?'on':'off'}">${esc(STATE_LABELS[o.status]||o.status)}</span>`;
-    tr.innerHTML=`<td>#${o.order_number}</td><td>${esc(o.buyer_name)}</td><td>${thumbCell(o)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
+    tr.innerHTML=`<td><a onclick="openOrderDetail('${o.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${o.order_number}</a></td><td>${esc(o.buyer_name)}</td><td>${thumbCell(o)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
+const MP_LABELS={approved:'Aprobado',pending:'Pendiente',in_process:'En proceso',rejected:'Rechazado',cancelled:'Cancelado',refunded:'Reintegrado'};
+function openOrderDetail(id){
+  const o=(window._orders||[]).find(x=>x.id===id); if(!o) return;
+  const items=o.order_items||[];
+  const rows=items.map(it=>`<tr>
+    <td>${it.design_thumbnail_url?`<img src="${esc(it.design_thumbnail_url)}" onclick="lightbox(this.src)" style="width:54px;height:54px;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid var(--line)">`:'<span class="muted">—</span>'}</td>
+    <td>${esc(it.product_name)}<div class="muted" style="font-size:11px">SKU: ${esc(it.product_slug||'—')}</div><div class="muted" style="font-size:11px">Texto: "${esc(it.design_text||'')}"${it.design_font?' · '+esc(it.design_font):''}</div></td>
+    <td>${it.quantity}</td>
+    <td>${money(it.subtotal)}</td>
+    <td style="white-space:nowrap">${it.design_print_url?`<a class="btn sm" href="${esc(it.design_print_url)}" target="_blank" rel="noopener" title="Archivo listo para imprimir, tamaño real">⬇ Diseño</a> `:''}${it.design_thumbnail_url?`<a class="btn sec sm" href="${esc(it.design_thumbnail_url)}" target="_blank" rel="noopener">Mockup</a>`:''}</td></tr>`).join('');
+  const ship=o.shipping_method==='retiro'?'Retiro en local':'Envío Andreani';
+  const addr=[o.shipping_address,o.shipping_city,o.shipping_province,o.shipping_zip].filter(Boolean).join(', ');
+  $('odBody').innerHTML=`<h3 style="margin:0 0 10px">Pedido #${o.order_number} <span class="muted" style="font-size:12px;font-weight:400">· ${(o.created_at||'').slice(0,10)}</span></h3>
+    <div class="odgrid">
+      <div><div class="odk">Comprador</div>${esc(o.buyer_name)}<br><span class="muted">${esc(o.buyer_email)}${o.buyer_phone?' · '+esc(o.buyer_phone):''}</span></div>
+      <div><div class="odk">Pago</div>Mercado Pago · <strong>${esc(MP_LABELS[o.mp_status]||o.mp_status||'—')}</strong><br><span class="muted">Estado del pedido: ${esc(STATE_LABELS[o.status]||o.status)}</span></div>
+      <div><div class="odk">Envío</div>${ship}${addr?'<br><span class="muted">'+esc(addr)+'</span>':''}${o.tracking_number?'<br><span class="muted">Tracking: '+esc(o.tracking_number)+'</span>':''}</div>
+      <div><div class="odk">Total</div><strong>${money(o.total)}</strong>${o.shipping_cost?'<br><span class="muted">Envío: '+money(o.shipping_cost)+'</span>':''}</div>
+    </div>
+    <table style="margin-top:14px"><thead><tr><th>Diseño</th><th>Producto / SKU</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  $('odModal').classList.add('show');
+}
 async function tnSetStatus(id,status){try{const{error}=await sb.from('orders').update({status}).eq('id',id);if(error)throw error;const o=(window._orders||[]).find(x=>x.id===id);if(o)o.status=status;toast('Pedido actualizado');}catch(e){toast(e.message,false);}}
 function tnRenderProducts(){const b=$('productsBody');const ps=window._products||[];b.innerHTML=ps.length?'':'<tr><td colspan="4" class="muted">Sin productos.</td></tr>';
   ps.forEach(p=>{const tr=document.createElement('tr');const canEdit=myRole==='admin';
