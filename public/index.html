@@ -1111,18 +1111,6 @@ async function composePhotoMockup(p, cv) {
   const font = state.font || 'Nunito';
   try { await document.fonts.load(`700 40px "${font}"`); } catch(e) {}
 
-  // Dibujo o logo a la izquierda (no en pulsera)
-  let textX = rx, textW = rw;
-  if (!isPulsera && state.position !== 'none' && state.iconSrc) {
-    try {
-      const ic = await loadImgCached(state.iconSrc);
-      const isz = rh * 0.98;
-      ctx.drawImage(ic, rx, ry + (rh - isz)/2, isz, isz);
-      const gap = rw * 0.004;
-      textX = rx + isz + gap; textW = rw - isz - gap;
-    } catch(e) {}
-  }
-
   // Texto: máx 4 palabras en hasta 2 líneas
   const words = (state.text || '').trim().split(/\s+/).filter(Boolean).slice(0, 4);
   let lines;
@@ -1130,15 +1118,29 @@ async function composePhotoMockup(p, cv) {
   else if (words.length === 3) lines = [words[0]+' '+words[1], words[2]];
   else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];  // máx 2 palabras por línea
 
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = tColor;
+  const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
+  const iconW = hasIcon ? rh*0.92 : 0;
+  const gapIcon = hasIcon ? rw*0.02 : 0;
+  const availW = rw - iconW - gapIcon;
+
+  ctx.textBaseline = 'middle'; ctx.fillStyle = tColor;
   let size = Math.floor(rh / (lines.length > 1 ? 2.3 : 1.15));
   for (; size > 8; size--) {
     ctx.font = `700 ${size}px "${font}", cursive`;
     const maxW = Math.max(...lines.map(l => ctx.measureText(l).width));
-    if (maxW <= textW * 0.98 && size * lines.length * 1.22 <= rh) break;
+    if (maxW <= availW * 0.98 && size * lines.length * 1.22 <= rh) break;
   }
   ctx.font = `700 ${size}px "${font}", cursive`;
-  const cx = textX + textW/2;
+  const textBlockW = Math.max(...lines.map(l => ctx.measureText(l).width));
+
+  // Centrar el GRUPO (dibujo + texto) juntos → el dibujo queda pegado al texto
+  const totalW = iconW + gapIcon + textBlockW;
+  const groupX = rx + Math.max(0, (rw - totalW)/2);
+  if (hasIcon) {
+    try { const ic = await loadImgCached(state.iconSrc); ctx.drawImage(ic, groupX, ry + (rh - iconW)/2, iconW, iconW); } catch(e) {}
+  }
+  ctx.textAlign = 'center';
+  const cx = groupX + iconW + gapIcon + textBlockW/2;
   const lh = size * 1.2;
   const startY = ry + rh/2 - (lines.length - 1) * lh/2;
   lines.forEach((l, i) => ctx.fillText(l, cx, startY + i*lh));
@@ -1177,16 +1179,6 @@ async function renderPrintReady(p) {
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   const pad = H*0.06, rx = pad, ry = pad, rw = W - pad*2, rh = H - pad*2;
   const isPulsera = p.id === 'pulsera';
-  let textX = rx, textW = rw;
-  if (!isPulsera && state.position !== 'none' && state.iconSrc) {
-    try {
-      const ic = await loadImgCached(state.iconSrc);
-      const isz = rh*0.98;
-      ctx.drawImage(ic, rx, ry + (rh-isz)/2, isz, isz);
-      const gap = rw*0.004;
-      textX = rx + isz + gap; textW = rw - isz - gap;
-    } catch(e) {}
-  }
   const font = state.font || 'Nunito';
   try { await document.fonts.load(`700 80px "${font}"`); } catch(e) {}
   const words = (state.text || '').trim().split(/\s+/).filter(Boolean).slice(0, 4);
@@ -1194,15 +1186,28 @@ async function renderPrintReady(p) {
   if (words.length <= 2) lines = [words.join(' ')];
   else if (words.length === 3) lines = [words[0]+' '+words[1], words[2]];
   else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000000';
+
+  const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
+  const iconW = hasIcon ? rh*0.92 : 0;
+  const gapIcon = hasIcon ? rw*0.02 : 0;
+  const availW = rw - iconW - gapIcon;
+
+  ctx.textBaseline = 'middle'; ctx.fillStyle = '#000000';
   let size = Math.floor(rh / (lines.length > 1 ? 2.3 : 1.15));
   for (; size > 8; size--) {
     ctx.font = `700 ${size}px "${font}", cursive`;
     const mw = Math.max(...lines.map(l => ctx.measureText(l).width));
-    if (mw <= textW*0.98 && size*lines.length*1.22 <= rh) break;
+    if (mw <= availW*0.98 && size*lines.length*1.22 <= rh) break;
   }
   ctx.font = `700 ${size}px "${font}", cursive`;
-  const cx = textX + textW/2, lh = size*1.2, sy = ry + rh/2 - (lines.length-1)*lh/2;
+  const textBlockW = Math.max(...lines.map(l => ctx.measureText(l).width));
+  const totalW = iconW + gapIcon + textBlockW;
+  const groupX = rx + Math.max(0, (rw - totalW)/2);
+  if (hasIcon) {
+    try { const ic = await loadImgCached(state.iconSrc); ctx.drawImage(ic, groupX, ry + (rh-iconW)/2, iconW, iconW); } catch(e) {}
+  }
+  ctx.textAlign = 'center';
+  const cx = groupX + iconW + gapIcon + textBlockW/2, lh = size*1.2, sy = ry + rh/2 - (lines.length-1)*lh/2;
   lines.forEach((l, i) => ctx.fillText(l, cx, sy + i*lh));
   return cv.toDataURL('image/jpeg', 0.95);
 }
