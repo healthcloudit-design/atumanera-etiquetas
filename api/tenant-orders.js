@@ -33,7 +33,7 @@ async function signThumb(v) {
 async function signPrint(v) {
   if (typeof v !== 'string' || !v.startsWith('storage:designs/')) return null;
   const path = v.slice('storage:designs/'.length);
-  const printPath = path.replace(/\/([^/]+)\.[a-zA-Z0-9]+$/, '/$1-print.jpg');
+  const printPath = path.replace(/\/([^/]+)\.([a-zA-Z0-9]+)$/, '/$1-print.$2');
   if (printPath === path) return null;
   const { data } = await supabase.storage.from('designs').createSignedUrl(printPath, 3600);
   return data?.signedUrl || null;
