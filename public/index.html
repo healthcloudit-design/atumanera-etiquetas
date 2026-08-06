@@ -1037,10 +1037,10 @@ function openSku(i) {
 // imagen) donde va el diseño; `tint` (pulsera) = zona de la cinta a colorear.
 // Ajustables a ojo: son solo números 0..1.
 const PHOTO_MOCKUPS = {
-  falletina: { src:'/assets/mockups/falletina.png', region:{x:0.30,y:0.415,w:0.42,h:0.15}, tint:{x:0,y:0.398,w:1,h:0.198} },
-  termo32:   { src:'/assets/mockups/termo32.png',   region:{x:0.335,y:0.482,w:0.33,h:0.085}, border:{x:0.31,y:0.465,w:0.38,h:0.12},  tint:null },
-  termo49:   { src:'/assets/mockups/termo49.png',   region:{x:0.325,y:0.435,w:0.35,h:0.135}, border:{x:0.30,y:0.41,w:0.40,h:0.185}, tint:null },
-  pulsera:   { src:'/assets/mockups/pulsera.png',   region:{x:0.33,y:0.45,w:0.34,h:0.10}, tint:{x:0,y:0.43,w:1,h:0.145} },
+  falletina: { src:'/assets/mockups/falletina.png', region:{x:0.30,y:0.415,w:0.42,h:0.15}, printArea:{x:0.28,y:0.435,w:0.44,h:0.125}, tint:{x:0,y:0.398,w:1,h:0.198} },
+  termo32:   { src:'/assets/mockups/termo32.png',   region:{x:0.335,y:0.482,w:0.33,h:0.085}, border:{x:0.31,y:0.465,w:0.38,h:0.12},  printArea:{x:0.30,y:0.458,w:0.40,h:0.135}, tint:null },
+  termo49:   { src:'/assets/mockups/termo49.png',   region:{x:0.325,y:0.435,w:0.35,h:0.135}, border:{x:0.30,y:0.41,w:0.40,h:0.185}, printArea:{x:0.29,y:0.402,w:0.42,h:0.20}, tint:null },
+  pulsera:   { src:'/assets/mockups/pulsera.png',   region:{x:0.33,y:0.45,w:0.34,h:0.10}, printArea:{x:0.28,y:0.44,w:0.44,h:0.115}, tint:{x:0,y:0.43,w:1,h:0.145} },
 };
 
 function loadImg(src) {
@@ -1085,6 +1085,17 @@ async function composePhotoMockup(p, cv) {
   const rx = cfg.region.x*W, ry = cfg.region.y*H, rw = cfg.region.w*W, rh = cfg.region.h*H;
   const tColorForce = '#000000'; // el texto siempre va en negro (spec del producto)
 
+  // Guía del área de impresión REAL (gris punteado) en todos los modelos
+  if (cfg.printArea) {
+    const g = cfg.printArea;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(110,110,110,0.6)';
+    ctx.lineWidth = Math.max(1.5, H*0.0035);
+    ctx.setLineDash([H*0.012, H*0.009]);
+    ctx.strokeRect(g.x*W, g.y*H, g.w*W, g.h*H);
+    ctx.restore();
+  }
+
   // Borde "camino de hormiga" (punteado) para termoadhesivas, dentro de la etiqueta
   if (p.hasBorderColor && cfg.border) {
     const b = cfg.border;
@@ -1107,7 +1118,7 @@ async function composePhotoMockup(p, cv) {
       const ic = await loadImgCached(state.iconSrc);
       const isz = rh * 0.98;
       ctx.drawImage(ic, rx, ry + (rh - isz)/2, isz, isz);
-      const gap = rw * 0.015;
+      const gap = rw * 0.004;
       textX = rx + isz + gap; textW = rw - isz - gap;
     } catch(e) {}
   }
@@ -1172,7 +1183,7 @@ async function renderPrintReady(p) {
       const ic = await loadImgCached(state.iconSrc);
       const isz = rh*0.98;
       ctx.drawImage(ic, rx, ry + (rh-isz)/2, isz, isz);
-      const gap = rw*0.015;
+      const gap = rw*0.004;
       textX = rx + isz + gap; textW = rw - isz - gap;
     } catch(e) {}
   }
