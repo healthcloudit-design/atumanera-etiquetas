@@ -23,6 +23,23 @@ async function getTenantSecret(tenantId, name) {
   return data || null;
 }
 
+// Tarifas de motomensajería privada (GBA), en pesos. DEBEN coincidir con el cliente.
+const MOTO_TARIFAS = {
+  'CABA': 4490,
+  'Avellaneda': 6490, 'San Martin': 6490, 'Tigre': 6490, 'Tres De Febrero': 6490, 'Vicente Lopez': 6490,
+  'San Fernando': 4600, 'San Isidro': 4600,
+  'San Miguel': 8690,
+  'Almirante Brown': 9990, 'Berisso': 9990, 'Campana': 9990, 'Cañuelas': 9990, 'Del Viso': 9990,
+  'Derqui': 9990, 'Ensenada': 9990, 'Escobar': 9990, 'Garín': 9990, 'General Rodriguez': 9990,
+  'Guernica': 9990, 'Ingeniero Maschwitz': 9990, 'La Plata Centro': 9990, 'La Plata Norte': 9990,
+  'La Plata Oeste': 9990, 'Lujan': 9990, 'Marcos Paz': 9990, 'Nordelta': 9990, 'Pilar': 9990,
+  'San Vicente': 9990, 'Villa Rosa': 9990, 'Zarate': 9990, 'Berazategui': 9990,
+  'Esteban Echeverria': 9990, 'Ezeiza': 9990, 'Florencio Varela': 9990, 'Hurlingham': 9990,
+  'Ituzaingó': 9990, 'Jose C Paz': 9990, 'La Matanza Norte': 9990, 'La Matanza Sur': 9990,
+  'Lanús': 9990, 'Lomas de Zamora': 9990, 'Malvinas Argentinas': 9990, 'Merlo': 9990,
+  'Moreno': 9990, 'Moron': 9990, 'Quilmes': 9990,
+};
+
 // NOTA: no hay productos "fallback" hardcodeados. Cada tenant solo puede vender
 // productos que existan en su propia fila de la tabla `products`, a su precio real.
 // Esto evita fugas entre tenants y precios desactualizados.
@@ -56,16 +73,21 @@ module.exports = async function handler(req, res) {
     const buyerPhone = cleanPhone(buyer.phone);
     if (!buyerName || !buyerEmail) return publicError(res, 400, 'Nombre y email requeridos');
 
-    const shippingMethod = shipping.method === 'retiro' ? 'retiro' : 'andreani';
+    const shippingMethod = ['retiro', 'moto', 'andreani'].includes(shipping.method) ? shipping.method : 'andreani';
     const shippingZip = cleanString(shipping.zip, 12);
     if (shippingMethod === 'andreani' && !/^\d{4}$/.test(shippingZip || '')) {
       return publicError(res, 400, 'Codigo postal invalido');
     }
+    const motoLocality = cleanString(shipping.locality || shipping.city, 80);
+    if (shippingMethod === 'moto' && !(motoLocality in MOTO_TARIFAS)) {
+      return publicError(res, 400, 'Localidad de envio invalida');
+    }
 
     const orderItems = await buildOrderItems(cartItems, tenant.id);
     const itemsSubtotal = orderItems.reduce((acc, item) => acc + item.subtotal, 0);
-    const shippingCost = shippingMethod === 'andreani'
-      ? await quoteShippingCents(shippingZip, tenant, andreaniCreds)
+    const shippingCost =
+        shippingMethod === 'andreani' ? await quoteShippingCents(shippingZip, tenant, andreaniCreds)
+      : shippingMethod === 'moto'     ? cents(MOTO_TARIFAS[motoLocality] * 100)
       : 0;
     const total = itemsSubtotal + shippingCost;
 
@@ -77,10 +99,10 @@ module.exports = async function handler(req, res) {
         buyer_email: buyerEmail,
         buyer_phone: buyerPhone,
         shipping_method: shippingMethod,
-        shipping_address: shippingMethod === 'andreani' ? cleanString(shipping.address, 180) : null,
-        shipping_city: shippingMethod === 'andreani' ? cleanString(shipping.city, 80) : null,
+        shipping_address: (shippingMethod === 'andreani' || shippingMethod === 'moto') ? cleanString(shipping.address, 180) : null,
+        shipping_city: shippingMethod === 'moto' ? motoLocality : (shippingMethod === 'andreani' ? cleanString(shipping.city, 80) : null),
         shipping_zip: shippingMethod === 'andreani' ? shippingZip : null,
-        shipping_province: shippingMethod === 'andreani' ? cleanString(shipping.province, 80) : null,
+        shipping_province: shippingMethod === 'moto' ? 'Buenos Aires' : (shippingMethod === 'andreani' ? cleanString(shipping.province, 80) : null),
         shipping_cost: shippingCost,
         total,
         status: 'pending_payment',

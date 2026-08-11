@@ -376,7 +376,7 @@ img{max-width:100%;}
 <body>
 
 <!-- TOP BAR -->
-<div class="topbar">🚚 Envíos a todo el país por Andreani · Retiro los Miércoles 16-20hs en Belgrano</div>
+<div class="topbar">🚚 Envíos a todo el país por Andreani · GBA por mensajería privada</div>
 
 <!-- HEADER -->
 <div class="header">
@@ -1693,6 +1693,23 @@ const ANDREANI_TARIFAS = {
   patagonia: { label: 'Patagonia',                  precio: 13000 },
 };
 
+// Tarifas de motomensajería privada (GBA), en pesos. Deben coincidir con el server.
+const MOTO_TARIFAS = {
+  'CABA': 4490,
+  'Avellaneda': 6490, 'San Martin': 6490, 'Tigre': 6490, 'Tres De Febrero': 6490, 'Vicente Lopez': 6490,
+  'San Fernando': 4600, 'San Isidro': 4600,
+  'San Miguel': 8690,
+  'Almirante Brown': 9990, 'Berisso': 9990, 'Campana': 9990, 'Cañuelas': 9990, 'Del Viso': 9990,
+  'Derqui': 9990, 'Ensenada': 9990, 'Escobar': 9990, 'Garín': 9990, 'General Rodriguez': 9990,
+  'Guernica': 9990, 'Ingeniero Maschwitz': 9990, 'La Plata Centro': 9990, 'La Plata Norte': 9990,
+  'La Plata Oeste': 9990, 'Lujan': 9990, 'Marcos Paz': 9990, 'Nordelta': 9990, 'Pilar': 9990,
+  'San Vicente': 9990, 'Villa Rosa': 9990, 'Zarate': 9990, 'Berazategui': 9990,
+  'Esteban Echeverria': 9990, 'Ezeiza': 9990, 'Florencio Varela': 9990, 'Hurlingham': 9990,
+  'Ituzaingó': 9990, 'Jose C Paz': 9990, 'La Matanza Norte': 9990, 'La Matanza Sur': 9990,
+  'Lanús': 9990, 'Lomas de Zamora': 9990, 'Malvinas Argentinas': 9990, 'Merlo': 9990,
+  'Moreno': 9990, 'Moron': 9990, 'Quilmes': 9990,
+};
+
 function getZonaAndreani(cp) {
   const n = parseInt(String(cp).replace(/\D/g, ''));
   if (!n || isNaN(n) || n < 1000 || n > 9999) return null;
@@ -1708,16 +1725,33 @@ let _andreaniQuoteController = null; // para cancelar fetch si el usuario tipea 
 async function actualizarCostoEnvio() {
   const method = document.getElementById('shippingMethod')?.value;
   const addrDiv = document.getElementById('andreaniAddressFields');
+  const motoDiv = document.getElementById('motoFields');
   const infoEl = document.getElementById('shippingCostInfo');
   if (!method || !addrDiv || !infoEl) return;
 
   if (method === 'retiro') {
     addrDiv.style.display = 'none';
-    infoEl.innerHTML = '<div style="background:#e8f5e9;border-radius:8px;padding:10px 13px;font-size:13px;color:#2e7d32;font-weight:700;">🏪 Retiro en Belgrano — Miércoles 16-20hs — <strong>¡Gratis!</strong></div>';
+    if (motoDiv) motoDiv.style.display = 'none';
+    infoEl.innerHTML = '<div style="background:#e8f5e9;border-radius:8px;padding:10px 13px;font-size:13px;color:#2e7d32;font-weight:700;">🏪 Retiro en sucursal — <strong>¡Gratis!</strong></div>';
     infoEl.style.display = 'block';
     return;
   }
 
+  if (method === 'moto') {
+    addrDiv.style.display = 'none';
+    if (motoDiv) motoDiv.style.display = 'block';
+    const loc = document.getElementById('motoLocality')?.value;
+    if (!loc || !(loc in MOTO_TARIFAS)) {
+      infoEl.innerHTML = '<div style="background:#f5f5f5;border-radius:8px;padding:10px 13px;font-size:13px;color:#777;">📍 Elegí tu localidad para ver el costo del envío</div>';
+      infoEl.style.display = 'block';
+      return;
+    }
+    infoEl.innerHTML = '<div style="background:#e3f2fd;border-radius:8px;padding:10px 13px;font-size:13px;color:#01579b;font-weight:700;">🛵 Motomensajería a ' + loc + ' — <strong>$' + MOTO_TARIFAS[loc].toLocaleString('es-AR') + '</strong></div>';
+    infoEl.style.display = 'block';
+    return;
+  }
+
+  if (motoDiv) motoDiv.style.display = 'none';
   addrDiv.style.display = 'block';
   const cp = document.getElementById('buyerZip')?.value.trim();
 
@@ -1812,8 +1846,9 @@ function buildCheckoutModal() {
         <label style="${LABEL_STYLE}">ENVÍO</label>
         <select id="shippingMethod" onchange="actualizarCostoEnvio()"
           style="${INPUT_STYLE}padding:10px 13px;font-size:14px;background:#fff;">
-          <option value="andreani">Andreani — envío a domicilio</option>
-          <option value="retiro">Retiro en Belgrano — Miércoles 16-20hs (gratis)</option>
+          <option value="andreani">Andreani — envío a todo el país</option>
+          <option value="moto">Motomensajería GBA — a domicilio</option>
+          <option value="retiro">Retiro en sucursal (gratis)</option>
         </select>
       </div>
 
@@ -1867,6 +1902,20 @@ function buildCheckoutModal() {
         </div>
       </div>
 
+      <!-- Campos de Motomensajería (GBA) -->
+      <div id="motoFields" style="margin-bottom:14px;display:none;">
+        <label style="${LABEL_STYLE}">LOCALIDAD (GBA) *</label>
+        <select id="motoLocality" onchange="actualizarCostoEnvio()" style="${INPUT_STYLE}background:#fff;margin-bottom:8px;">
+          <option value="">— Elegí tu localidad —</option>
+          ${Object.keys(MOTO_TARIFAS).sort((a,b)=>a.localeCompare(b)).map(l=>`<option value="${l}">${l} — $${MOTO_TARIFAS[l].toLocaleString('es-AR')}</option>`).join('')}
+        </select>
+        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin-bottom:8px;">
+          <div><label style="${LABEL_STYLE}">CALLE *</label><input id="motoStreet" type="text" placeholder="Av. Corrientes" style="${INPUT_STYLE}"></div>
+          <div><label style="${LABEL_STYLE}">NÚMERO *</label><input id="motoStreetNum" type="text" placeholder="1234" style="${INPUT_STYLE}"></div>
+        </div>
+        <div><label style="${LABEL_STYLE}">PISO / DEPTO (opcional)</label><input id="motoFloor" type="text" placeholder="3° A" style="${INPUT_STYLE}"></div>
+      </div>
+
       <!-- Info costo de envío -->
       <div id="shippingCostInfo" style="margin-bottom:14px;display:none;"></div>
 
@@ -1906,8 +1955,17 @@ async function submitCheckout() {
   const province  = document.getElementById('buyerProvince')?.value || '';
   const floor     = document.getElementById('buyerFloor')?.value.trim() || '';
 
+  // Datos de Motomensajería
+  const motoLoc    = document.getElementById('motoLocality')?.value || '';
+  const motoStreet = document.getElementById('motoStreet')?.value.trim() || '';
+  const motoNum    = document.getElementById('motoStreetNum')?.value.trim() || '';
+  const motoFloor  = document.getElementById('motoFloor')?.value.trim() || '';
+
   // Leer costo de envío del último resultado consultado (API real o tabla de zonas)
   let shippingCost = 0;
+  if (shipping === 'moto') {
+    shippingCost = MOTO_TARIFAS[motoLoc] || 0;
+  }
   if (shipping === 'andreani') {
     // Intentar parsear el precio que se muestra en pantalla
     const infoEl = document.getElementById('shippingCostInfo');
@@ -1934,13 +1992,18 @@ async function submitCheckout() {
     if (!zip || !getZonaAndreani(zip)) { showErr('Ingresá un código postal válido (4 dígitos).'); return; }
     if (!province) { showErr('Seleccioná la provincia.'); return; }
   }
+  if (shipping === 'moto') {
+    if (!motoLoc || !(motoLoc in MOTO_TARIFAS)) { showErr('Elegí tu localidad de GBA.'); return; }
+    if (!motoStreet || !motoNum) { showErr('Completá calle y número para el envío.'); return; }
+  }
 
   payBtn.textContent = '⏳ Procesando...';
   payBtn.disabled = true;
 
   // Armar dirección completa
-  const fullAddress = shipping === 'andreani'
-    ? `${street} ${streetNum}${floor ? ', ' + floor : ''}`
+  const fullAddress =
+      shipping === 'andreani' ? `${street} ${streetNum}${floor ? ', ' + floor : ''}`
+    : shipping === 'moto'     ? `${motoStreet} ${motoNum}${motoFloor ? ', ' + motoFloor : ''}`
     : null;
 
   // Preparar items para la API
@@ -1972,11 +2035,12 @@ async function submitCheckout() {
         cartItems: mpItems,
         shipping: {
           method: shipping,
-          cost: shippingCost * 100,  // la API espera centavos
+          cost: shippingCost * 100,  // display; el server recalcula
           address: fullAddress,
-          city: city || null,
-          zip: zip || null,
-          province: province || null,
+          city: shipping === 'moto' ? motoLoc : (city || null),
+          zip: shipping === 'andreani' ? (zip || null) : null,
+          province: shipping === 'moto' ? 'Buenos Aires' : (province || null),
+          locality: shipping === 'moto' ? motoLoc : null,
         }
       })
     });
