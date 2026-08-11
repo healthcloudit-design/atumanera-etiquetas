@@ -23,6 +23,8 @@
   .price{font-size:20px;font-weight:800}
   .per{font-size:12px;color:var(--mut);font-weight:600}
   .meta{font-size:12.5px;color:var(--mut);margin:8px 0 12px;line-height:1.5;flex:1}
+  .pimg{width:100%;height:210px;border-radius:12px;overflow:hidden;background:#f3f1ec;margin-bottom:10px;display:flex;align-items:center;justify-content:center}
+  .pimg img{width:100%;height:100%;object-fit:contain}
   .btn{cursor:pointer;border:0;border-radius:10px;padding:11px 15px;font-weight:700;font-size:14px;background:var(--pri);color:#fff;transition:.15s}
   .btn:hover{filter:brightness(1.06)} .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .btn.block{width:100%} .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -82,7 +84,7 @@ function renderStore(){
   const logo = TENANT.logo_url ? `<img src="${esc(TENANT.logo_url)}" alt="">` : esc(initial);
   $('root').innerHTML = `
     <div class="hero"><div class="in"><div class="hlogo">${logo}</div>
-      <div><h1>${esc(TENANT.name)}</h1><p>Productos personalizados</p></div></div></div>
+      <div><h1>${esc(TENANT.name)}</h1><p>${esc(TENANT.tagline||'')}</p></div></div></div>
     <div class="wrap">
       ${PRODUCTS.length? '<div class="grid" id="grid"></div>' : '<p class="muted" style="margin-top:20px">Esta tienda todavía no cargó productos.</p>'}
       <div class="powered">Tienda impulsada por Praxis Personaliza</div>
@@ -97,20 +99,19 @@ function renderStore(){
   if(g) PRODUCTS.forEach((p,i)=>{
     const meta=[p.size_description,p.material,p.units_per_set&&(p.units_per_set+' '+(p.unit_label||'u')),p.elaboration_days].filter(Boolean).join(' · ');
     const el=document.createElement('div');el.className='card';
-    el.innerHTML=`<div class="cat">${esc(p.category||'')}</div><div class="pname">${esc(p.name)}</div>
-      <div class="price">${money(p.price)} <span class="per">/ ${esc(p.unit_label||'set')}</span></div>
+    el.innerHTML=`<div class="pimg"><img src="/assets/${esc(slug)}/${esc(p.slug)}.jpg" alt="${esc(p.name)}" loading="lazy" onerror="this.closest('.pimg').style.display='none'"></div>
+      <div class="cat">${esc(p.category||'')}</div><div class="pname">${esc(p.name)}</div>
+      <div class="price">${money(p.price)}</div>
       <div class="meta">${esc(meta)}${p.notes?'<br>'+esc(p.notes):''}</div>
-      <button class="btn block" onclick="openCust(${i})">Personalizar</button>`;
+      <button class="btn block" onclick="openCust(${i})">Agregar al carrito</button>`;
     g.appendChild(el);
   });
 }
 
 let custIdx=null, custQty=1;
 function openCust(i){ custIdx=i; custQty=1; const p=PRODUCTS[i];
-  $('custSheet').innerHTML=`<h3>${esc(p.name)}</h3><p class="muted" style="margin-top:2px">${money(p.price)} / ${esc(p.unit_label||'set')}</p>
-    <label>Texto a personalizar (nombre, frase…)</label>
-    <input id="custText" maxlength="60" placeholder="Ej: Familia Pérez">
-    <label>Cantidad (sets)</label>
+  $('custSheet').innerHTML=`<h3>${esc(p.name)}</h3><p class="muted" style="margin-top:2px">${money(p.price)}${p.size_description?' · '+esc(p.size_description):''}</p>
+    <label>Cantidad</label>
     <div class="qty"><button onclick="chQty(-1)">−</button><strong id="qv">1</strong><button onclick="chQty(1)">+</button></div>
     <div style="display:flex;gap:8px;margin-top:18px">
       <button class="btn sec block" onclick="closeModal('custModal')">Cancelar</button>
@@ -118,8 +119,8 @@ function openCust(i){ custIdx=i; custQty=1; const p=PRODUCTS[i];
   $('custModal').classList.add('show');
 }
 function chQty(d){ custQty=Math.max(1,Math.min(10,custQty+d)); $('qv').textContent=custQty; }
-function addToCart(){ const p=PRODUCTS[custIdx]; const text=($('custText').value||'').trim();
-  cart.push({ productSlug:p.slug, product:p.name, text:text||'(sin texto)', qty:custQty, unitPrice:p.price, price:p.price*custQty });
+function addToCart(){ const p=PRODUCTS[custIdx];
+  cart.push({ productSlug:p.slug, product:p.name, text:'', qty:custQty, unitPrice:p.price, price:p.price*custQty });
   closeModal('custModal'); updateCart(); toast('Agregado al carrito');
 }
 function updateCart(){ const count=cart.reduce((a,i)=>a+i.qty,0); const total=cart.reduce((a,i)=>a+i.price,0);
@@ -130,7 +131,7 @@ function closeModal(id){ $(id).classList.remove('show'); }
 
 function openCheckout(){
   if(!cart.length) return;
-  const rows=cart.map((it,i)=>`<div class="citem"><div>${esc(it.product)} <span class="muted">×${it.qty}</span><br><span class="muted">"${esc(it.text)}"</span></div><div>${money(it.price)} <button onclick="rmItem(${i})" class="btn sec" style="padding:2px 8px;margin-left:6px">✕</button></div></div>`).join('');
+  const rows=cart.map((it,i)=>`<div class="citem"><div>${esc(it.product)} <span class="muted">×${it.qty}</span>${it.text?`<br><span class="muted">"${esc(it.text)}"</span>`:''}</div><div>${money(it.price)} <button onclick="rmItem(${i})" class="btn sec" style="padding:2px 8px;margin-left:6px">✕</button></div></div>`).join('');
   const total=cart.reduce((a,i)=>a+i.price,0);
   $('checkoutSheet').innerHTML=`<h3>Finalizar compra</h3>
     <div style="margin:10px 0">${rows}<div class="citem" style="border:0"><strong>Total productos</strong><strong>${money(total)}</strong></div></div>
