@@ -8,12 +8,27 @@
 <style>
   :root{ --pri:#7A6E5C; --sec:#B39A6E; --ink:#20232a; --mut:#8a8f99; --line:#ecebe7; --bg:#ffffff; --soft:#f6f4ef; }
   *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  section{scroll-margin-top:64px}
   body{margin:0;font-family:'Jost',system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
   a{color:inherit;text-decoration:none}
-  .topbar{background:var(--pri);color:#fff;text-align:center;font-size:12.5px;letter-spacing:.5px;padding:8px 12px;font-weight:400}
-  header.hd{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:12px}
-  header.hd .logo{height:44px;width:auto;display:block}
-  header.hd .nm{font-size:20px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+  .topbar{background:#111;color:#fff;font-size:12.5px;letter-spacing:.4px;padding:9px 20px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+  .topbar b{font-weight:700}
+  .topbar .links{position:absolute;right:20px;display:flex;gap:18px;font-size:12px}
+  @media(max-width:640px){.topbar .links{display:none}}
+  .topwrap{position:relative}
+  .marquee{background:#7a1220;color:#fff;overflow:hidden;white-space:nowrap;font-weight:700;letter-spacing:1px;font-size:13.5px;text-transform:uppercase}
+  .marquee > span{display:inline-block;padding:9px 0;animation:scroll-left 22s linear infinite}
+  .marquee > span > i{font-style:normal;padding:0 40px}
+  @keyframes scroll-left{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  header.hd{background:#fff;border-bottom:1px solid var(--line);padding:16px 20px;display:flex;align-items:center;justify-content:center;gap:12px}
+  header.hd .logo{height:48px;width:auto;display:block}
+  header.hd .nm{font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase}
+  nav.catnav{position:sticky;top:0;z-index:19;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;overflow-x:auto;padding:11px 16px;-webkit-overflow-scrolling:touch}
+  nav.catnav::-webkit-scrollbar{display:none}
+  nav.catnav a{font-size:13px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--ink);white-space:nowrap;padding:6px 12px;border-radius:20px;transition:.15s}
+  nav.catnav a:hover{background:var(--soft);color:var(--pri)}
+  nav.catnav a.hot{background:var(--pri);color:#fff}
   .wrap{max-width:1180px;margin:0 auto;padding:10px 20px 90px}
   .sec-title{font-size:15px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--ink);margin:34px 0 4px;text-align:center}
   .sec-rule{width:44px;height:2px;background:var(--sec);margin:0 auto 18px}
@@ -98,18 +113,29 @@ function cardHTML(p,i){
   </div>`;
 }
 
+// Orden preferido de categorías (las fragancias primero, como en las perfumerías).
+const CAT_ORDER = ['Fragancias Femeninas','Fragancias Masculinas','Fragancias para Niños','Agua de Colonia','Cuidado Bebés','Cuidado del Cabello','Cuidado Facial','Línea Patagonia','Cuidado Corporal','Cremas Corporales','Cuidado de Manos','Cuidado Solar','Lip Care','Cuidado Capilar','Aceites Esenciales','Aceites Cosmetológicos','Cream Oil','Aromatizantes de Ambiente','Difusores y Hornillo','Aroma para Tela y Cama','Aroma para el Auto','Lavado y Enjuague','Bienestar','Accesorios'];
+function catRank(c){ const i=CAT_ORDER.indexOf(c); return i<0?999:i; }
+
 function renderStore(){
   const logo = TENANT.logo_url ? `<img class="logo" src="${esc(TENANT.logo_url)}" alt="${esc(TENANT.name)}">` : `<span class="nm">${esc(TENANT.name)}</span>`;
-  // agrupar por categoría, en el orden de aparición
-  const cats=[]; const byCat={};
-  PRODUCTS.forEach((p,i)=>{ const c=p.category||'Productos'; if(!byCat[c]){byCat[c]=[];cats.push(c);} byCat[c].push(i); });
+  // agrupar por categoría y ordenar según CAT_ORDER
+  const byCat={};
+  PRODUCTS.forEach((p,i)=>{ const c=p.category||'Productos'; (byCat[c]||(byCat[c]=[])).push(i); });
+  const cats = Object.keys(byCat).sort((a,b)=>catRank(a)-catRank(b) || a.localeCompare(b));
+  const nav = cats.length
+    ? `<nav class="catnav">${cats.map((c,ci)=>`<a href="#cat${ci}" class="${/Fragancias/.test(c)?'hot':''}">${esc(c)}</a>`).join('')}</nav>` : '';
   const sections = PRODUCTS.length
-    ? cats.map(c=>`<div class="sec-title">${esc(c)}</div><div class="sec-rule"></div>
-        <div class="grid">${byCat[c].map(i=>cardHTML(PRODUCTS[i],i)).join('')}</div>`).join('')
+    ? cats.map((c,ci)=>`<section id="cat${ci}"><div class="sec-title">${esc(c)}</div><div class="sec-rule"></div>
+        <div class="grid">${byCat[c].map(i=>cardHTML(PRODUCTS[i],i)).join('')}</div></section>`).join('')
     : '<p class="muted" style="text-align:center;margin-top:40px">Esta tienda todavía no cargó productos.</p>';
   $('root').innerHTML = `
-    <div class="topbar">Envíos a todo el país · Comprá seguro con Mercado Pago</div>
-    <header class="hd">${logo}${TENANT.logo_url?'':''}</header>
+    <div class="topwrap">
+      <div class="topbar"><b>ENVÍO GRATIS</b> En compras mayores a $100.000<span class="links"><a href="#">Contacto</a><a href="#">Sucursales</a></span></div>
+      <div class="marquee"><span><i>Comprá antes de las 10 AM y recibilo el mismo día — válido de lunes a viernes excepto feriados</i><i>Comprá antes de las 10 AM y recibilo el mismo día — válido de lunes a viernes excepto feriados</i></span></div>
+    </div>
+    <header class="hd">${logo}</header>
+    ${nav}
     <div class="wrap">${sections}<div class="powered">Tienda impulsada por Praxis Personaliza</div></div>
     <div class="cartbar" id="cartbar">
       <div><strong id="cartCount">0</strong> <span class="muted">en el carrito</span> · <strong id="cartTotal">$0</strong></div>
