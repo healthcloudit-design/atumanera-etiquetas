@@ -44,8 +44,9 @@
   .hero .dots i.on{background:#fff;width:22px;border-radius:5px}
   /* Banner de sección */
   .secbanner{position:relative;max-width:1180px;margin:34px auto 6px;border-radius:14px;overflow:hidden;height:200px;background:var(--soft);display:flex;align-items:center}
-  .secbanner::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.42),transparent 60%)}
-  .secbanner .t{position:relative;color:#fff;padding:0 clamp(20px,5vw,52px)}
+  .secbanner img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%}
+  .secbanner::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.15) 55%,transparent)}
+  .secbanner .t{position:relative;z-index:2;color:#fff;padding:0 clamp(20px,5vw,52px)}
   .secbanner .t h3{font-size:clamp(20px,3vw,30px);font-weight:600;letter-spacing:1px;margin:0;text-transform:uppercase}
   .wrap{max-width:1180px;margin:0 auto;padding:10px 20px 90px}
   .sec-title{font-size:15px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--ink);margin:34px 0 4px;text-align:center}
@@ -112,10 +113,17 @@ async function init(){
     document.documentElement.style.setProperty('--pri',TENANT.primary_color||'#7A6E5C');
     document.documentElement.style.setProperty('--sec',TENANT.secondary_color||'#B39A6E');
     document.title = TENANT.name;
+    setFavicon();
     renderStore();
   }catch(e){ renderError('No se pudo cargar la tienda.'); }
 }
 function renderError(msg){ $('root').innerHTML='<div class="center"><div><h2>Ups</h2><p class="muted">'+esc(msg)+'</p></div></div>'; }
+function setFavicon(){
+  const href=`/assets/${slug}/favicon.png`;
+  const probe=new Image();
+  probe.onload=()=>{ ['icon','apple-touch-icon'].forEach(rel=>{ let l=document.querySelector(`link[rel="${rel}"]`); if(!l){l=document.createElement('link');l.rel=rel;document.head.appendChild(l);} l.href=href; }); };
+  probe.src=href;
+}
 
 function cardHTML(p,i){
   const img = `/assets/${esc(slug)}/${esc(p.slug)}.jpg`;
