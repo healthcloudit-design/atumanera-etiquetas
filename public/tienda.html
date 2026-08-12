@@ -6,29 +6,46 @@
 <title>Tienda</title>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --pri:#7A6E5C; --sec:#B39A6E; --ink:#20232a; --mut:#8a8f99; --line:#ecebe7; --bg:#ffffff; --soft:#f6f4ef; }
+  :root{ --pri:#7A6E5C; --sec:#B39A6E; --ink:#20232a; --mut:#8a8f99; --line:#ecebe7; --bg:#ffffff; --soft:#f6f4ef;
+    /* Chrome (barra superior, marquee, header, nav). Valores por defecto = look claro actual.
+       Cada tenant puede sobreescribirlos vía applyTheme() (ej: feciega usa tema oscuro). */
+    --top-bg:#111; --top-fg:#fff;
+    --marq-bg:#7a1220; --marq-fg:#fff;
+    --hd-bg:#fff; --hd-fg:var(--ink); --hd-line:var(--line);
+    --nav-bg:#fff; --nav-fg:var(--ink); --nav-line:var(--line);
+    --nav-hover-bg:var(--soft); --nav-hover-fg:var(--pri);
+    --nav-hot-bg:var(--pri); --nav-hot-fg:#fff;
+    --accent:var(--sec); --pill-on-fg:#fff; }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   section{scroll-margin-top:64px}
   body{margin:0;font-family:'Jost',system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
   a{color:inherit;text-decoration:none}
-  .topbar{background:#111;color:#fff;font-size:12.5px;letter-spacing:.4px;padding:9px 20px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+  .topbar{background:var(--top-bg);color:var(--top-fg);font-size:12.5px;letter-spacing:.4px;padding:9px 20px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
   .topbar b{font-weight:700}
   .topbar .links{position:absolute;right:20px;display:flex;gap:18px;font-size:12px}
   @media(max-width:640px){.topbar .links{display:none}}
   .topwrap{position:relative}
-  .marquee{background:#7a1220;color:#fff;overflow:hidden;white-space:nowrap;font-weight:700;letter-spacing:1px;font-size:13.5px;text-transform:uppercase}
+  .marquee{background:var(--marq-bg);color:var(--marq-fg);overflow:hidden;white-space:nowrap;font-weight:700;letter-spacing:1px;font-size:13.5px;text-transform:uppercase}
   .marquee > span{display:inline-block;padding:9px 0;animation:scroll-left 22s linear infinite}
   .marquee > span > i{font-style:normal;padding:0 40px}
   @keyframes scroll-left{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-  header.hd{background:#fff;border-bottom:1px solid var(--line);padding:16px 20px;display:flex;align-items:center;justify-content:center;gap:12px}
+  header.hd{background:var(--hd-bg);color:var(--hd-fg);border-bottom:1px solid var(--hd-line);padding:16px 20px;display:flex;align-items:center;justify-content:center;gap:12px}
   header.hd .logo{height:48px;width:auto;display:block}
   header.hd .nm{font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase}
-  nav.catnav{position:sticky;top:0;z-index:19;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;overflow-x:auto;padding:11px 16px;-webkit-overflow-scrolling:touch}
+  nav.catnav{position:sticky;top:0;z-index:19;background:var(--nav-bg);border-bottom:1px solid var(--nav-line);display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;overflow-x:auto;padding:11px 16px;-webkit-overflow-scrolling:touch}
   nav.catnav::-webkit-scrollbar{display:none}
-  nav.catnav a{font-size:13px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--ink);white-space:nowrap;padding:6px 12px;border-radius:20px;transition:.15s}
-  nav.catnav a:hover{background:var(--soft);color:var(--pri)}
-  nav.catnav a.hot{background:var(--pri);color:#fff}
+  nav.catnav a{font-size:13px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--nav-fg);white-space:nowrap;padding:6px 12px;border-radius:20px;transition:.15s}
+  nav.catnav a:hover{background:var(--nav-hover-bg);color:var(--nav-hover-fg)}
+  nav.catnav a.hot{background:var(--nav-hot-bg);color:var(--nav-hot-fg)}
+  /* Barra de filtros (talle / categoría) — se usa en tenants con cfg.filters (ej: feciega) */
+  .filterbar{position:sticky;top:0;z-index:19;background:var(--nav-bg);border-bottom:1px solid var(--nav-line);padding:12px 16px;display:flex;flex-direction:column;gap:9px}
+  .filterbar .frow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .filterbar .flabel{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-right:4px}
+  .pill{font-size:12.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--nav-fg);background:transparent;border:1px solid var(--nav-line);padding:7px 14px;border-radius:22px;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
+  .pill:hover{border-color:var(--accent)}
+  .pill.on{background:var(--accent);color:var(--pill-on-fg);border-color:var(--accent)}
+  .nores{text-align:center;color:var(--mut);padding:48px 20px;font-size:14px}
   /* Hero carrusel */
   .hero{position:relative;max-width:1180px;margin:20px auto 6px;border-radius:16px;overflow:hidden;aspect-ratio:16/6.6;background:var(--soft)}
   @media(max-width:640px){.hero{aspect-ratio:16/11;margin:12px}}
@@ -97,6 +114,65 @@ const slug = (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])
 let TENANT=null, PRODUCTS=[], cart=[];
 
 const BOTTLE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="color:var(--pri)"><rect x="7.5" y="9" width="9" height="12" rx="1.6"/><rect x="10" y="5.5" width="4" height="3.5"/><rect x="10.3" y="2.6" width="3.4" height="3" rx="1"/><line x1="9.7" y1="13" x2="14.3" y2="13"/></svg>`;
+// Ícono neutro (percha) para el placeholder cuando falta la foto (indumentaria).
+const HANGER_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="color:var(--pri)"><path d="M12 6.5a1.8 1.8 0 1 1 1.6 1.8c-.9.1-1.6.6-1.6 1.5"/><path d="M12 9.8 3.5 15.2c-.9.6-.5 2 .6 2h15.8c1.1 0 1.5-1.4.6-2L12 9.8Z"/></svg>`;
+
+/* ── Configuración de apariencia por tenant (slug) ──────────────────────────
+   El storefront es compartido. Por defecto usa el look claro tipo perfumería
+   (maison / atumanera). Cada tenant puede sobreescribir chrome, hero, banners,
+   activar filtros y un tema oscuro sin tocar a los demás. */
+const SITECFG = {
+  feciega: {
+    theme: 'dark',
+    filters: true,
+    placeholder: HANGER_SVG,
+    topbar: '<b>ENVÍOS A TODO EL PAÍS</b> · Pagá en cuotas con Mercado Pago',
+    topLinks: [{t:'WhatsApp', h:'#'}, {t:'Cómo comprar', h:'#'}],
+    marquee: 'FE CIEGA IMPORT · STREETWEAR & DEPORTIVO · NIKE · ADIDAS · JORDAN · LACOSTE · CALIDAD IMPORTADA · ',
+    hero: [
+      { img:'hero1.jpg', h:'FE CIEGA IMPORT', p:'Streetwear y deportivo importado. Camperas, conjuntos y más.', cta:'Ver productos', cat:'' },
+      { img:'hero2.jpg', h:'CONJUNTOS DEPORTIVOS', p:'Nike, Adidas, Jordan y Lacoste — calidad premium.', cta:'Ver conjuntos', cat:'Conjuntos Deportivos' },
+      { img:'hero3.jpg', h:'CONJUNTOS DE FÚTBOL', p:'Tus equipos, en versión importada. Talles S al XL.', cta:'Ver fútbol', cat:'Conjuntos de Fútbol' },
+    ],
+    banners: {
+      'Camperas Rompevientos':'banner-rompevientos.jpg',
+      'Conjuntos de Fútbol':'banner-futbol.jpg',
+      'Conjuntos Deportivos':'banner-deportivos.jpg',
+      'Camperas de Gimnasia':'banner-gimnasia.jpg',
+    },
+  },
+};
+// Tema oscuro (feciega): carbón + dorado. Sobre las vars de :root.
+const THEMES = {
+  dark: {
+    '--top-bg':'#14171b', '--top-fg':'#f3f2ef',
+    '--marq-bg':'var(--sec)', '--marq-fg':'#141414',
+    '--hd-bg':'#1E2228', '--hd-fg':'#ffffff', '--hd-line':'#2c313a',
+    '--nav-bg':'#1E2228', '--nav-fg':'#e8e6e2', '--nav-line':'#2c313a',
+    '--nav-hover-bg':'#2c313a', '--nav-hover-fg':'var(--sec)',
+    '--nav-hot-bg':'var(--sec)', '--nav-hot-fg':'#141414',
+    '--accent':'var(--sec)', '--pill-on-fg':'#141414',
+  },
+};
+function applyTheme(cfg){
+  const t = THEMES[cfg && cfg.theme]; if(!t) return;
+  const r = document.documentElement.style;
+  for(const k in t) r.setProperty(k, t[k]);
+}
+// Hero y banners por defecto (perfumería): se usan si el tenant no define los suyos.
+const DEFAULT_HERO = [
+  {img:'hero1.jpg', h:'Tu fragancia, tu firma', p:'Descubrí nuestras fragancias femeninas', cta:'Ver Fragancias Femeninas', cat:'Fragancias Femeninas'},
+  {img:'hero2.jpg', h:'Elegancia que se siente', p:'Fragancias masculinas premium', cta:'Ver Fragancias Masculinas', cat:'Fragancias Masculinas'},
+  {img:'hero3.jpg', h:'Perfumería premium', p:'Envíos a todo el país · Comprá seguro', cta:'Ver productos', cat:''}
+];
+const DEFAULT_BANNER = {'Fragancias Femeninas':'banner-femeninas.jpg','Fragancias Masculinas':'banner-masculinas.jpg','Fragancias para Niños':'banner-ninos.jpg'};
+// Estado de filtros (solo tenants con cfg.filters)
+let fState = {cat:'', size:''};
+function productSizes(p){
+  const m = String(p.size_description||'').match(/talles?:?\s*(.+)$/i);
+  const src = m ? m[1] : (p.size_description||'');
+  return src.split(/[,/]/).map(s=>s.trim().toUpperCase()).filter(Boolean);
+}
 
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -112,6 +188,7 @@ async function init(){
     TENANT=d.tenant; PRODUCTS=d.products||[];
     document.documentElement.style.setProperty('--pri',TENANT.primary_color||'#7A6E5C');
     document.documentElement.style.setProperty('--sec',TENANT.secondary_color||'#B39A6E');
+    applyTheme(SITECFG[slug]);
     document.title = TENANT.name;
     setFavicon();
     renderStore();
@@ -127,8 +204,10 @@ function setFavicon(){
 
 function cardHTML(p,i){
   const img = `/assets/${esc(slug)}/${esc(p.slug)}.jpg`;
-  return `<div class="card" onclick="openCust(${i})">
-    <div class="pimg"><div class="ph">${BOTTLE_SVG}</div><img src="${img}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'"></div>
+  const ph = (SITECFG[slug] && SITECFG[slug].placeholder) || BOTTLE_SVG;
+  const sizes = productSizes(p);
+  return `<div class="card" data-cat="${esc(p.category||'')}" data-sizes="${esc(sizes.join(','))}" onclick="openCust(${i})">
+    <div class="pimg"><div class="ph">${ph}</div><img src="${img}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'"></div>
     <div class="pinfo">
       <div class="chip">${esc(p.category||'')}</div>
       <div class="pname">${esc(p.name)}</div>
@@ -144,37 +223,63 @@ const CAT_ORDER = ['Conjuntos de Fútbol','Conjuntos Deportivos','Camperas de Gi
 function catRank(c){ const i=CAT_ORDER.indexOf(c); return i<0?999:i; }
 
 function renderStore(){
+  const cfg = SITECFG[slug] || {};
   const logo = TENANT.logo_url ? `<img class="logo" src="${esc(TENANT.logo_url)}" alt="${esc(TENANT.name)}">` : `<span class="nm">${esc(TENANT.name)}</span>`;
   // agrupar por categoría y ordenar según CAT_ORDER
   const byCat={};
   PRODUCTS.forEach((p,i)=>{ const c=p.category||'Productos'; (byCat[c]||(byCat[c]=[])).push(i); });
   const cats = Object.keys(byCat).sort((a,b)=>catRank(a)-catRank(b) || a.localeCompare(b));
-  const nav = cats.length
-    ? `<nav class="catnav">${cats.map((c,ci)=>`<a href="#cat${ci}" class="${/Fragancias/.test(c)?'hot':''}">${esc(c)}</a>`).join('')}</nav>` : '';
-  const BANNER = {'Fragancias Femeninas':'banner-femeninas.jpg','Fragancias Masculinas':'banner-masculinas.jpg','Fragancias para Niños':'banner-ninos.jpg'};
+  const BANNER = cfg.banners || DEFAULT_BANNER;
+
+  // Navegación: barra de filtros (tenants con cfg.filters) o nav de anclas por categoría.
+  let nav = '';
+  if (cats.length && cfg.filters) {
+    const sizes = [...new Set(PRODUCTS.flatMap(productSizes))].sort();
+    nav = `<div class="filterbar">
+      <div class="frow"><span class="flabel">Categoría</span>
+        <button class="pill on" data-cat="">Todos</button>
+        ${cats.map(c=>`<button class="pill" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      ${sizes.length?`<div class="frow"><span class="flabel">Talle</span>
+        <button class="pill on" data-size="">Todos</button>
+        ${sizes.map(s=>`<button class="pill" data-size="${esc(s)}">${esc(s)}</button>`).join('')}</div>`:''}
+    </div>`;
+  } else if (cats.length) {
+    nav = `<nav class="catnav">${cats.map((c,ci)=>`<a href="#cat${ci}" class="${/Fragancias/.test(c)?'hot':''}">${esc(c)}</a>`).join('')}</nav>`;
+  }
+
   const sections = PRODUCTS.length
     ? cats.map((c,ci)=>{
         const b = BANNER[c] ? `<div class="secbanner"><img src="/assets/${esc(slug)}/${BANNER[c]}" alt="${esc(c)}" onerror="this.closest('.secbanner').remove()"><div class="t"><h3>${esc(c)}</h3></div></div>` : '';
-        return `<section id="cat${ci}">${b}<div class="sec-title">${esc(c)}</div><div class="sec-rule"></div>
+        return `<section id="cat${ci}" data-cat="${esc(c)}">${b}<div class="sec-title">${esc(c)}</div><div class="sec-rule"></div>
         <div class="grid">${byCat[c].map(i=>cardHTML(PRODUCTS[i],i)).join('')}</div></section>`;
-      }).join('')
+      }).join('') + (cfg.filters?'<div class="nores" id="noRes" style="display:none">No hay productos con esos filtros.</div>':'')
     : '<p class="muted" style="text-align:center;margin-top:40px">Esta tienda todavía no cargó productos.</p>';
+
   // Hero (imágenes por tenant en /assets/<slug>/heroN.jpg; se ocultan solas si no existen)
-  const HERO = [
-    {img:'hero1.jpg', h:'Tu fragancia, tu firma', p:'Descubrí nuestras fragancias femeninas', cat:'Fragancias Femeninas'},
-    {img:'hero2.jpg', h:'Elegancia que se siente', p:'Fragancias masculinas premium', cat:'Fragancias Masculinas'},
-    {img:'hero3.jpg', h:'Perfumería premium', p:'Envíos a todo el país · Comprá seguro', cat:''}
-  ];
-  const heroIdx = c => { const k=cats.indexOf(c); return k<0?'':'#cat'+k; };
+  const HERO = cfg.hero || DEFAULT_HERO;
+  const heroIdx = c => { const k=cats.indexOf(c); return k<0?-1:k; };
+  const heroLink = s => {
+    const k = s.cat ? heroIdx(s.cat) : -1;
+    const label = esc(s.cta || (s.cat ? 'Ver '+s.cat : 'Ver productos'));
+    if (cfg.filters) return `<a href="#" onclick="selCat('${s.cat?esc(s.cat).replace(/'/g,"\\'"):''}');return false">${label}</a>`;
+    return `<a href="#cat${k<0?0:k}">${label}</a>`;
+  };
   const hero = `<div class="hero" id="hero">
-    ${HERO.map((s,k)=>`<div class="slide${k===0?' on':''}" style="background-image:url('/assets/${esc(slug)}/${s.img}')">
-      <div class="cap"><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p>${s.cat&&heroIdx(s.cat)?`<a href="${heroIdx(s.cat)}">Ver ${esc(s.cat)}</a>`:`<a href="#cat0">Ver productos</a>`}</div></div>`).join('')}
+    ${HERO.map((s,k)=>`<div class="slide${k===0?' on':''}" style="background-image:url('/assets/${esc(slug)}/${esc(s.img)}')">
+      <div class="cap"><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p>${heroLink(s)}</div></div>`).join('')}
     <div class="dots">${HERO.map((s,k)=>`<i class="${k===0?'on':''}" data-k="${k}"></i>`).join('')}</div>
   </div>`;
+
+  // Chrome configurable por tenant
+  const linksHtml = (cfg.topLinks||[{t:'Contacto',h:'#'},{t:'Sucursales',h:'#'}])
+    .map(l=>`<a href="${esc(l.h)}">${esc(l.t)}</a>`).join('');
+  const topbar = cfg.topbar || '<b>ENVÍO GRATIS</b> En compras mayores a $100.000';
+  const marqTxt = cfg.marquee || 'Comprá antes de las 10 AM y recibilo el mismo día — válido de lunes a viernes excepto feriados';
+
   $('root').innerHTML = `
     <div class="topwrap">
-      <div class="topbar"><b>ENVÍO GRATIS</b> En compras mayores a $100.000<span class="links"><a href="#">Contacto</a><a href="#">Sucursales</a></span></div>
-      <div class="marquee"><span><i>Comprá antes de las 10 AM y recibilo el mismo día — válido de lunes a viernes excepto feriados</i><i>Comprá antes de las 10 AM y recibilo el mismo día — válido de lunes a viernes excepto feriados</i></span></div>
+      <div class="topbar">${topbar}<span class="links">${linksHtml}</span></div>
+      <div class="marquee"><span><i>${esc(marqTxt)}</i><i>${esc(marqTxt)}</i></span></div>
     </div>
     <header class="hd">${logo}</header>
     ${nav}
@@ -187,6 +292,42 @@ function renderStore(){
     <div class="modal-bg" id="custModal"><div class="sheet" id="custSheet"></div></div>
     <div class="modal-bg" id="checkoutModal"><div class="sheet" id="checkoutSheet"></div></div>`;
   initHero();
+  if (cfg.filters) wireFilters();
+}
+
+// ── Filtros por categoría / talle (oculta cards y secciones vacías) ─────────
+function wireFilters(){
+  fState = {cat:'', size:''};
+  document.querySelectorAll('.filterbar .pill').forEach(b=>{
+    b.onclick = ()=>{
+      const isCat = b.dataset.cat !== undefined;
+      if (isCat) fState.cat = b.dataset.cat; else fState.size = b.dataset.size;
+      const attr = isCat ? 'cat' : 'size';
+      document.querySelectorAll(`.filterbar .pill[data-${attr}]`).forEach(p=>p.classList.remove('on'));
+      b.classList.add('on');
+      applyFilters();
+    };
+  });
+}
+function applyFilters(){
+  let total=0;
+  document.querySelectorAll('section[id^="cat"]').forEach(sec=>{
+    let vis=0;
+    sec.querySelectorAll('.card').forEach(c=>{
+      const okC = !fState.cat || c.dataset.cat===fState.cat;
+      const okS = !fState.size || (c.dataset.sizes||'').split(',').includes(fState.size);
+      const show = okC && okS; c.style.display = show?'':'none'; if(show){vis++;total++;}
+    });
+    sec.style.display = vis?'':'none';
+  });
+  const nr=$('noRes'); if(nr) nr.style.display = total?'none':'block';
+}
+function selCat(cat){
+  fState.cat = cat;
+  document.querySelectorAll('.filterbar .pill[data-cat]').forEach(p=>p.classList.toggle('on', p.dataset.cat===cat));
+  applyFilters();
+  const target = cat ? document.querySelector(`section[data-cat="${cat}"]`) : document.querySelector('section[id^="cat"]');
+  if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 let heroTimer=null;
