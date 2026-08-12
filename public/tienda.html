@@ -29,6 +29,24 @@
   nav.catnav a{font-size:13px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--ink);white-space:nowrap;padding:6px 12px;border-radius:20px;transition:.15s}
   nav.catnav a:hover{background:var(--soft);color:var(--pri)}
   nav.catnav a.hot{background:var(--pri);color:#fff}
+  /* Hero carrusel */
+  .hero{position:relative;max-width:1180px;margin:20px auto 6px;border-radius:16px;overflow:hidden;aspect-ratio:16/6.6;background:var(--soft)}
+  @media(max-width:640px){.hero{aspect-ratio:16/11;margin:12px}}
+  .hero .slide{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .9s ease;display:flex;align-items:center}
+  .hero .slide.on{opacity:1}
+  .hero .slide::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.15) 55%,transparent)}
+  .hero .cap{position:relative;color:#fff;padding:0 clamp(20px,5vw,64px);max-width:60%}
+  .hero .cap h2{font-size:clamp(22px,3.4vw,40px);font-weight:600;line-height:1.1;margin:0 0 8px;letter-spacing:.5px}
+  .hero .cap p{font-size:clamp(13px,1.5vw,17px);margin:0 0 16px;opacity:.95;font-weight:300}
+  .hero .cap a{display:inline-block;background:#fff;color:var(--ink);padding:11px 22px;border-radius:24px;font-weight:600;font-size:13px;letter-spacing:.5px}
+  .hero .dots{position:absolute;bottom:14px;left:0;right:0;display:flex;gap:8px;justify-content:center;z-index:2}
+  .hero .dots i{width:8px;height:8px;border-radius:50%;background:#ffffff8c;cursor:pointer;transition:.2s}
+  .hero .dots i.on{background:#fff;width:22px;border-radius:5px}
+  /* Banner de sección */
+  .secbanner{position:relative;max-width:1180px;margin:34px auto 6px;border-radius:14px;overflow:hidden;height:200px;background:var(--soft);display:flex;align-items:center}
+  .secbanner::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.42),transparent 60%)}
+  .secbanner .t{position:relative;color:#fff;padding:0 clamp(20px,5vw,52px)}
+  .secbanner .t h3{font-size:clamp(20px,3vw,30px);font-weight:600;letter-spacing:1px;margin:0;text-transform:uppercase}
   .wrap{max-width:1180px;margin:0 auto;padding:10px 20px 90px}
   .sec-title{font-size:15px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--ink);margin:34px 0 4px;text-align:center}
   .sec-rule{width:44px;height:2px;background:var(--sec);margin:0 auto 18px}
@@ -125,10 +143,26 @@ function renderStore(){
   const cats = Object.keys(byCat).sort((a,b)=>catRank(a)-catRank(b) || a.localeCompare(b));
   const nav = cats.length
     ? `<nav class="catnav">${cats.map((c,ci)=>`<a href="#cat${ci}" class="${/Fragancias/.test(c)?'hot':''}">${esc(c)}</a>`).join('')}</nav>` : '';
+  const BANNER = {'Fragancias Femeninas':'banner-femeninas.jpg','Fragancias Masculinas':'banner-masculinas.jpg','Fragancias para Niños':'banner-ninos.jpg'};
   const sections = PRODUCTS.length
-    ? cats.map((c,ci)=>`<section id="cat${ci}"><div class="sec-title">${esc(c)}</div><div class="sec-rule"></div>
-        <div class="grid">${byCat[c].map(i=>cardHTML(PRODUCTS[i],i)).join('')}</div></section>`).join('')
+    ? cats.map((c,ci)=>{
+        const b = BANNER[c] ? `<div class="secbanner"><img src="/assets/${esc(slug)}/${BANNER[c]}" alt="${esc(c)}" onerror="this.closest('.secbanner').remove()"><div class="t"><h3>${esc(c)}</h3></div></div>` : '';
+        return `<section id="cat${ci}">${b}<div class="sec-title">${esc(c)}</div><div class="sec-rule"></div>
+        <div class="grid">${byCat[c].map(i=>cardHTML(PRODUCTS[i],i)).join('')}</div></section>`;
+      }).join('')
     : '<p class="muted" style="text-align:center;margin-top:40px">Esta tienda todavía no cargó productos.</p>';
+  // Hero (imágenes por tenant en /assets/<slug>/heroN.jpg; se ocultan solas si no existen)
+  const HERO = [
+    {img:'hero1.jpg', h:'Tu fragancia, tu firma', p:'Descubrí nuestras fragancias femeninas', cat:'Fragancias Femeninas'},
+    {img:'hero2.jpg', h:'Elegancia que se siente', p:'Fragancias masculinas premium', cat:'Fragancias Masculinas'},
+    {img:'hero3.jpg', h:'Perfumería premium', p:'Envíos a todo el país · Comprá seguro', cat:''}
+  ];
+  const heroIdx = c => { const k=cats.indexOf(c); return k<0?'':'#cat'+k; };
+  const hero = `<div class="hero" id="hero">
+    ${HERO.map((s,k)=>`<div class="slide${k===0?' on':''}" style="background-image:url('/assets/${esc(slug)}/${s.img}')">
+      <div class="cap"><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p>${s.cat&&heroIdx(s.cat)?`<a href="${heroIdx(s.cat)}">Ver ${esc(s.cat)}</a>`:`<a href="#cat0">Ver productos</a>`}</div></div>`).join('')}
+    <div class="dots">${HERO.map((s,k)=>`<i class="${k===0?'on':''}" data-k="${k}"></i>`).join('')}</div>
+  </div>`;
   $('root').innerHTML = `
     <div class="topwrap">
       <div class="topbar"><b>ENVÍO GRATIS</b> En compras mayores a $100.000<span class="links"><a href="#">Contacto</a><a href="#">Sucursales</a></span></div>
@@ -136,6 +170,7 @@ function renderStore(){
     </div>
     <header class="hd">${logo}</header>
     ${nav}
+    ${hero}
     <div class="wrap">${sections}<div class="powered">Tienda impulsada por Praxis Personaliza</div></div>
     <div class="cartbar" id="cartbar">
       <div><strong id="cartCount">0</strong> <span class="muted">en el carrito</span> · <strong id="cartTotal">$0</strong></div>
@@ -143,6 +178,22 @@ function renderStore(){
     </div>
     <div class="modal-bg" id="custModal"><div class="sheet" id="custSheet"></div></div>
     <div class="modal-bg" id="checkoutModal"><div class="sheet" id="checkoutSheet"></div></div>`;
+  initHero();
+}
+
+let heroTimer=null;
+function initHero(){
+  const hero=$('hero'); if(!hero) return;
+  // Ocultar el hero si la primera imagen no existe (otros tenants sin fotos)
+  const probe=new Image();
+  probe.onerror=()=>{ hero.remove(); if(heroTimer)clearInterval(heroTimer); };
+  probe.src=`/assets/${slug}/hero1.jpg`;
+  const slides=[...hero.querySelectorAll('.slide')], dots=[...hero.querySelectorAll('.dots i')];
+  let cur=0;
+  const go=n=>{ cur=(n+slides.length)%slides.length; slides.forEach((s,k)=>s.classList.toggle('on',k===cur)); dots.forEach((d,k)=>d.classList.toggle('on',k===cur)); };
+  dots.forEach(d=>d.onclick=()=>{ go(+d.dataset.k); restart(); });
+  const restart=()=>{ if(heroTimer)clearInterval(heroTimer); heroTimer=setInterval(()=>go(cur+1),5000); };
+  if(slides.length>1) restart();
 }
 
 let custIdx=null, custQty=1;
