@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
+    "@vercel/edge": "^1.1.1",
     "mercadopago": "^2.13.0"
   }
 }

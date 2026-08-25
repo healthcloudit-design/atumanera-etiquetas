@@ -6,8 +6,6 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/panel", "destination": "/personaliza.html" },
     { "source": "/superadmin", "destination": "/personaliza.html" },
-    { "source": "/", "missing": [{ "type": "host", "value": "personaliza\\.praxisoperativa\\.com" }, { "type": "host", "value": ".*\\.vercel\\.app" }], "destination": "/tienda.html" },
-    { "source": "/:path((?!api(?:/|$)|assets(?:/|$)|favicon\\.svg$|favicon\\.ico$|t/|panel$|superadmin$|admin$|pago-).*)", "missing": [{ "type": "host", "value": "personaliza\\.praxisoperativa\\.com" }, { "type": "host", "value": ".*\\.vercel\\.app" }], "destination": "/tienda.html" },
     { "source": "/t/:slug", "destination": "/tienda.html" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/pago-exitoso", "destination": "/index.html" },
