@@ -13,15 +13,19 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return publicError(res, 405, 'Method not allowed');
 
   const slug = cleanString(req.query.tenant, 63);
-  if (!slug) return publicError(res, 400, 'tenant requerido');
+  // Resolución alternativa por dominio propio (hostname). Permite que cada tenant
+  // conecte su propio dominio (tenants.custom_domain) sin hardcodear nada.
+  const rawHost = cleanString(req.query.host, 255);
+  const host = rawHost ? rawHost.toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9.-]/g, '') : '';
+  if (!slug && !host) return publicError(res, 400, 'tenant o host requerido');
 
   try {
-    const { data: tenant, error: tErr } = await supabase
+    let tq = supabase
       .from('tenants')
       .select('id, slug, name, primary_color, secondary_color, logo_url, default_shipping_cost, active')
-      .eq('slug', slug)
-      .eq('active', true)
-      .maybeSingle();
+      .eq('active', true);
+    tq = slug ? tq.eq('slug', slug) : tq.in('custom_domain', [host, 'www.' + host]);
+    const { data: tenant, error: tErr } = await tq.maybeSingle();
     if (tErr) throw tErr;
     if (!tenant) return publicError(res, 404, 'Tienda no encontrada');
 

@@ -109,13 +109,10 @@
 <div id="toast" class="toast"></div>
 
 <script>
-const HOST_TENANTS = {
-  'feciega.com': 'feciega',
-  'www.feciega.com': 'feciega',
-};
+// Tenant por: 1) /t/<slug>  2) ?tenant=<slug>  3) dominio propio (hostname → API).
+// En el caso 3, slug arranca vacío y se completa con la respuesta del storefront.
 const hostname = location.hostname.toLowerCase();
-const slug = HOST_TENANTS[hostname]
-  || (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])[1]
+let slug = (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])[1]
   || new URLSearchParams(location.search).get('tenant') || '';
 let TENANT=null, PRODUCTS=[], cart=[];
 
@@ -186,12 +183,14 @@ function money(c){return '$'+((Number(c)||0)/100).toLocaleString('es-AR',{minimu
 function toast(m){const t=$('toast');t.textContent=m;t.className='toast show';setTimeout(()=>t.className='toast',2200)}
 
 async function init(){
-  if(!slug){ return renderError('Falta el identificador de la tienda.'); }
+  // Si hay slug (/t/<slug> o ?tenant=), pedimos por slug; si no, por dominio propio (host).
+  const qs = slug ? 'tenant='+encodeURIComponent(slug) : 'host='+encodeURIComponent(hostname);
   try{
-    const r = await fetch('/api/storefront?tenant='+encodeURIComponent(slug));
+    const r = await fetch('/api/storefront?'+qs);
     if(!r.ok){ return renderError('Tienda no encontrada.'); }
     const d = await r.json();
     TENANT=d.tenant; PRODUCTS=d.products||[];
+    slug = TENANT.slug || slug;   // fijar el slug real: assets, favicon, SITECFG, tema
     document.documentElement.style.setProperty('--pri',TENANT.primary_color||'#7A6E5C');
     document.documentElement.style.setProperty('--sec',TENANT.secondary_color||'#B39A6E');
     applyTheme(SITECFG[slug]);
