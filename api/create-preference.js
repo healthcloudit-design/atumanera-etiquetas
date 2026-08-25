@@ -144,7 +144,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
+    const siteUrl = getPublicSiteUrl(req, tenantSlug);
     const prefResult = await preference.create({
       body: {
         items: mpItems,
@@ -214,6 +214,22 @@ async function getTenant(slug) {
 
   if (error && error.code !== '42P01') throw error;
   return data || null;
+}
+
+// Los dominios propios deben volver al mismo dominio después de Mercado Pago.
+// El resto conserva SITE_URL como base de la plataforma.
+function getPublicSiteUrl(req, tenantSlug) {
+  const rawHost = String(req.headers['x-forwarded-host'] || req.headers.host || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, '');
+
+  if (tenantSlug === 'feciega' && (rawHost === 'feciega.com' || rawHost === 'www.feciega.com')) {
+    return 'https://feciega.com';
+  }
+
+  return process.env.SITE_URL || 'https://personaliza.praxisoperativa.com';
 }
 
 async function getProductsBySlug(slugs, tenantId) {

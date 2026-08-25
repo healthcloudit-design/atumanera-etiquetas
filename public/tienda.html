@@ -109,7 +109,13 @@
 <div id="toast" class="toast"></div>
 
 <script>
-const slug = (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])[1]
+const HOST_TENANTS = {
+  'feciega.com': 'feciega',
+  'www.feciega.com': 'feciega',
+};
+const hostname = location.hostname.toLowerCase();
+const slug = HOST_TENANTS[hostname]
+  || (location.pathname.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})/i) || [])[1]
   || new URLSearchParams(location.search).get('tenant') || '';
 let TENANT=null, PRODUCTS=[], cart=[];
 
