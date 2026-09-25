@@ -6,8 +6,14 @@
 <title>A Tu Manera Gráfica</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/assets/img/logo.jpeg">
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Dancing+Script:wght@700&family=Caveat:wght@700&family=Fredoka+One&family=Nunito:wght@700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
 <style>
+/* ===== Fuentes del editor de etiquetas ===== */
+@font-face{font-family:'Noteworthy';src:url('/assets/fonts/Noteworthy.ttf') format('truetype');font-weight:400 700;font-display:swap;}
+@font-face{font-family:'Gabriola';src:url('/assets/fonts/Gabriola.ttf') format('truetype');font-display:swap;}
+@font-face{font-family:'HelveticaSchool';src:url('/assets/fonts/HelveticaSchool.ttf') format('truetype');font-display:swap;}
+@font-face{font-family:'ComicSans';src:url('/assets/fonts/ComicSans.ttf') format('truetype');font-display:swap;}
+@font-face{font-family:'SweetiePie';src:url('/assets/fonts/SweetiePie.ttf') format('truetype');font-display:swap;}
 /* ===== RESET & BASE ===== */
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Nunito',sans-serif;background:#fff;color:#1A1A1A;min-height:100vh;}
@@ -554,7 +560,7 @@ img{max-width:100%;}
       <h2 id="editorTitle">✏️ Personalizá tu etiqueta</h2>
       <div class="field">
         <label id="textLabel">Nombre y apellido</label>
-        <input type="text" id="labelText" maxlength="30" placeholder="Ej: Isaac Malinarich" oninput="updatePreview()">
+        <input type="text" id="labelText" maxlength="42" placeholder="Ej: Isaac Ezequiel Malinarich Perez" oninput="updatePreview()">
         <div class="char-count" id="charCount">0 / 30</div>
       </div>
       <div class="field">
@@ -1107,43 +1113,13 @@ async function composePhotoMockup(p, cv) {
     ctx.restore();
   }
 
-  const tColor = tColorForce;
-  const font = state.font || 'Nunito';
-  try { await document.fonts.load(`700 40px "${font}"`); } catch(e) {}
-
-  // Texto: máx 4 palabras en hasta 2 líneas
-  const words = (state.text || '').trim().split(/\s+/).filter(Boolean).slice(0, 4);
-  let lines;
-  if (words.length <= 2) lines = [words.join(' ')];             // 1-2 palabras → 1 línea
-  else if (words.length === 3) lines = [words[0]+' '+words[1], words[2]];
-  else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];  // máx 2 palabras por línea
-
+  // Texto + dibujito con la tabla de tamaños (escala física del área de impresión real).
+  const spec = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
   const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
-  const iconW = hasIcon ? rh*0.92 : 0;
-  const gapIcon = hasIcon ? rw*0.02 : 0;
-  const availW = rw - iconW - gapIcon;
-
-  ctx.textBaseline = 'middle'; ctx.fillStyle = tColor;
-  let size = Math.floor(rh / (lines.length > 1 ? 2.3 : 1.15));
-  for (; size > 8; size--) {
-    ctx.font = `700 ${size}px "${font}", cursive`;
-    const maxW = Math.max(...lines.map(l => ctx.measureText(l).width));
-    if (maxW <= availW * 0.98 && size * lines.length * 1.22 <= rh) break;
-  }
-  ctx.font = `700 ${size}px "${font}", cursive`;
-  const textBlockW = Math.max(...lines.map(l => ctx.measureText(l).width));
-
-  // Centrar el GRUPO (dibujo + texto) juntos → el dibujo queda pegado al texto
-  const totalW = iconW + gapIcon + textBlockW;
-  const groupX = rx + Math.max(0, (rw - totalW)/2);
-  if (hasIcon) {
-    try { const ic = await loadImgCached(state.iconSrc); ctx.drawImage(ic, groupX, ry + (rh - iconW)/2, iconW, iconW); } catch(e) {}
-  }
-  ctx.textAlign = 'center';
-  const cx = groupX + iconW + gapIcon + textBlockW/2;
-  const lh = size * 1.2;
-  const startY = ry + rh/2 - (lines.length - 1) * lh/2;
-  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i*lh));
+  await drawLabel(ctx, {
+    font: state.font || 'Noteworthy', text: state.text, color: tColorForce,
+    iconSrc: state.iconSrc, hasIcon, x: rx, y: ry, w: rw, h: rh, pxPerCm: rh/spec.h
+  });
   return cv;
 }
 
@@ -1172,43 +1148,17 @@ const PRINT_SPECS = {
 // blanco — es el archivo que la vendedora usa para producir.
 async function renderPrintReady(p) {
   const spec = PRINT_SPECS[p.id]; if (!spec) return null;
-  const DPI = 300;
-  const W = Math.round(spec.w/2.54*DPI), H = Math.round(spec.h/2.54*DPI);
+  const DPI = 300, pxPerCm = DPI/2.54;
+  const W = Math.round(spec.w*pxPerCm), H = Math.round(spec.h*pxPerCm);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
-  const pad = H*0.06, rx = pad, ry = pad, rw = W - pad*2, rh = H - pad*2;
   const isPulsera = p.id === 'pulsera';
-  const font = state.font || 'Nunito';
-  try { await document.fonts.load(`700 80px "${font}"`); } catch(e) {}
-  const words = (state.text || '').trim().split(/\s+/).filter(Boolean).slice(0, 4);
-  let lines;
-  if (words.length <= 2) lines = [words.join(' ')];
-  else if (words.length === 3) lines = [words[0]+' '+words[1], words[2]];
-  else lines = [words[0]+' '+words[1], words[2]+' '+words[3]];
-
   const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
-  const iconW = hasIcon ? rh*0.92 : 0;
-  const gapIcon = hasIcon ? rw*0.02 : 0;
-  const availW = rw - iconW - gapIcon;
-
-  ctx.textBaseline = 'middle'; ctx.fillStyle = '#000000';
-  let size = Math.floor(rh / (lines.length > 1 ? 2.3 : 1.15));
-  for (; size > 8; size--) {
-    ctx.font = `700 ${size}px "${font}", cursive`;
-    const mw = Math.max(...lines.map(l => ctx.measureText(l).width));
-    if (mw <= availW*0.98 && size*lines.length*1.22 <= rh) break;
-  }
-  ctx.font = `700 ${size}px "${font}", cursive`;
-  const textBlockW = Math.max(...lines.map(l => ctx.measureText(l).width));
-  const totalW = iconW + gapIcon + textBlockW;
-  const groupX = rx + Math.max(0, (rw - totalW)/2);
-  if (hasIcon) {
-    try { const ic = await loadImgCached(state.iconSrc); ctx.drawImage(ic, groupX, ry + (rh-iconW)/2, iconW, iconW); } catch(e) {}
-  }
-  ctx.textAlign = 'center';
-  const cx = groupX + iconW + gapIcon + textBlockW/2, lh = size*1.2, sy = ry + rh/2 - (lines.length-1)*lh/2;
-  lines.forEach((l, i) => ctx.fillText(l, cx, sy + i*lh));
+  await drawLabel(ctx, {
+    font: state.font || 'Noteworthy', text: state.text, color: '#000000',
+    iconSrc: state.iconSrc, hasIcon, x: 0, y: 0, w: W, h: H, pxPerCm
+  });
   return cv.toDataURL('image/jpeg', 0.95);
 }
 
@@ -1222,13 +1172,75 @@ const PROD_CARDS = [
 ];
 
 const FONTS = [
-  { name:'Pacifico', label:'Pacifico', sample:'Nombre' },
-  { name:'Dancing Script', label:'Dancing Script', sample:'Nombre' },
-  { name:'Caveat', label:'Caveat', sample:'Nombre' },
-  { name:'Fredoka One', label:'Fredoka', sample:'Nombre' },
-  { name:'Nunito', label:'Nunito Bold', sample:'Nombre' },
-  { name:'Permanent Marker', label:'Marker', sample:'Nombre' },
+  { name:'Noteworthy', label:'Noteworthy', sample:'Nombre' },
+  { name:'Gabriola', label:'Gabriola', sample:'Nombre' },
+  { name:'HelveticaSchool', label:'Helvética', sample:'Nombre' },
+  { name:'ComicSans', label:'Comic Sans', sample:'Nombre' },
+  { name:'SweetiePie', label:'Sweety Pie', sample:'Nombre' },
 ];
+// Tabla de tamaños por fuente y caso, calibrada en Photoshop. size/leading en puntos
+// (pt, medida física → calzan en el área real 4,5×1,5cm a cualquier DPI). "t" = interletra
+// (tracking de Photoshop, ÷1000 em). Casos: 2=Nombre+Apellido (1 línea),
+// 3=Nombre+Nombre+Apellido (2 líneas), 4=Nombre+Nombre+Apellido+Apellido (2 líneas).
+const FONT_TABLE = {
+  'Noteworthy':      { 2:{s:20,l:22,t:30}, 3:{s:14,l:15,t:30}, 4:{s:14,l:15,t:30} },
+  'Gabriola':        { 2:{s:28,l:20,t:30}, 3:{s:17,l:14,t:30}, 4:{s:17,l:14,t:30} },
+  'HelveticaSchool': { 2:{s:22,l:20,t:0},  3:{s:13,l:14,t:0},  4:{s:13,l:14,t:0} },
+  'ComicSans':       { 2:{s:22,l:20,t:0},  3:{s:12,l:14,t:0},  4:{s:12,l:14,t:0} },
+  'SweetiePie':      { 2:{s:20,l:24,t:30}, 3:{s:13,l:18,t:30}, 4:{s:13,l:18,t:30} },
+};
+const FONT_FALLBACK = { 'Gabriola':'cursive','Noteworthy':'cursive','SweetiePie':'cursive','ComicSans':'sans-serif','HelveticaSchool':'sans-serif' };
+function fontStack(f){ return `"${f}", ${FONT_FALLBACK[f]||'sans-serif'}`; }
+
+// Parte el nombre en líneas por estructura (nombres arriba, apellidos abajo).
+// Máx 4 palabras. Regla: 1 línea salvo que la estructura o los 21 caracteres obliguen a bajar.
+function labelLayout(text){
+  const words = (text||'').trim().split(/\s+/).filter(Boolean).slice(0,4);
+  if(words.length===0) return { lines:[''], cs:2 };
+  if(words.length===1) return { lines:[words[0]], cs:2 };
+  if(words.length===2){
+    const one = words.join(' ');
+    return one.length<=21 ? { lines:[one], cs:2 } : { lines:[words[0], words[1]], cs:3 };
+  }
+  if(words.length===3) return { lines:[words[0]+' '+words[1], words[2]], cs:3 };
+  return { lines:[words[0]+' '+words[1], words[2]+' '+words[3]], cs:4 };
+}
+function fontSpec(font, cs){ return (FONT_TABLE[font]||FONT_TABLE['Noteworthy'])[cs] || {s:16,l:18,t:0}; }
+
+// Dibuja dibujito + nombre dentro de un área (en px). Los tamaños salen de la tabla en pt
+// (medida física), escalados por pxPerCm → sirve igual para el archivo de impresión (300dpi)
+// y para el preview sobre la foto. Dibujito: 1,40cm ancho × 1,5cm alto, 3mm de separación.
+async function drawLabel(ctx, o){
+  const { font, text, color='#000000', iconSrc, hasIcon, x, y, w, h, pxPerCm } = o;
+  const { lines, cs } = labelLayout(text);
+  const sp = fontSpec(font, cs);
+  const pxPerPt = pxPerCm * 2.54/72;
+  let fontPx = sp.s*pxPerPt, leadPx = sp.l*pxPerPt, lsPx = fontPx*(sp.t/1000);
+  const iconW = hasIcon ? 1.40*pxPerCm : 0;
+  const iconH = hasIcon ? Math.min(1.5*pxPerCm, h) : 0;
+  const gap   = hasIcon ? 0.30*pxPerCm : 0;
+  try { await document.fonts.load(`${Math.max(6,Math.round(fontPx))}px "${font}"`); } catch(e){}
+  ctx.save();
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = color;
+  const setFont = () => { ctx.font = `${fontPx}px ${fontStack(font)}`; if ('letterSpacing' in ctx) { try { ctx.letterSpacing = lsPx+'px'; } catch(e){} } };
+  setFont();
+  let textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
+  // Se respetan los tamaños de la tabla; solo se achica lo justo si el nombre (junto al
+  // dibujito, que queda fijo) no entra a lo ancho o alto del área de impresión.
+  const availTextW = w - (hasIcon ? iconW+gap : 0);
+  let scale = 1;
+  if (textBlockW > availTextW*0.99) scale = Math.min(scale, availTextW*0.99/textBlockW);
+  const blockH = (lines.length-1)*leadPx + fontPx*1.02;
+  if (blockH > h*0.99) scale = Math.min(scale, h*0.99/blockH);
+  if (scale < 1) { fontPx*=scale; leadPx*=scale; lsPx*=scale; setFont(); textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width)); }
+  const totalW = (hasIcon ? iconW+gap : 0) + textBlockW;
+  const groupX = x + Math.max(0, (w-totalW)/2);
+  if (hasIcon && iconSrc) { try { const ic = await loadImgCached(iconSrc); ctx.drawImage(ic, groupX, y+(h-iconH)/2, iconW, iconH); } catch(e){} }
+  const tx = groupX + (hasIcon ? iconW+gap : 0);
+  const sy = y + h/2 - (lines.length-1)*leadPx/2;
+  lines.forEach((l,i)=> ctx.fillText(l, tx, sy + i*leadPx));
+  ctx.restore();
+}
 const TEXT_COLORS = [
   { hex:'#1A1A1A', label:'Negro' },
   { hex:'#00AEEF', label:'Celeste' },
@@ -1261,7 +1273,7 @@ const CINTA_COLORS = [
   { hex:'#F4D35E', label:'Amarillo', textColor:'#1A1A1A' },
 ];
 
-let state = { productIdx:0, text:'', font:'Pacifico', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', qty:1 };
+let state = { productIdx:0, text:'', font:'Noteworthy', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', qty:1 };
 let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
 
 /* ============================================================
