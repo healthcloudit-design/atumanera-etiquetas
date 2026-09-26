@@ -1151,8 +1151,8 @@ async function renderPhotoMockup(p) {   // miniatura para el carrito
 // Área de impresión REAL por tipo (cm). Para el archivo listo para producción.
 const PRINT_SPECS = {
   falletina: { w:4.5, h:1.5 },
-  termo32:   { w:4.5, h:1.15 },
-  termo49:   { w:6,   h:2.5 },
+  termo32:   { w:4.3, h:1.2 },
+  termo49:   { w:4.3, h:1.2 },
   pulsera:   { w:12,  h:2.5 },
 };
 
@@ -1229,8 +1229,10 @@ async function drawLabel(ctx, o){
   const sp = fontSpec(font, cs);
   const pxPerPt = pxPerCm * 2.54/72;
   let fontPx = sp.s*pxPerPt, leadPx = sp.l*pxPerPt, lsPx = fontPx*(sp.t/1000);
-  const iconW = hasIcon ? 1.40*pxPerCm : 0;
-  const iconH = hasIcon ? Math.min(1.5*pxPerCm, h) : 0;
+  // Dibujito: caja 1,40×1,5cm; si el área es más baja que 1,5cm, se achica proporcional (sin deformar).
+  const iconScale = hasIcon ? Math.min(1, h/(1.5*pxPerCm)) : 0;
+  const iconW = hasIcon ? 1.40*pxPerCm*iconScale : 0;
+  const iconH = hasIcon ? 1.5*pxPerCm*iconScale : 0;
   const gap   = hasIcon ? 0.30*pxPerCm : 0;
   try { await document.fonts.load(`${Math.max(6,Math.round(fontPx))}px "${font}"`); } catch(e){}
   ctx.save();
