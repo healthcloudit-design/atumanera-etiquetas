@@ -43,14 +43,14 @@ img{max-width:100%;}
 .logo-text{font-family:'Pacifico',cursive;font-size:16px;color:#1A1A1A;line-height:1.1;}
 .logo-text span{color:#00AEEF;}
 
-.nav{display:flex;gap:4px;align-items:center;}
-.nav-item{padding:8px 15px;font-size:13px;font-weight:800;color:#3a3f47;border-radius:22px;cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.34,1.56,.64,1),background .18s ease,color .18s ease,box-shadow .18s ease;}
-.nav-item:hover{transform:translateY(-2px) scale(1.06);}
-.nav>.nav-item:nth-child(1):hover{color:#fff;background:#00AEEF;box-shadow:0 6px 16px rgba(0,174,239,.35);}
-.nav>.nav-item:nth-child(2):hover{color:#fff;background:#8DC63F;box-shadow:0 6px 16px rgba(141,198,63,.35);}
-.nav>.nav-item:nth-child(3):hover{color:#fff;background:#EC008C;box-shadow:0 6px 16px rgba(236,0,140,.35);}
+.nav{display:flex;gap:8px;align-items:center;}
+.nav-item{padding:8px 16px;font-size:13px;font-weight:800;color:#fff;border-radius:22px;cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .18s ease,filter .18s ease;box-shadow:0 2px 6px rgba(0,0,0,.12);}
+.nav>.nav-item:nth-child(1){background:#00AEEF;}
+.nav>.nav-item:nth-child(2){background:#8DC63F;}
+.nav>.nav-item:nth-child(3){background:#EC008C;}
+.nav-item:hover{transform:translateY(-3px) scale(1.07);box-shadow:0 8px 18px rgba(0,0,0,.22);filter:brightness(1.07);}
 .nav-dropdown .nav-dd-item{transition:background .15s;}
-.nav-item.active{color:#00AEEF;}
+.nav-item.active{box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 2px 6px rgba(0,0,0,.12);}
 .nav-dropdown{position:absolute;top:100%;left:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:220px;display:none;flex-direction:column;z-index:200;overflow:hidden;margin-top:0;}
 .nav-item:hover .nav-dropdown{display:flex;}
 .nav-dd-item{padding:10px 16px;font-size:13px;font-weight:600;color:#555;cursor:pointer;transition:background 0.1s;}
@@ -1095,7 +1095,7 @@ const SHEETS = {
     { w:3,   h:0.5, count:50, cols:5 },   // 50 chicos
     { w:4.5, h:1.5, count:12, cols:4 },   // 12 medianos
     { w:6,   h:3.5, count:6,  cols:3 },   // 6 grandes
-  ] },
+  ], side: { count:3, ofGroup:0 } },      // 3 redondos SOLO dibujito, al lado de las 50 chicas
 };
 
 // Vista previa de la PLANCHA completa: dibuja todas las etiquetas (a escala relativa entre
@@ -1103,14 +1103,15 @@ const SHEETS = {
 async function renderSheet(p, cv) {
   const cfg = SHEETS[p.id];
   const W = 1000, pad = 30, gapX = 12, gapY = 12, gapGroup = 26;
-  const isPulsera = false;
   const hasIcon = state.position !== 'none' && !!state.iconSrc;
-  // Medidas de cada grupo en px
-  const G = cfg.groups.map(g => {
-    const tileW = (W - 2*pad - (g.cols-1)*gapX) / g.cols;
+  const side = cfg.side;                     // grupo de stickers redondos (solo dibujito)
+  const sideW = side ? 168 : 0;              // ancho reservado a la derecha
+  // Medidas de cada grupo en px (el grupo con redondos al lado reserva ese ancho)
+  const G = cfg.groups.map((g,gi) => {
+    const reserve = (side && side.ofGroup===gi) ? sideW : 0;
+    const tileW = (W - 2*pad - reserve - (g.cols-1)*gapX) / g.cols;
     const tileH = tileW * g.h/g.w;
-    const rows = Math.ceil(g.count/g.cols);
-    return { ...g, tileW, tileH, rows };
+    return { ...g, tileW, tileH, rows: Math.ceil(g.count/g.cols) };
   });
   let totalH = pad;
   G.forEach((g,i)=>{ totalH += g.rows*g.tileH + (g.rows-1)*gapY; if(i<G.length-1) totalH += gapGroup; });
@@ -1118,23 +1119,41 @@ async function renderSheet(p, cv) {
   cv.width = W; cv.height = Math.round(totalH);
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#fffdf8'; ctx.fillRect(0,0,W,cv.height);        // hoja
-  const textColor = '#000000';
 
   let y = pad;
-  for (const g of G){
+  for (let gi=0; gi<G.length; gi++){
+    const g = G[gi];
     for (let i=0;i<g.count;i++){
       const col = i % g.cols, row = Math.floor(i/g.cols);
       const x = pad + col*(g.tileW+gapX);
       const ty = y + row*(g.tileH+gapY);
-      // línea de corte punteada de cada etiqueta
       ctx.save();
       ctx.strokeStyle = 'rgba(150,150,150,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
       ctx.strokeRect(x, ty, g.tileW, g.tileH);
       ctx.restore();
       await drawLabel(ctx, {
-        font: state.font || 'Noteworthy', text: state.text, color: textColor,
+        font: state.font || 'Noteworthy', text: state.text, color: '#000000',
         iconSrc: state.iconSrc, hasIcon, x, y: ty, w: g.tileW, h: g.tileH, pxPerCm: g.tileW/g.w
       });
+    }
+    // 3 stickers redondos SOLO dibujito, a la derecha de su grupo
+    if (side && side.ofGroup===gi){
+      const blockH = g.rows*g.tileH + (g.rows-1)*gapY;
+      const cx = W - pad - sideW/2;
+      const d = Math.min(sideW-14, blockH/side.count - 16);
+      let ic = null; if (hasIcon){ try { ic = await loadImgCached(state.iconSrc); } catch(e){} }
+      for (let k=0;k<side.count;k++){
+        const cy = y + blockH*(k+0.5)/side.count;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(150,150,150,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.arc(cx, cy, d/2, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
+        if (ic){
+          const box = d*0.66, r = (ic.naturalWidth||1)/(ic.naturalHeight||1);
+          let iw = box, ih = box; if (r>=1) ih = box/r; else iw = box*r;
+          ctx.drawImage(ic, cx-iw/2, cy-ih/2, iw, ih);
+        }
+      }
     }
     y += g.rows*g.tileH + (g.rows-1)*gapY + gapGroup;
   }
