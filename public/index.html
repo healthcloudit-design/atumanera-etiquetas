@@ -1215,7 +1215,8 @@ function labelLayout(text){
     const one = words.join(' ');
     return one.length<=21 ? { lines:[one], cs:2 } : { lines:[words[0], words[1]], cs:3 };
   }
-  if(words.length===3) return { lines:[words[0]+' '+words[1], words[2]], cs:3 };
+  // Apellidos = últimas 2 palabras; nombres = las primeras (nombre/s arriba, apellidos abajo).
+  if(words.length===3) return { lines:[words[0], words[1]+' '+words[2]], cs:3 };
   return { lines:[words[0]+' '+words[1], words[2]+' '+words[3]], cs:4 };
 }
 function fontSpec(font, cs){ return (FONT_TABLE[font]||FONT_TABLE['Noteworthy'])[cs] || {s:16,l:18,t:0}; }
@@ -1246,8 +1247,9 @@ async function drawLabel(ctx, o){
   const blockH0 = (lines.length-1)*leadPx + fontPx*1.02;
   const scaleW = textBlockW>0 ? availTextW*0.99/textBlockW : 1;
   const scaleH = blockH0>0 ? h*0.99/blockH0 : 1;
-  // Crece hasta llenar el área, pero nunca más grande que el tamaño de la tabla (techo = 1).
-  const scale = Math.min(scaleW, scaleH, 1);
+  // Crece hasta llenar el área de impresión (ancho o alto, lo que tope primero),
+  // manteniendo las proporciones de interlineado/interletra de la tabla.
+  const scale = Math.min(scaleW, scaleH);
   if (scale > 0 && isFinite(scale) && Math.abs(scale-1) > 0.001) {
     fontPx*=scale; leadPx*=scale; lsPx*=scale; setFont();
     textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
