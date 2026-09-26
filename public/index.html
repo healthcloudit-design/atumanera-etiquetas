@@ -1006,6 +1006,7 @@ const PRODUCTS = [
   { id:'termo32', slug:'termo-32', icon:'🔥', name:'Termoadhesivas x32', price:12999, unitsPerSet:32, unitLabel:'etiquetas', mockupBg:'bg-termo', sizeNote:'5 × 1,5 cm · Tela · Plancha (calor)', mockupLabel:'Vista previa · Termoadhesiva (5×1,5 cm)', mockupId:'mockupTermoChica', contentId:'contentTermoChica', textId:'textTermoChica', iconId:'iconTermoChica', textDefaultSize:23, iconDefaultSize:34, hasBorderColor:true, borderEl:'termoBorderChica', hasPulseraColor:false, hasPosition:true, info:[['Material','Tela blanca'],['Medida','5 × 1,5 cm'],['Texto','Solo negro'],['Borde','Color a elegir'],['Elaboración','7 días hábiles'],['¡Ojo!','No apta toallas/polar']] },
   { id:'termo49', slug:'termo-49', icon:'🔥', name:'Termoadhesivas x49', price:18990, unitsPerSet:49, unitLabel:'etiquetas', mockupBg:'bg-termo', sizeNote:'40 unid. 5×1,5cm + 9 unid. 6,5×3,5cm', mockupLabel:'Vista previa · Termoadhesiva grande (6,5×3,5 cm)', mockupId:'mockupTermoGrande', contentId:'contentTermoGrande', textId:'textTermoGrande', iconId:'iconTermoGrande', textDefaultSize:25, iconDefaultSize:40, hasBorderColor:true, borderEl:'termoBorderGrande', hasPulseraColor:false, hasPosition:true, info:[['Chicas','40 unid. 5×1,5cm'],['Grandes','9 unid. 6,5×3,5cm'],['Texto','Solo negro'],['Borde','Color a elegir'],['Elaboración','7 días hábiles'],['¡Ojo!','No apta toallas/polar']] },
   { id:'pulsera', slug:'pulseras-fluor', icon:'🪢', name:'Pulseras Fluor x30', price:19900, unitsPerSet:30, unitLabel:'pulseras', mockupBg:'bg-pulsera', sizeNote:'2,5 × 30 cm · Raso flúor · Se ata a la mano', mockupLabel:'Vista previa · Pulsera Fluor (2,5×30 cm)', mockupId:'mockupPulsera', contentId:'contentPulsera', textId:'textPulsera', iconId:'iconPulsera', textDefaultSize:19, iconDefaultSize:20, hasBorderColor:false, hasPulseraColor:true, hasPosition:false, info:[['Material','Raso flúor'],['Medida','2,5 × 30 cm'],['Colores','Naranja/amarillo/verde/fucsia'],['Texto','Solo negro'],['Elaboración','10-15 días hábiles'],['Tip','Pasar encendedor a bordes']] },
+  { id:'stickers', slug:'stickers-vinilo', icon:'💧', name:'Stickers de Vinilo x68', price:16900, unitsPerSet:68, unitLabel:'stickers', mockupBg:'bg-termo', sizeNote:'Plancha 20×20 cm · Vinilo blanco resistente al agua · 68 stickers', mockupLabel:'Vista previa · Plancha de Stickers de Vinilo', mockupId:'mockupTermoGrande', contentId:'contentTermoGrande', textId:'textTermoGrande', iconId:'iconTermoGrande', textDefaultSize:25, iconDefaultSize:40, hasBorderColor:false, hasPulseraColor:false, hasPosition:true, info:[['Material','Vinilo blanco'],['Resistente','Al agua'],['Plancha','20 × 20 cm'],['Chicos','50 · 3×0,5cm'],['Medianos','12 · 4,5×1,5cm'],['Grandes','6 · 6×3,5cm']] },
 ];
 
 // Catálogo real (13 SKUs). Cada uno referencia un "type" (índice en PRODUCTS)
@@ -1024,6 +1025,7 @@ const CATALOG = [
   { name:'32 Etiquetas Termoadhesivas con nombre',  price:12999, slug:'termo-32',               img:'/assets/img/termo-nombre.jpg',       type:1, units:32,  cat:'termo' },
   { name:'49 Etiquetas Termoadhesivas con nombre',  price:18990, slug:'termo-49',               img:'/assets/img/termo-nombre.jpg',       type:2, units:49,  cat:'termo' },
   { name:'Pulseras Cinta Fluor x30',                price:19900, slug:'pulseras-fluor',         img:'/assets/img/pulseras.png',           type:3, units:30,  cat:'pulseras' },
+  { name:'68 Stickers de Vinilo (plancha 20×20)',   price:16900, slug:'stickers-vinilo',        img:'/assets/img/coser-llavero.png',      type:4, units:68,  cat:'coser' },
 ];
 
 // SKU activo del editor (o null = usar los valores por defecto del type)
@@ -1083,6 +1085,11 @@ const SHEETS = {
   termo49: { groups: [
     { w:4.3, h:1.2, count:40, cols:4 },   // 40 chicas
     { w:5.5, h:2.5, count:9,  cols:3 },   // 9 grandes
+  ] },
+  stickers: { groups: [
+    { w:3,   h:0.5, count:50, cols:5 },   // 50 chicos
+    { w:4.5, h:1.5, count:12, cols:4 },   // 12 medianos
+    { w:6,   h:3.5, count:6,  cols:3 },   // 6 grandes
   ] },
 };
 
@@ -1240,6 +1247,7 @@ const PRINT_SPECS = {
   termo32:   { w:4.3, h:1.2 },
   termo49:   { w:4.3, h:1.2 },
   pulsera:   { w:12,  h:2.5 },
+  stickers:  { w:4.5, h:1.5 },
 };
 
 // Diseño (capa 2) SOLO, al tamaño físico real del área de impresión, negro sobre
