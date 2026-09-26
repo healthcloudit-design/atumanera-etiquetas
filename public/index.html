@@ -1195,7 +1195,8 @@ function fontStack(f){ return `"${f}", ${FONT_FALLBACK[f]||'sans-serif'}`; }
 // Parte el nombre en líneas por estructura (nombres arriba, apellidos abajo).
 // Máx 4 palabras. Regla: 1 línea salvo que la estructura o los 21 caracteres obliguen a bajar.
 function labelLayout(text){
-  const words = (text||'').trim().split(/\s+/).filter(Boolean).slice(0,4);
+  const words = (text||'').trim().split(/\s+/).filter(Boolean).slice(0,4)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1)); // auto-capitaliza la 1ª letra de cada palabra
   if(words.length===0) return { lines:[''], cs:2 };
   if(words.length===1) return { lines:[words[0]], cs:2 };
   if(words.length===2){
