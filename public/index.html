@@ -1091,14 +1091,19 @@ async function composePhotoMockup(p, cv) {
   const rx = cfg.region.x*W, ry = cfg.region.y*H, rw = cfg.region.w*W, rh = cfg.region.h*H;
   const tColorForce = '#000000'; // el texto siempre va en negro (spec del producto)
 
-  // Guía del área de impresión REAL (gris punteado) en todos los modelos
+  // Guía del área de impresión REAL (gris punteado) = exactamente el rectángulo del diseño
+  // (proporción spec.w×spec.h cm) encajado dentro de la zona definida en el mockup.
   if (cfg.printArea) {
-    const g = cfg.printArea;
+    const g = cfg.printArea, sp = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
+    const gW0 = g.w*W, gH0 = g.h*H;
+    const ppc = Math.min(gW0/sp.w, gH0/sp.h);
+    const gw = sp.w*ppc, gh = sp.h*ppc;
+    const gx = g.x*W + (gW0-gw)/2, gy = g.y*H + (gH0-gh)/2;
     ctx.save();
     ctx.strokeStyle = 'rgba(110,110,110,0.6)';
     ctx.lineWidth = Math.max(1.5, H*0.0035);
     ctx.setLineDash([H*0.012, H*0.009]);
-    ctx.strokeRect(g.x*W, g.y*H, g.w*W, g.h*H);
+    ctx.strokeRect(gx, gy, gw, gh);
     ctx.restore();
   }
 
@@ -1113,12 +1118,19 @@ async function composePhotoMockup(p, cv) {
     ctx.restore();
   }
 
-  // Texto + dibujito con la tabla de tamaños (escala física del área de impresión real).
+  // Texto + dibujito usando el MISMO rectángulo que la guía punteada (área de impresión),
+  // escalado por ancho → el preview coincide con el archivo de impresión real.
   const spec = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
+  const pa = cfg.printArea || cfg.region;
+  const paX = pa.x*W, paY = pa.y*H, paW = pa.w*W, paH = pa.h*H;
+  // Encajo el diseño real (spec.w×spec.h cm) dentro del rectángulo respetando proporción.
+  const pxPerCm = Math.min(paW/spec.w, paH/spec.h);
+  const dW = spec.w*pxPerCm, dH = spec.h*pxPerCm;
+  const dX = paX + (paW-dW)/2, dY = paY + (paH-dH)/2;
   const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
   await drawLabel(ctx, {
     font: state.font || 'Noteworthy', text: state.text, color: tColorForce,
-    iconSrc: state.iconSrc, hasIcon, x: rx, y: ry, w: rw, h: rh, pxPerCm: rh/spec.h
+    iconSrc: state.iconSrc, hasIcon, x: dX, y: dY, w: dW, h: dH, pxPerCm
   });
   return cv;
 }
@@ -1229,11 +1241,15 @@ async function drawLabel(ctx, o){
   // Se respetan los tamaños de la tabla; solo se achica lo justo si el nombre (junto al
   // dibujito, que queda fijo) no entra a lo ancho o alto del área de impresión.
   const availTextW = w - (hasIcon ? iconW+gap : 0);
-  let scale = 1;
-  if (textBlockW > availTextW*0.99) scale = Math.min(scale, availTextW*0.99/textBlockW);
-  const blockH = (lines.length-1)*leadPx + fontPx*1.02;
-  if (blockH > h*0.99) scale = Math.min(scale, h*0.99/blockH);
-  if (scale < 1) { fontPx*=scale; leadPx*=scale; lsPx*=scale; setFont(); textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width)); }
+  const blockH0 = (lines.length-1)*leadPx + fontPx*1.02;
+  const scaleW = textBlockW>0 ? availTextW*0.99/textBlockW : 1;
+  const scaleH = blockH0>0 ? h*0.99/blockH0 : 1;
+  // Crece hasta llenar el área, pero nunca más grande que el tamaño de la tabla (techo = 1).
+  const scale = Math.min(scaleW, scaleH, 1);
+  if (scale > 0 && isFinite(scale) && Math.abs(scale-1) > 0.001) {
+    fontPx*=scale; leadPx*=scale; lsPx*=scale; setFont();
+    textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
+  }
   // Layout según el esquema: dibujito pegado a la izquierda del área; el texto ocupa
   // (y se centra en) la zona restante a la derecha (3mm de separación). Sin dibujito,
   // el texto se centra en toda el área de impresión.
