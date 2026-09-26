@@ -1233,10 +1233,17 @@ async function drawLabel(ctx, o){
   const blockH = (lines.length-1)*leadPx + fontPx*1.02;
   if (blockH > h*0.99) scale = Math.min(scale, h*0.99/blockH);
   if (scale < 1) { fontPx*=scale; leadPx*=scale; lsPx*=scale; setFont(); textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width)); }
-  const totalW = (hasIcon ? iconW+gap : 0) + textBlockW;
-  const groupX = x + Math.max(0, (w-totalW)/2);
-  if (hasIcon && iconSrc) { try { const ic = await loadImgCached(iconSrc); ctx.drawImage(ic, groupX, y+(h-iconH)/2, iconW, iconH); } catch(e){} }
-  const tx = groupX + (hasIcon ? iconW+gap : 0);
+  // Layout según el esquema: dibujito pegado a la izquierda del área; el texto ocupa
+  // (y se centra en) la zona restante a la derecha (3mm de separación). Sin dibujito,
+  // el texto se centra en toda el área de impresión.
+  let tx;
+  if (hasIcon) {
+    if (iconSrc) { try { const ic = await loadImgCached(iconSrc); ctx.drawImage(ic, x, y+(h-iconH)/2, iconW, iconH); } catch(e){} }
+    const zoneX = x + iconW + gap, zoneW = w - iconW - gap;
+    tx = zoneX + Math.max(0, (zoneW - textBlockW)/2);
+  } else {
+    tx = x + Math.max(0, (w - textBlockW)/2);
+  }
   const sy = y + h/2 - (lines.length-1)*leadPx/2;
   lines.forEach((l,i)=> ctx.fillText(l, tx, sy + i*leadPx));
   ctx.restore();
