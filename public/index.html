@@ -1065,72 +1065,106 @@ function loadImgCached(src) {
   return loadImg(src).then(img => { _mockImgCache[src] = img; return img; });
 }
 
-// Dibuja el mockup (foto real + diseño) dentro del canvas dado. Núcleo compartido
-// por el preview en vivo del editor y por la miniatura del carrito.
+// Medidas físicas REALES de la etiqueta completa (cm), para dibujar la cinta a escala.
+const LABEL_SIZES = {
+  falletina: { w:6,  h:2.5, kind:'cinta' },
+  termo32:   { w:5,  h:1.5, kind:'tela' },
+  termo49:   { w:5,  h:1.5, kind:'tela' },
+  pulsera:   { w:14, h:2.5, kind:'pulsera' },
+};
+
+function _roundRect(ctx, x, y, w, h, r){
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+// Dibuja el mockup a ESCALA REAL: cinta con proporción de la etiqueta física, textura de
+// tela y fondo suave; el diseño se ubica en la zona imprimible real → el cliente ve 1:1.
+// Núcleo compartido por el preview del editor y la miniatura del carrito.
 async function composePhotoMockup(p, cv) {
-  const cfg = PHOTO_MOCKUPS[p.id];
-  if (!cfg) return null;
-  const base = await loadImgCached(cfg.src);
-  const W = base.naturalWidth, H = base.naturalHeight;
+  const lab = LABEL_SIZES[p.id] || { w:6, h:2.5, kind:'tela' };
+  const spec = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
+  const W = 1200, H = 640;
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(base, 0, 0, W, H);
+
+  // Fondo suave (cálido) con leve luz arriba
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#fdf7ee'); g.addColorStop(1,'#efe7d8');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  const rg = ctx.createRadialGradient(W*0.5,H*0.28,10,W*0.5,H*0.28,W*0.6);
+  rg.addColorStop(0,'rgba(255,255,255,0.55)'); rg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
 
   const isPulsera = p.id === 'pulsera';
-  const tintColor = isPulsera ? state.pulseraColor : (p.id === 'falletina' ? state.cintaColor : null);
-  if (cfg.tint && tintColor && tintColor.toUpperCase() !== '#FFFFFF') {
-    const t = cfg.tint;
-    ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = tintColor;
-    ctx.fillRect(t.x*W, t.y*H, t.w*W, t.h*H);
+  // Cinta a escala: ocupo ~82% del ancho, alto proporcional a la etiqueta real
+  let rw = W*0.82, rh = rw * lab.h/lab.w;
+  const maxH = H*0.52; if (rh > maxH) { rh = maxH; rw = rh * lab.w/lab.h; }
+  const rx = (W-rw)/2, ry = (H-rh)/2;
+
+  // Sombra bajo la cinta
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.22)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 16;
+  ctx.fillStyle = '#fff'; _roundRect(ctx, rx, ry, rw, rh, Math.min(14, rh*0.12)); ctx.fill();
+  ctx.restore();
+
+  // Color base de la cinta
+  const baseColor = isPulsera ? (state.pulseraColor||'#EC008C')
+                  : (p.id==='falletina' ? (state.cintaColor||'#FFFFFF') : '#FBFBF8');
+  ctx.save(); _roundRect(ctx, rx, ry, rw, rh, Math.min(14, rh*0.12)); ctx.clip();
+  ctx.fillStyle = baseColor; ctx.fillRect(rx,ry,rw,rh);
+
+  // Textura de tela
+  ctx.globalAlpha = lab.kind==='pulsera' ? 0.10 : 0.16;
+  if (lab.kind==='cinta') {                    // grosgrain: costillas verticales
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1;
+    for (let x=rx+2; x<rx+rw; x+=4){ ctx.beginPath(); ctx.moveTo(x,ry); ctx.lineTo(x,ry+rh); ctx.stroke(); }
+  } else {                                      // tela: trama fina horizontal
+    ctx.strokeStyle = 'rgba(120,120,120,0.5)'; ctx.lineWidth = 1;
+    for (let y=ry+2; y<ry+rh; y+=3){ ctx.beginPath(); ctx.moveTo(rx,y); ctx.lineTo(rx+rw,y); ctx.stroke(); }
+  }
+  ctx.globalAlpha = 1;
+  // Brillo diagonal sutil
+  const sh = ctx.createLinearGradient(rx,ry,rx,ry+rh);
+  sh.addColorStop(0,'rgba(255,255,255,0.22)'); sh.addColorStop(0.5,'rgba(255,255,255,0)'); sh.addColorStop(1,'rgba(0,0,0,0.08)');
+  ctx.fillStyle = sh; ctx.fillRect(rx,ry,rw,rh);
+  ctx.restore();
+
+  // Flecos en los extremos (solo tela/termo)
+  if (lab.kind==='tela'){
+    ctx.save(); ctx.strokeStyle='rgba(210,208,200,0.9)'; ctx.lineWidth=2;
+    for (let y=ry+4; y<ry+rh-2; y+=5){
+      ctx.beginPath(); ctx.moveTo(rx,y); ctx.lineTo(rx-7,y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rx+rw,y); ctx.lineTo(rx+rw+7,y); ctx.stroke();
+    }
     ctx.restore();
   }
 
-  const rx = cfg.region.x*W, ry = cfg.region.y*H, rw = cfg.region.w*W, rh = cfg.region.h*H;
-  const tColorForce = '#000000'; // el texto siempre va en negro (spec del producto)
+  // Zona imprimible REAL, a escala, centrada en la cinta
+  const pxPerCm = rw / lab.w;
+  const sW = spec.w*pxPerCm, sH = spec.h*pxPerCm;
+  const sX = rx + (rw-sW)/2, sY = ry + (rh-sH)/2;
 
-  // Guía del área de impresión REAL (gris punteado) = exactamente el rectángulo del diseño
-  // (proporción spec.w×spec.h cm) encajado dentro de la zona definida en el mockup.
-  if (cfg.printArea) {
-    const g = cfg.printArea, sp = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
-    const gW0 = g.w*W, gH0 = g.h*H;
-    const ppc = Math.min(gW0/sp.w, gH0/sp.h);
-    const gw = sp.w*ppc, gh = sp.h*ppc;
-    const gx = g.x*W + (gW0-gw)/2, gy = g.y*H + (gH0-gh)/2;
+  // Guía punteada del área de impresión (sutil)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(90,90,90,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([7,5]);
+  ctx.strokeRect(sX, sY, sW, sH);
+  ctx.restore();
+
+  // Borde "camino de hormiga" para termoadhesivas
+  if (p.hasBorderColor){
     ctx.save();
-    ctx.strokeStyle = 'rgba(110,110,110,0.6)';
-    ctx.lineWidth = Math.max(1.5, H*0.0035);
-    ctx.setLineDash([H*0.012, H*0.009]);
-    ctx.strokeRect(gx, gy, gw, gh);
+    ctx.strokeStyle = state.borderColor || '#00AEEF'; ctx.lineWidth = Math.max(2, sH*0.05);
+    ctx.setLineDash([sH*0.14, sH*0.09]);
+    ctx.strokeRect(sX - sW*0.02, sY - sH*0.06, sW*1.04, sH*1.12);
     ctx.restore();
   }
 
-  // Borde "camino de hormiga" (punteado) para termoadhesivas, dentro de la etiqueta
-  if (p.hasBorderColor && cfg.border) {
-    const b = cfg.border;
-    ctx.save();
-    ctx.strokeStyle = state.borderColor || '#00AEEF';
-    ctx.lineWidth = Math.max(2, H*0.006);
-    ctx.setLineDash([H*0.02, H*0.013]);
-    ctx.strokeRect(b.x*W, b.y*H, b.w*W, b.h*H);
-    ctx.restore();
-  }
-
-  // Texto + dibujito usando el MISMO rectángulo que la guía punteada (área de impresión),
-  // escalado por ancho → el preview coincide con el archivo de impresión real.
-  const spec = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
-  const pa = cfg.printArea || cfg.region;
-  const paX = pa.x*W, paY = pa.y*H, paW = pa.w*W, paH = pa.h*H;
-  // Encajo el diseño real (spec.w×spec.h cm) dentro del rectángulo respetando proporción.
-  const pxPerCm = Math.min(paW/spec.w, paH/spec.h);
-  const dW = spec.w*pxPerCm, dH = spec.h*pxPerCm;
-  const dX = paX + (paW-dW)/2, dY = paY + (paH-dH)/2;
+  const textColor = isPulsera ? (state.pulseraTextColor || '#ffffff') : '#000000';
   const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
   await drawLabel(ctx, {
-    font: state.font || 'Noteworthy', text: state.text, color: tColorForce,
-    iconSrc: state.iconSrc, hasIcon, x: dX, y: dY, w: dW, h: dH, pxPerCm
+    font: state.font || 'Noteworthy', text: state.text, color: textColor,
+    iconSrc: state.iconSrc, hasIcon, x: sX, y: sY, w: sW, h: sH, pxPerCm
   });
   return cv;
 }
