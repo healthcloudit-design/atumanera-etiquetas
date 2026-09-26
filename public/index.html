@@ -1240,8 +1240,7 @@ async function drawLabel(ctx, o){
   let tx;
   if (hasIcon) {
     if (iconSrc) { try { const ic = await loadImgCached(iconSrc); ctx.drawImage(ic, x, y+(h-iconH)/2, iconW, iconH); } catch(e){} }
-    const zoneX = x + iconW + gap, zoneW = w - iconW - gap;
-    tx = zoneX + Math.max(0, (zoneW - textBlockW)/2);
+    tx = x + iconW + gap; // texto pegado a 3mm exactos del dibujito
   } else {
     tx = x + Math.max(0, (w - textBlockW)/2);
   }
