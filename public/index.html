@@ -1078,10 +1078,62 @@ function _roundRect(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
+// Planchas con más de un tamaño de etiqueta (vista previa de la hoja completa).
+const SHEETS = {
+  termo49: { groups: [
+    { w:4.3, h:1.2, count:40, cols:4 },   // 40 chicas
+    { w:5.5, h:2.5, count:9,  cols:3 },   // 9 grandes
+  ] },
+};
+
+// Vista previa de la PLANCHA completa: dibuja todas las etiquetas (a escala relativa entre
+// tamaños) con el mismo diseño repetido, como la hoja real que recibe el cliente.
+async function renderSheet(p, cv) {
+  const cfg = SHEETS[p.id];
+  const W = 1000, pad = 30, gapX = 12, gapY = 12, gapGroup = 26;
+  const isPulsera = false;
+  const hasIcon = state.position !== 'none' && !!state.iconSrc;
+  // Medidas de cada grupo en px
+  const G = cfg.groups.map(g => {
+    const tileW = (W - 2*pad - (g.cols-1)*gapX) / g.cols;
+    const tileH = tileW * g.h/g.w;
+    const rows = Math.ceil(g.count/g.cols);
+    return { ...g, tileW, tileH, rows };
+  });
+  let totalH = pad;
+  G.forEach((g,i)=>{ totalH += g.rows*g.tileH + (g.rows-1)*gapY; if(i<G.length-1) totalH += gapGroup; });
+  totalH += pad;
+  cv.width = W; cv.height = Math.round(totalH);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fffdf8'; ctx.fillRect(0,0,W,cv.height);        // hoja
+  const textColor = '#000000';
+
+  let y = pad;
+  for (const g of G){
+    for (let i=0;i<g.count;i++){
+      const col = i % g.cols, row = Math.floor(i/g.cols);
+      const x = pad + col*(g.tileW+gapX);
+      const ty = y + row*(g.tileH+gapY);
+      // línea de corte punteada de cada etiqueta
+      ctx.save();
+      ctx.strokeStyle = 'rgba(150,150,150,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+      ctx.strokeRect(x, ty, g.tileW, g.tileH);
+      ctx.restore();
+      await drawLabel(ctx, {
+        font: state.font || 'Noteworthy', text: state.text, color: textColor,
+        iconSrc: state.iconSrc, hasIcon, x, y: ty, w: g.tileW, h: g.tileH, pxPerCm: g.tileW/g.w
+      });
+    }
+    y += g.rows*g.tileH + (g.rows-1)*gapY + gapGroup;
+  }
+  return cv;
+}
+
 // Dibuja el mockup a ESCALA REAL: cinta con proporción de la etiqueta física, textura de
 // tela y fondo suave; el diseño se ubica en la zona imprimible real → el cliente ve 1:1.
 // Núcleo compartido por el preview del editor y la miniatura del carrito.
 async function composePhotoMockup(p, cv) {
+  if (SHEETS[p.id]) return renderSheet(p, cv);
   const lab = LABEL_SIZES[p.id] || { w:6, h:2.5, kind:'tela' };
   const spec = PRINT_SPECS[p.id] || { w:4.5, h:1.5 };
   const W = 1200, H = 640;
