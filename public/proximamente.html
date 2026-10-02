@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Próximamente · A tu manera Gráfica</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--celeste:#00AEEF;--fucsia:#EC008C;--verde:#8DC63F;--amarillo:#FFC107;--ink:#1A1A1A;--muted:#5F6670;--bg:#FAFBFD;--accent:var(--celeste)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;overflow-x:hidden;text-align:center}
+body.regalos{--accent:var(--fucsia)} body.impresiones{--accent:var(--verde)}
+.dots{display:flex;gap:10px;justify-content:center;margin:28px 0 22px}
+.dots span{width:14px;height:14px;border-radius:50%;animation:bounce 1.2s ease-in-out infinite}
+.dots span:nth-child(1){background:var(--celeste)}
+.dots span:nth-child(2){background:var(--fucsia);animation-delay:.15s}
+.dots span:nth-child(3){background:var(--verde);animation-delay:.3s}
+.dots span:nth-child(4){background:var(--amarillo);animation-delay:.45s}
+@keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}}
+img.logo{height:54px;width:auto;mix-blend-mode:multiply}
+.badge{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;
+  background:var(--accent);padding:6px 14px;border-radius:999px;margin-bottom:14px}
+h1{font-family:'Pacifico',cursive;font-weight:400;font-size:clamp(30px,6vw,48px);line-height:1.2;color:var(--accent);margin-bottom:12px}
+p{color:var(--muted);font-size:17px;line-height:1.6;max-width:520px;margin:0 auto}
+.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px;transition:transform .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 30%,transparent)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid #E1E6EE}
+.btn svg{width:18px;height:18px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+  <a href="https://atumaneragraf.com/"><img class="logo" src="/assets/img/logo-header.png" alt="A tu manera Gráfica"></a>
+  <div class="dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <span class="badge">Próximamente</span>
+  <h1 id="title">Estamos preparando algo nuevo</h1>
+  <p id="desc">Muy pronto vas a poder diseñar y pedir online. Mientras tanto, escribinos y te ayudamos con tu pedido.</p>
+  <div class="actions">
+    <a class="btn primary" id="wa" href="https://wa.me/5491176309675" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+      Consultanos por WhatsApp</a>
+    <a class="btn ghost" href="https://atumaneragraf.com/">Volver al inicio</a>
+  </div>
+<script>
+// Sección por: ?s=regalos|impresiones  o  subdominio regalos.* / impresiones.*
+(function(){
+  var SECCIONES = {
+    regalos: {
+      title: 'Regalos personalizados',
+      desc: 'Tazas, remeras y más con tu foto, frase o diseño. Estamos armando la tienda: mientras tanto, escribinos y te cotizamos.',
+      wa: 'Hola! Quiero consultar por regalos personalizados (tazas / remeras).'
+    },
+    impresiones: {
+      title: 'Plotter / Impresiones',
+      desc: 'Impresión en gran formato, vinilos de corte, planos y cartelería. Muy pronto vas a poder subir tu archivo acá; por ahora mandánoslo por WhatsApp.',
+      wa: 'Hola! Quiero consultar por impresiones / plotter.'
+    }
+  };
+  var q = new URLSearchParams(location.search).get('s');
+  var sub = location.hostname.split('.')[0].toLowerCase();
+  var key = SECCIONES[q] ? q : (SECCIONES[sub] ? sub : null);
+  if (!key) return;
+  var s = SECCIONES[key];
+  document.body.classList.add(key);
+  document.title = s.title + ' · Próximamente · A tu manera Gráfica';
+  document.getElementById('title').textContent = s.title;
+  document.getElementById('desc').textContent = s.desc;
+  document.getElementById('wa').href = 'https://wa.me/5491176309675?text=' + encodeURIComponent(s.wa);
+})();
+</script>
+</body>
+</html>

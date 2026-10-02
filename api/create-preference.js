@@ -216,6 +216,12 @@ async function getTenant(slug) {
   return data || null;
 }
 
+const ATUMANERA_GRAF_HOSTS = new Set([
+  'atumaneragraf.com',
+  'www.atumaneragraf.com',
+  'etiquetas.atumaneragraf.com',
+]);
+
 // Los dominios propios deben volver al mismo dominio después de Mercado Pago.
 // El resto conserva SITE_URL como base de la plataforma.
 function getPublicSiteUrl(req, tenantSlug) {
@@ -227,6 +233,11 @@ function getPublicSiteUrl(req, tenantSlug) {
 
   if (tenantSlug === 'feciega' && (rawHost === 'feciega.com' || rawHost === 'www.feciega.com')) {
     return 'https://feciega.com';
+  }
+
+  // A tu manera Gráfica: vuelve al apex; el middleware redirige /pago-* a etiquetas.*
+  if (tenantSlug === 'atumanera' && ATUMANERA_GRAF_HOSTS.has(rawHost)) {
+    return 'https://atumaneragraf.com';
   }
 
   return process.env.SITE_URL || 'https://personaliza.praxisoperativa.com';

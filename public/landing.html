@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A tu manera Gráfica · Etiquetas, regalos e impresiones personalizadas</title>
+<meta name="description" content="A tu manera Gráfica: etiquetas para ropa, regalos personalizados y plotter / impresiones. Diseñá a tu manera.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://atumaneragraf.com/">
+<meta property="og:title" content="A tu manera Gráfica">
+<meta property="og:description" content="Etiquetas para ropa, regalos personalizados y plotter / impresiones.">
+<meta property="og:url" content="https://atumaneragraf.com/">
+<meta property="og:image" content="https://atumaneragraf.com/assets/img/logo-header.png">
+<meta name="theme-color" content="#00AEEF">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --celeste:#00AEEF; --fucsia:#EC008C; --verde:#8DC63F; --amarillo:#FFC107;
+  --ink:#1A1A1A; --muted:#5F6670; --bg:#FAFBFD; --card:#FFFFFF; --line:#E8ECF2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:var(--bg);
+  min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+/* Burbujas de fondo (las del logo) */
+.bubbles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bubbles span{position:absolute;border-radius:50%;opacity:.13;filter:blur(1px);animation:float 14s ease-in-out infinite}
+.b1{width:420px;height:420px;background:var(--celeste);top:-140px;left:-120px}
+.b2{width:220px;height:220px;background:var(--fucsia);top:8%;right:-60px;animation-delay:-4s!important}
+.b3{width:300px;height:300px;background:var(--verde);bottom:-120px;right:12%;animation-delay:-8s!important}
+.b4{width:90px;height:90px;background:var(--amarillo);bottom:18%;left:8%;opacity:.22!important;animation-delay:-2s!important}
+@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(18px,-22px)}}
+
+header,main,footer{position:relative;z-index:1}
+header{padding:22px 20px 0;display:flex;justify-content:center}
+header img{height:56px;width:auto;display:block;mix-blend-mode:multiply}
+
+main{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:36px 16px 48px}
+.hero{text-align:center;max-width:680px;margin:0 auto 40px}
+.hero h1{font-family:'Pacifico',cursive;font-weight:400;font-size:clamp(30px,5.4vw,52px);line-height:1.2;margin-bottom:14px}
+.hero h1 .c{color:var(--celeste)} .hero h1 .f{color:var(--fucsia)} .hero h1 .v{color:var(--verde)}
+.hero p{font-size:clamp(16px,2vw,19px);color:var(--muted);line-height:1.55}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{--accent:var(--celeste);position:relative;display:flex;flex-direction:column;text-decoration:none;
+  background:var(--card);border:1px solid var(--line);border-radius:24px;padding:30px 26px 26px;
+  box-shadow:0 1px 2px rgba(20,30,50,.04),0 8px 24px rgba(20,30,50,.06);
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .25s;overflow:hidden;min-height:320px}
+.card::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--accent)}
+.card::after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:var(--accent);
+  opacity:.07;right:-60px;bottom:-60px;transition:transform .35s}
+.card.fucsia{--accent:var(--fucsia)} .card.verde{--accent:var(--verde)}
+.card:hover,.card:focus-visible{transform:translateY(-6px);border-color:var(--accent);
+  box-shadow:0 2px 4px rgba(20,30,50,.05),0 18px 40px rgba(20,30,50,.12)}
+.card:hover::after{transform:scale(1.35)}
+.card:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+.icon{width:72px;height:72px;border-radius:20px;display:grid;place-items:center;margin-bottom:22px;
+  background:color-mix(in srgb,var(--accent) 14%,white);color:var(--accent)}
+.icon svg{width:38px;height:38px}
+.card h2{font-family:'Pacifico',cursive;font-weight:400;font-size:26px;line-height:1.25;margin-bottom:10px}
+.card p{color:var(--muted);font-size:15.5px;line-height:1.55;flex:1}
+.cta{margin-top:22px;display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--accent)}
+.cta svg{width:18px;height:18px;transition:transform .25s}
+.card:hover .cta svg{transform:translateX(4px)}
+
+.badge{position:absolute;top:22px;right:20px;z-index:2;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:#fff;background:var(--accent);padding:6px 12px;border-radius:999px;box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 35%,transparent)}
+.card.soon .cta{color:var(--muted)}
+
+footer{text-align:center;padding:24px 16px 32px;color:var(--muted);font-size:14px}
+footer .links{display:flex;justify-content:center;gap:18px;margin-bottom:10px;flex-wrap:wrap}
+footer a{text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+footer a:hover{color:var(--fucsia)}
+footer svg{width:18px;height:18px}
+
+@media (max-width:900px){.grid{grid-template-columns:1fr 1fr}.grid .card:first-child{grid-column:1/-1;min-height:0}}
+@media (max-width:620px){
+  header img{height:46px}
+  main{padding-top:24px}
+  .hero{margin-bottom:28px}
+  .grid{grid-template-columns:1fr;gap:16px}
+  .card{min-height:0;padding:24px 20px 22px}
+  .icon{width:60px;height:60px;margin-bottom:16px}
+  .icon svg{width:32px;height:32px}
+  .card h2{font-size:23px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bubbles" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
+
+<header>
+  <a href="/" aria-label="A tu manera Gráfica — inicio"><img src="/assets/img/logo-header.png" alt="A tu manera Gráfica" width="250" height="58"></a>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>Todo <span class="c">personalizado</span>, <span class="f">a tu</span> <span class="v">manera</span></h1>
+    <p>Elegí qué querés crear. Diseñás en línea, te lo producimos y te lo enviamos.</p>
+  </section>
+
+  <section class="grid" aria-label="Nuestras líneas">
+    <!-- 1) Etiquetas: activa -->
+    <a class="card" href="https://etiquetas.atumaneragraf.com/">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+      </div>
+      <h2>Etiquetas para ropa</h2>
+      <p>Termoadhesivas, de falletina para coser, pulseras y stickers de vinilo. Diseñalas en vivo con el nombre y el dibujito que quieras.</p>
+      <span class="cta">Ir a la tienda
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+
+    <!-- 2) Regalos: próximamente -->
+    <a class="card fucsia soon" href="/proximamente?s=regalos">
+      <span class="badge">Próximamente</span>
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3.5c0 1 1 1.5 1 2.5M12 3.5c0 1 1 1.5 1 2.5"/></svg>
+      </div>
+      <h2>Regalos personalizados</h2>
+      <p>Tazas, remeras y más con tu foto, frase o diseño. Ideales para cumpleaños, egresos, empresas y fechas especiales.</p>
+      <span class="cta">Muy pronto
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+
+    <!-- 3) Plotter / Impresiones: próximamente -->
+    <a class="card verde soon" href="/proximamente?s=impresiones">
+      <span class="badge">Próximamente</span>
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/><path d="M17.5 12h.01"/></svg>
+      </div>
+      <h2>Plotter / Impresiones</h2>
+      <p>Impresión en gran formato, vinilos de corte, planos y cartelería. Mandanos tu archivo y lo imprimimos.</p>
+      <span class="cta">Muy pronto
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+  </section>
+</main>
+
+<footer>
+  <div class="links">
+    <a href="https://wa.me/5491176309675" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>WhatsApp</a>
+    <a href="https://instagram.com/atumaneraetiquetas" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>Instagram</a>
+  </div>
+  © <span id="y"></span> A tu manera Gráfica
+</footer>
+<script>document.getElementById('y').textContent=new Date().getFullYear();</script>
+</body>
+</html>

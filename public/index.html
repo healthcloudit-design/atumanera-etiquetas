@@ -1325,8 +1325,17 @@ function fontStack(f){ return `"${f}", ${FONT_FALLBACK[f]||'sans-serif'}`; }
 // Parte el nombre en líneas por estructura (nombres arriba, apellidos abajo).
 // Máx 4 palabras. Regla: 1 línea salvo que la estructura o los 21 caracteres obliguen a bajar.
 function labelLayout(text){
-  const words = (text||'').trim().split(/\s+/).filter(Boolean).slice(0,4)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1)); // auto-capitaliza la 1ª letra de cada palabra
+  const cap = w => w.charAt(0).toUpperCase() + w.slice(1); // auto-capitaliza la 1ª letra
+  const raw = (text||'');
+  // Salto de línea MANUAL: si el cliente deja 2+ espacios (o un enter), corta ahí.
+  // Permite poner, p.ej., el nombre arriba y el apellido abajo a gusto.
+  if (/\n|\s{2,}/.test(raw)) {
+    const parts = raw.split(/\s*\n\s*|\s{2,}/).map(s => s.trim()).filter(Boolean).slice(0,2);
+    const lines = parts.map(l => l.split(/\s+/).filter(Boolean).map(cap).join(' '));
+    const nWords = raw.trim().split(/\s+/).filter(Boolean).length;
+    return { lines: lines.length ? lines : [''], cs: nWords>=4 ? 4 : 3 };
+  }
+  const words = raw.trim().split(/\s+/).filter(Boolean).slice(0,4).map(cap);
   if(words.length===0) return { lines:[''], cs:2 };
   if(words.length===1) return { lines:[words[0]], cs:2 };
   if(words.length===2){
@@ -1705,8 +1714,8 @@ function updatePreview() {
   state.text = rawText;
   const cc = document.getElementById('charCount');
   const len = rawText.length;
-  cc.textContent = len + ' / 30';
-  cc.className = 'char-count' + (len>=30?' full':len>=22?' near':'');
+  cc.textContent = len + ' / 42';
+  cc.className = 'char-count' + (len>=42?' full':len>=32?' near':'');
   applyToMockup(p.textId, p.iconId, p.contentId, rawText, p);
   if (p.hasBorderColor && p.borderEl) document.getElementById(p.borderEl).style.borderColor = state.borderColor;
   if (p.hasPulseraColor) { document.getElementById('pulseraBg').style.background = state.pulseraColor; if(rawText.trim()) document.getElementById(p.textId).style.color = '#000000'; }
