@@ -51,6 +51,10 @@ img{max-width:100%;}
 .nav-item:hover{transform:translateY(-3px) scale(1.07);box-shadow:0 8px 18px rgba(0,0,0,.22);filter:brightness(1.07);}
 .nav-dropdown .nav-dd-item{transition:background .15s;}
 .nav-item.active{box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 2px 6px rgba(0,0,0,.12);}
+.align-row{display:flex;gap:8px;}
+.align-btn{flex:1;padding:9px 6px;border:2px solid #e0e0e0;background:#fff;border-radius:10px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:#555;cursor:pointer;transition:all .15s;}
+.align-btn:hover{border-color:#00AEEF;color:#00AEEF;}
+.align-btn.active{background:#00AEEF;border-color:#00AEEF;color:#fff;}
 .nav-dropdown{position:absolute;top:100%;left:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:220px;display:none;flex-direction:column;z-index:200;overflow:hidden;margin-top:0;}
 .nav-item:hover .nav-dropdown{display:flex;}
 .nav-dd-item{padding:10px 16px;font-size:13px;font-weight:600;color:#555;cursor:pointer;transition:background 0.1s;}
@@ -566,11 +570,19 @@ img{max-width:100%;}
       <div class="field">
         <label id="textLabel">Nombre y apellido</label>
         <input type="text" id="labelText" maxlength="42" placeholder="Ej: Isaac Ezequiel Malinarich Perez" oninput="updatePreview()">
-        <div class="char-count" id="charCount">0 / 30</div>
+        <div class="char-count" id="charCount">0 / 42</div>
       </div>
       <div class="field">
         <label>Tipografía</label>
         <div class="font-grid" id="fontGrid"></div>
+      </div>
+      <div class="field" id="alignField">
+        <label>Alineación del texto</label>
+        <div class="align-row">
+          <button type="button" class="align-btn" data-al="left"   onclick="setAlign('left')">⬅︎ Izquierda</button>
+          <button type="button" class="align-btn" data-al="center" onclick="setAlign('center')">↔︎ Centro</button>
+          <button type="button" class="align-btn" data-al="right"  onclick="setAlign('right')">Derecha ➡︎</button>
+        </div>
       </div>
       <div class="field" id="textColorField">
         <label>Color del texto</label>
@@ -592,7 +604,7 @@ img{max-width:100%;}
         <label style="display:none">Posición del dibujito</label>
         <div class="pos-row" id="posRow" style="display:none"></div>
       </div>
-      <div class="field">
+      <div class="field" id="iconField">
         <label>Dibujito <span style="font-size:10px;color:#aaa;font-weight:400;text-transform:none">(30 de los 122 diseños exclusivos)</span></label>
         <div class="icon-cats" id="iconCats"></div>
         <div class="icon-grid" id="iconGrid"></div>
@@ -1243,7 +1255,7 @@ async function composePhotoMockup(p, cv) {
     ctx.restore();
   }
 
-  const textColor = isPulsera ? (state.pulseraTextColor || '#ffffff') : '#000000';
+  const textColor = '#000000';   // el texto va SIEMPRE en negro (incluida la pulsera fluo)
   const hasIcon = !isPulsera && state.position !== 'none' && !!state.iconSrc;
   await drawLabel(ctx, {
     font: state.font || 'Noteworthy', text: state.text, color: textColor,
@@ -1381,18 +1393,18 @@ async function drawLabel(ctx, o){
     fontPx*=scale; leadPx*=scale; lsPx*=scale; setFont();
     textBlockW = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
   }
-  // Layout según el esquema: dibujito pegado a la izquierda del área; el texto ocupa
-  // (y se centra en) la zona restante a la derecha (3mm de separación). Sin dibujito,
-  // el texto se centra en toda el área de impresión.
-  let tx;
-  if (hasIcon) {
-    if (iconSrc) { try { const ic = await loadImgCached(iconSrc); ctx.drawImage(ic, x, y+(h-iconH)/2, iconW, iconH); } catch(e){} }
-    tx = x + iconW + gap; // texto pegado a 3mm exactos del dibujito
-  } else {
-    tx = x + Math.max(0, (w - textBlockW)/2);
-  }
+  // Dibujito a la izquierda; el texto se alinea (izq/centro/der, a elección del cliente)
+  // dentro de la zona restante. Sin dibujito, dentro de toda el área de impresión.
+  if (hasIcon && iconSrc) { try { const ic = await loadImgCached(iconSrc); ctx.drawImage(ic, x, y+(h-iconH)/2, iconW, iconH); } catch(e){} }
+  const align = (typeof state!=='undefined' && state.align) ? state.align : 'center';
+  const zoneX = hasIcon ? x + iconW + gap : x;
+  const zoneW = hasIcon ? w - iconW - gap : w;
+  let ax;
+  if (align==='left'){ ctx.textAlign='left'; ax = zoneX; }
+  else if (align==='right'){ ctx.textAlign='right'; ax = zoneX + zoneW; }
+  else { ctx.textAlign='center'; ax = zoneX + zoneW/2; }
   const sy = y + h/2 - (lines.length-1)*leadPx/2;
-  lines.forEach((l,i)=> ctx.fillText(l, tx, sy + i*leadPx));
+  lines.forEach((l,i)=> ctx.fillText(l, ax, sy + i*leadPx));
   ctx.restore();
 }
 const TEXT_COLORS = [
@@ -1427,7 +1439,18 @@ const CINTA_COLORS = [
   { hex:'#F4D35E', label:'Amarillo', textColor:'#1A1A1A' },
 ];
 
-let state = { productIdx:0, text:'', font:'Noteworthy', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', qty:1 };
+let state = { productIdx:0, text:'', font:'Noteworthy', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', align:'center', qty:1 };
+function setAlign(a){ state.align=a; renderAlignRow(); updatePreview(); }
+function renderAlignRow(){ document.querySelectorAll('.align-btn').forEach(b=>b.classList.toggle('active', b.dataset.al===state.align)); }
+// El dibujito solo está disponible en falletina BLANCA; en pastel es solo texto. Pulsera no lleva dibujito.
+function updateIconAvailability(){
+  const p = PRODUCTS[state.productIdx];
+  const pastel = p.id==='falletina' && (state.cintaColor||'#FFFFFF').toUpperCase() !== '#FFFFFF';
+  const showIcon = !!p.hasPosition && !pastel;
+  tog('iconField', showIcon);
+  if (!showIcon) state.position='none';
+  else if (state.position==='none') state.position='left';
+}
 let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
 
 /* ============================================================
@@ -1596,7 +1619,7 @@ function buildCintaColorRow() {
     btn.className = 'pcolor-btn' + (c.hex===state.cintaColor?' active':'');
     btn.style.background = c.hex; btn.style.color = c.textColor; btn.style.border = '1px solid #e0e0e0';
     btn.textContent = c.label;
-    btn.onclick = () => { state.cintaColor=c.hex; renderCintaRow(); updatePreview(); };
+    btn.onclick = () => { state.cintaColor=c.hex; renderCintaRow(); updateIconAvailability(); updatePreview(); };
     row.appendChild(btn);
   });
 }
@@ -1638,6 +1661,8 @@ function switchProduct(idx) {
   document.getElementById('priceTotal2').textContent = curPrice().toLocaleString('es-AR');
   document.getElementById('qtyDisplay').textContent = 1;
   document.getElementById('qtySub').innerHTML = '× '+curUnits()+' '+curUnitLabel()+' = <strong id="totalUnits">'+curUnits()+'</strong>';
+  updateIconAvailability();
+  renderAlignRow();
   updatePreview();
 }
 
