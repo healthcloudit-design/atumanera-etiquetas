@@ -1364,7 +1364,11 @@ function fontSpec(font, cs){ return (FONT_TABLE[font]||FONT_TABLE['Noteworthy'])
 // (medida física), escalados por pxPerCm → sirve igual para el archivo de impresión (300dpi)
 // y para el preview sobre la foto. Dibujito: 1,40cm ancho × 1,5cm alto, 3mm de separación.
 async function drawLabel(ctx, o){
-  const { font, text, color='#000000', iconSrc, hasIcon, x, y, w, h, pxPerCm } = o;
+  const { font, text, color='#000000', iconSrc, hasIcon, pxPerCm } = o;
+  // Margen de seguridad: el contenido (texto + dibujito) nunca se acerca a menos de 2mm
+  // del borde del área de impresión → trabajamos sobre el área "menos 2mm" por lado.
+  const _m = 0.2*pxPerCm;
+  const x = o.x + _m, y = o.y + _m, w = Math.max(1, o.w - 2*_m), h = Math.max(1, o.h - 2*_m);
   const { lines, cs } = labelLayout(text);
   const sp = fontSpec(font, cs);
   const pxPerPt = pxPerCm * 2.54/72;
@@ -1384,8 +1388,8 @@ async function drawLabel(ctx, o){
   // dibujito, que queda fijo) no entra a lo ancho o alto del área de impresión.
   const availTextW = w - (hasIcon ? iconW+gap : 0);
   const blockH0 = (lines.length-1)*leadPx + fontPx*1.02;
-  const scaleW = textBlockW>0 ? availTextW*0.99/textBlockW : 1;
-  const scaleH = blockH0>0 ? h*0.99/blockH0 : 1;
+  const scaleW = textBlockW>0 ? availTextW/textBlockW : 1;
+  const scaleH = blockH0>0 ? h/blockH0 : 1;
   // Crece hasta llenar el área de impresión (ancho o alto, lo que tope primero),
   // manteniendo las proporciones de interlineado/interletra de la tabla.
   const scale = Math.min(scaleW, scaleH);
