@@ -33,6 +33,13 @@ img{max-width:100%;}
 
 /* ===== HEADER ===== */
 .topbar{background:#00AEEF;color:#fff;font-size:12px;font-weight:700;text-align:center;padding:6px;letter-spacing:0.3px;}
+.topbar{position:relative;padding:6px 200px;}
+.topbar-home{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none;font-weight:800;background:rgba(255,255,255,.18);padding:3px 10px;border-radius:999px;white-space:nowrap;transition:background .15s;}
+.topbar-home:hover{background:rgba(255,255,255,.32);}
+@media(max-width:750px){.topbar{padding:0;display:flex;flex-direction:column;}.topbar-home{position:static;transform:none;border-radius:0;background:#0099d4;padding:6px;display:block;}.topbar-msg{padding:6px;}}
+.footer-more{max-width:1000px;margin:0 auto 18px;text-align:center;font-size:13px;color:#aaa;}
+.footer-more a{color:#fff;font-weight:800;text-decoration:none;border-bottom:2px solid #EC008C;padding-bottom:1px;}
+.footer-more a:hover{color:#EC008C;}
 .header{background:#fff;border-bottom:3px solid var(--celeste);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
 .logo-wrap{display:flex;align-items:center;gap:10px;cursor:pointer;}
 .logo-circles{position:relative;width:44px;height:34px;flex-shrink:0;}
@@ -393,7 +400,7 @@ img{max-width:100%;}
 <body>
 
 <!-- TOP BAR -->
-<div class="topbar">🚚 Envíos a todo el país por Andreani · GBA por mensajería privada</div>
+<div class="topbar"><a class="topbar-home" href="https://atumaneragraf.com/">← Todos nuestros productos</a><span class="topbar-msg">🚚 Envíos a todo el país por Andreani · GBA por mensajería privada</span></div>
 
 <!-- HEADER -->
 <div class="header">
@@ -552,6 +559,7 @@ img{max-width:100%;}
         <a href="mailto:atumaneraventas2@gmail.com?subject=Bot%C3%B3n%20de%20arrepentimiento" style="display:inline-block;margin-top:16px;font-size:12px;text-decoration:underline;opacity:.85;">Botón de arrepentimiento</a>
       </div>
     </div>
+    <div class="footer-more">Más de A tu manera Gráfica: <a href="https://atumaneragraf.com/">Regalos e impresiones →</a></div>
     <div class="footer-bottom">
       © 2026 A Tu Manera Gráfica · atumaneraventas2@gmail.com · 11 2351-0510
       <div class="powered">Tienda powered by <a href="https://praxisoperativa.com/?utm_source=atumanera-etiquetas&amp;utm_medium=footer&amp;utm_campaign=powered_by" target="_blank" rel="noopener">PraxisOperativa.com</a></div>
