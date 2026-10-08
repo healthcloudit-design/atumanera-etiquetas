@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>A tu manera Gráfica · Etiquetas, regalos e impresiones personalizadas</title>
-<meta name="description" content="A tu manera Gráfica: etiquetas para ropa, regalos personalizados y plotter / impresiones. Diseñá a tu manera.">
+<meta name="description" content="A tu manera Gráfica: etiquetas para ropa, regalos personalizados e impresiones / plotter. Diseñá a tu manera.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://atumaneragraf.com/">
 <meta property="og:title" content="A tu manera Gráfica">
-<meta property="og:description" content="Etiquetas para ropa, regalos personalizados y plotter / impresiones.">
+<meta property="og:description" content="Etiquetas para ropa, regalos personalizados e impresiones.">
 <meta property="og:url" content="https://atumaneragraf.com/">
 <meta property="og:image" content="https://atumaneragraf.com/assets/img/logo-header.png">
 <meta name="theme-color" content="#00AEEF">
@@ -36,7 +36,7 @@ a{color:inherit}
 @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(18px,-22px)}}
 
 header,main,footer{position:relative;z-index:1}
-header{padding:22px 20px 0;display:flex;justify-content:center}
+header{padding:22px 20px 0;display:flex;justify-content:center;mix-blend-mode:multiply}
 header img{height:56px;width:auto;display:block;mix-blend-mode:multiply}
 
 main{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:36px 16px 48px}
@@ -45,7 +45,7 @@ main{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:36px 16px 48px}
 .hero h1 .c{color:var(--celeste)} .hero h1 .f{color:var(--fucsia)} .hero h1 .v{color:var(--verde)}
 .hero p{font-size:clamp(16px,2vw,19px);color:var(--muted);line-height:1.55}
 
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;max-width:860px;margin:0 auto}
 .card{--accent:var(--celeste);position:relative;display:flex;flex-direction:column;text-decoration:none;
   background:var(--card);border:1px solid var(--line);border-radius:24px;padding:30px 26px 26px;
   box-shadow:0 1px 2px rgba(20,30,50,.04),0 8px 24px rgba(20,30,50,.06);
@@ -78,7 +78,6 @@ footer a{text-decoration:none;font-weight:700;display:inline-flex;align-items:ce
 footer a:hover{color:var(--fucsia)}
 footer svg{width:18px;height:18px}
 
-@media (max-width:900px){.grid{grid-template-columns:1fr 1fr}.grid .card:first-child{grid-column:1/-1;min-height:0}}
 @media (max-width:620px){
   header img{height:46px}
   main{padding-top:24px}
@@ -117,26 +116,14 @@ footer svg{width:18px;height:18px}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </a>
 
-    <!-- 2) Regalos: próximamente -->
+    <!-- 2) Regalos e impresiones (un solo sitio: regalos.atumaneragraf.com) — próximamente -->
     <a class="card fucsia soon" href="/proximamente?s=regalos">
       <span class="badge">Próximamente</span>
       <div class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3.5c0 1 1 1.5 1 2.5M12 3.5c0 1 1 1.5 1 2.5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
       </div>
-      <h2>Regalos personalizados</h2>
-      <p>Tazas, remeras y más con tu foto, frase o diseño. Ideales para cumpleaños, egresos, empresas y fechas especiales.</p>
-      <span class="cta">Muy pronto
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-    </a>
-
-    <!-- 3) Plotter / Impresiones: próximamente -->
-    <a class="card verde soon" href="/proximamente?s=impresiones">
-      <span class="badge">Próximamente</span>
-      <div class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/><path d="M17.5 12h.01"/></svg>
-      </div>
-      <h2>Plotter / Impresiones</h2>
-      <p>Impresión en gran formato, vinilos de corte, planos y cartelería. Mandanos tu archivo y lo imprimimos.</p>
+      <h2>Regalos e impresiones</h2>
+      <p>Tazas, remeras y regalos con tu foto, frase o diseño. Y también plotter: impresión en gran formato, vinilos de corte y cartelería.</p>
       <span class="cta">Muy pronto
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </a>

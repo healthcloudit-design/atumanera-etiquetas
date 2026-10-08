@@ -28,11 +28,14 @@ const ETIQUETAS_HOSTS = new Set(['etiquetas.atumaneragraf.com']);
 // apex        → landing con menú (landing.html)
 // www         → 301 al apex
 // etiquetas.* → tienda/editor actual (index.html) — ver ETIQUETAS_HOSTS
-// regalos.* / impresiones.* → "Próximamente" hasta que existan las apps nuevas
+// regalos.*     → sitio único de Regalos + Impresiones ("Próximamente" hasta que exista)
+// impresiones.* → 302 a regalos.* (temporal a propósito: si se cambia el nombre, el navegador no lo cachea)
 const BRAND_APEX = 'atumaneragraf.com';
 const LANDING_HOSTS = new Set([BRAND_APEX]);
 const WWW_TO_APEX = { 'www.atumaneragraf.com': BRAND_APEX };
-const PROXIMAMENTE_HOSTS = new Set(['regalos.atumaneragraf.com', 'impresiones.atumaneragraf.com']);
+const REGALOS_HOST = 'regalos.atumaneragraf.com';
+const PROXIMAMENTE_HOSTS = new Set([REGALOS_HOST]);
+const ALIAS_TO_REGALOS = new Set(['impresiones.atumaneragraf.com']);
 const ETIQUETAS_ORIGIN = 'https://etiquetas.atumaneragraf.com';
 // Mercado Pago vuelve al apex (ver getPublicSiteUrl en api/create-preference.js);
 // estas rutas se mandan a etiquetas.* porque el carrito vive en ese origen.
@@ -54,6 +57,10 @@ export default function middleware(request) {
     if (u.pathname === '/') { u.pathname = '/landing.html'; return rewrite(u); }
     if (u.pathname === '/proximamente') { u.pathname = '/proximamente.html'; return rewrite(u); }
     return next();
+  }
+  if (ALIAS_TO_REGALOS.has(host)) {
+    const u = new URL(request.url);
+    return Response.redirect(`https://${REGALOS_HOST}${u.pathname}${u.search}`, 302);
   }
   if (PROXIMAMENTE_HOSTS.has(host)) {
     const u = new URL(request.url);

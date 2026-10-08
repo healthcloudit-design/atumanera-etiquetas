@@ -51,24 +51,19 @@ p{color:var(--muted);font-size:17px;line-height:1.6;max-width:520px;margin:0 aut
 <script>
 // Sección por: ?s=regalos|impresiones  o  subdominio regalos.* / impresiones.*
 (function(){
-  var SECCIONES = {
-    regalos: {
-      title: 'Regalos personalizados',
-      desc: 'Tazas, remeras y más con tu foto, frase o diseño. Estamos armando la tienda: mientras tanto, escribinos y te cotizamos.',
-      wa: 'Hola! Quiero consultar por regalos personalizados (tazas / remeras).'
-    },
-    impresiones: {
-      title: 'Plotter / Impresiones',
-      desc: 'Impresión en gran formato, vinilos de corte, planos y cartelería. Muy pronto vas a poder subir tu archivo acá; por ahora mandánoslo por WhatsApp.',
-      wa: 'Hola! Quiero consultar por impresiones / plotter.'
-    }
+  // Regalos e Impresiones son un solo sitio (regalos.atumaneragraf.com).
+  var REGALOS = {
+    title: 'Regalos e impresiones',
+    desc: 'Tazas, remeras y regalos con tu foto, frase o diseño, y también plotter: gran formato, vinilos de corte y cartelería. Estamos armando la tienda; mientras tanto escribinos y te cotizamos.',
+    wa: 'Hola! Quiero consultar por regalos personalizados / impresiones.'
   };
+  var SECCIONES = { regalos: REGALOS, impresiones: REGALOS };
   var q = new URLSearchParams(location.search).get('s');
   var sub = location.hostname.split('.')[0].toLowerCase();
   var key = SECCIONES[q] ? q : (SECCIONES[sub] ? sub : null);
   if (!key) return;
   var s = SECCIONES[key];
-  document.body.classList.add(key);
+  document.body.classList.add('regalos');
   document.title = s.title + ' · Próximamente · A tu manera Gráfica';
   document.getElementById('title').textContent = s.title;
   document.getElementById('desc').textContent = s.desc;
