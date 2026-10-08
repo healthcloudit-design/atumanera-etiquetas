@@ -84,8 +84,38 @@ function cents(value) {
   return Math.max(0, Math.round(n));
 }
 
+// Bulto Andreani por defecto (sobre de etiquetas). NO cambiar: es lo que se
+// cotizaba históricamente para el sitio de etiquetas.
+const DEFAULT_PARCEL = { kilos: 0.15, largoCm: 15, anchoCm: 10, altoCm: 2, volumen: 300, valorDeclarado: 10000 };
+
+// Arma el bulto a partir de ítems con medidas ({kg,l,w,h,qty}). Si ningún ítem
+// trae medidas, devuelve el bulto por defecto (comportamiento de etiquetas).
+// La misma fórmula está replicada en public/assets/regalos/app.js (cotización).
+function buildParcel(items, declaredPesos = 10000) {
+  const sized = (items || []).filter(i => i && Number(i.kg) > 0);
+  if (!sized.length) return { ...DEFAULT_PARCEL };
+  const plain = (items || []).length - sized.length;          // etiquetas en el mismo envío
+  let kilos = plain * 0.15, volumen = plain * 300, largo = plain ? 15 : 0, ancho = plain ? 10 : 0, alto = plain ? 2 : 0;
+  for (const i of sized) {
+    const q = Math.max(1, Math.min(50, Number(i.qty) || 1));
+    const l = Math.min(80, Number(i.l) || 10), w = Math.min(80, Number(i.w) || 10), h = Math.min(80, Number(i.h) || 5);
+    kilos += Math.min(25, Number(i.kg)) * q;
+    volumen += l * w * h * q;
+    largo = Math.max(largo, l); ancho = Math.max(ancho, w); alto += h * q;
+  }
+  alto = Math.min(150, Math.max(2, alto));
+  return {
+    kilos: Math.round(kilos * 100) / 100,
+    largoCm: largo, anchoCm: ancho, altoCm: alto,
+    volumen: Math.round(volumen),
+    valorDeclarado: Math.max(10000, Math.round(Number(declaredPesos) || 0)),
+  };
+}
+
 module.exports = {
   DEFAULT_TENANT_SLUG,
+  DEFAULT_PARCEL,
+  buildParcel,
   applyCors,
   sendOptions,
   publicError,

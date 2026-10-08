@@ -12,6 +12,7 @@ const {
   cleanEmail,
   cleanPhone,
   cents,
+  buildParcel,
 } = require('./_utils');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -85,8 +86,13 @@ module.exports = async function handler(req, res) {
 
     const orderItems = await buildOrderItems(cartItems, tenant.id);
     const itemsSubtotal = orderItems.reduce((acc, item) => acc + item.subtotal, 0);
+    // Bulto: si hay productos con peso/medidas (regalos) se calcula; si no, el de siempre.
+    const parcel = buildParcel(
+      orderItems.map(i => (i._ship ? { ...i._ship, qty: i.quantity } : {})),
+      itemsSubtotal / 100
+    );
     const shippingCost =
-        shippingMethod === 'andreani' ? await quoteShippingCents(shippingZip, tenant, andreaniCreds)
+        shippingMethod === 'andreani' ? await quoteShippingCents(shippingZip, tenant, andreaniCreds, parcel)
       : shippingMethod === 'moto'     ? cents(MOTO_TARIFAS[motoLocality] * 100)
       : 0;
     const total = itemsSubtotal + shippingCost;
@@ -115,10 +121,12 @@ module.exports = async function handler(req, res) {
     // Mover miniaturas base64 al bucket privado 'designs' (F7). Si falla, se
     // conserva el data-URI para no romper el checkout.
     const rows = await Promise.all(orderItems.map(async (item, idx) => {
-      const { _printFile, ...rest } = item;
+      const { _printFile, _ship, _pendingFiles, ...rest } = item;
       const thumb = await storeThumbnail(tenant.id, order.id, idx, item.design_thumbnail_url);
       // Archivo de impresión a tamaño real → ruta derivable "<idx>-print.jpg" (sin columna nueva)
       if (_printFile) await storeThumbnail(tenant.id, order.id, idx + '-print', _printFile);
+      // Regalos: mover archivos subidos (pending) a la carpeta del pedido.
+      if (_pendingFiles) rest.files = await claimPendingFiles(tenant.id, order.id, idx, _pendingFiles);
       return { ...rest, order_id: order.id, design_thumbnail_url: thumb };
     }));
     const { error: itemsError } = await supabase.from('order_items').insert(rows);
@@ -128,7 +136,9 @@ module.exports = async function handler(req, res) {
     const preference = new Preference(mp);
     const mpItems = orderItems.map(item => ({
       id: item.product_slug || item.product_id || item.product_name,
-      title: `${item.product_name} - "${item.design_text}"`,
+      title: item._pendingFiles
+        ? `${item.product_name}${item.variant && item.variant.color ? ' · ' + item.variant.color : ''}`
+        : `${item.product_name} - "${item.design_text}"`,
       quantity: item.quantity,
       unit_price: item.unit_price / 100,
       currency_id: 'ARS',
@@ -145,6 +155,7 @@ module.exports = async function handler(req, res) {
     }
 
     const siteUrl = getPublicSiteUrl(req, tenantSlug);
+    const backUrl = getBackUrlBuilder(req, siteUrl, order.id);
     const prefResult = await preference.create({
       body: {
         items: mpItems,
@@ -154,9 +165,9 @@ module.exports = async function handler(req, res) {
           phone: buyerPhone ? { number: buyerPhone } : undefined,
         },
         back_urls: {
-          success: `${siteUrl}/pago-exitoso?order=${order.id}`,
-          failure: `${siteUrl}/pago-fallido?order=${order.id}`,
-          pending: `${siteUrl}/pago-pendiente?order=${order.id}`,
+          success: backUrl('exitoso'),
+          failure: backUrl('fallido'),
+          pending: backUrl('pendiente'),
         },
         auto_return: 'approved',
         external_reference: order.id,
@@ -221,18 +232,28 @@ const ATUMANERA_GRAF_HOSTS = new Set([
   'www.atumaneragraf.com',
   'etiquetas.atumaneragraf.com',
 ]);
+const REGALOS_HOST = 'regalos.atumaneragraf.com';
 
-// Los dominios propios deben volver al mismo dominio después de Mercado Pago.
-// El resto conserva SITE_URL como base de la plataforma.
-function getPublicSiteUrl(req, tenantSlug) {
-  const rawHost = String(req.headers['x-forwarded-host'] || req.headers.host || '')
+function getRequestHost(req) {
+  return String(req.headers['x-forwarded-host'] || req.headers.host || '')
     .split(',')[0]
     .trim()
     .toLowerCase()
     .replace(/:\d+$/, '');
+}
+
+// Los dominios propios deben volver al mismo dominio después de Mercado Pago.
+// El resto conserva SITE_URL como base de la plataforma.
+function getPublicSiteUrl(req, tenantSlug) {
+  const rawHost = getRequestHost(req);
 
   if (tenantSlug === 'feciega' && (rawHost === 'feciega.com' || rawHost === 'www.feciega.com')) {
     return 'https://feciega.com';
+  }
+
+  // Regalos: vuelve a su propio subdominio (el carrito vive en ese origen).
+  if (tenantSlug === 'atumanera' && rawHost === REGALOS_HOST) {
+    return 'https://' + REGALOS_HOST;
   }
 
   // A tu manera Gráfica: vuelve al apex; el middleware redirige /pago-* a etiquetas.*
@@ -243,17 +264,83 @@ function getPublicSiteUrl(req, tenantSlug) {
   return process.env.SITE_URL || 'https://personaliza.praxisoperativa.com';
 }
 
+// URLs de vuelta de Mercado Pago. Por defecto /pago-<estado> sobre siteUrl (igual
+// que siempre). La tienda de regalos probada desde un preview de Vercel
+// (*.vercel.app) vuelve a /regalos.html del mismo preview.
+function getBackUrlBuilder(req, siteUrl, orderId) {
+  const rawHost = getRequestHost(req);
+  if (req.body && req.body.site === 'regalos' && rawHost.endsWith('.vercel.app')) {
+    return (estado) => `https://${rawHost}/regalos.html?pago=${estado}&order=${orderId}`;
+  }
+  return (estado) => `${siteUrl}/pago-${estado}?order=${orderId}`;
+}
+
+// Mueve los archivos de regalos de <tenant>/pending/... a <tenant>/<order>/.
+// Si un move falla, conserva la ruta pending (el archivo sigue accesible).
+async function claimPendingFiles(tenantId, orderId, idx, pending) {
+  const move = async (from, name) => {
+    const ext = from.split('.').pop();
+    const to = `${tenantId}/${orderId}/${idx}-${name}.${ext}`;
+    const { error } = await supabase.storage.from('designs').move(from, to);
+    if (error) { console.error('claimPendingFiles', from, error.message); return `storage:designs/${from}`; }
+    return `storage:designs/${to}`;
+  };
+  const production = await move(pending.production, 'production');
+  const originals = [];
+  for (let k = 0; k < pending.originals.length; k++) originals.push(await move(pending.originals[k], `original-${k + 1}`));
+  return { production, originals };
+}
+
+// Valida y normaliza el diseño de un ítem de regalos (producto con options.editor).
+function validateGiftDesign(item, product, tenantId) {
+  const opts = product.options || {};
+  const pathRe = new RegExp(`^${tenantId}/pending/\\d{8}/[0-9a-f-]{36}-(original|production)\\.(jpg|png|webp|heic|heif)$`);
+  const files = item.files || {};
+  const production = typeof files.production === 'string' ? files.production : '';
+  if (!pathRe.test(production) || !production.endsWith('-production.png')) {
+    throw new Error(`Falta el archivo de producción: ${product.slug}`);
+  }
+  const originals = (Array.isArray(files.originals) ? files.originals : [])
+    .filter(p => typeof p === 'string' && pathRe.test(p) && /-original\./.test(p))
+    .slice(0, 6);
+
+  let variant = null;
+  if (Array.isArray(opts.colors) && opts.colors.length) {
+    const wanted = cleanString(item.variant && item.variant.color, 40);
+    const c = opts.colors.find(x => x.name === wanted);
+    if (!c) throw new Error(`Color invalido para ${product.slug}`);
+    variant = { color: c.name, color_hex: c.hex, label: opts.color_label || 'Color' };
+  }
+
+  let design = null;
+  if (item.design && typeof item.design === 'object') {
+    const json = JSON.stringify(item.design);
+    if (json.length > 60000) throw new Error('Diseño demasiado grande');
+    design = JSON.parse(json);
+  }
+
+  const ship = opts.shipping && Number(opts.shipping.kg) > 0
+    ? { kg: Number(opts.shipping.kg), l: Number(opts.shipping.l), w: Number(opts.shipping.w), h: Number(opts.shipping.h) }
+    : null;
+
+  return { variant, design, pending: { production, originals }, ship };
+}
+
 async function getProductsBySlug(slugs, tenantId) {
   if (!slugs.length) return new Map();
 
   // El filtro por tenant_id es OBLIGATORIO: un tenant solo puede resolver
   // sus propios productos. Sin esto, dos tenants con el mismo slug se pisan.
-  const { data, error } = await supabase
+  const base = 'id, tenant_id, name, slug, price, units_per_set, unit_label, active';
+  const query = cols => supabase
     .from('products')
-    .select('id, tenant_id, name, slug, price, units_per_set, unit_label, active')
+    .select(cols)
     .in('slug', slugs)
     .eq('active', true)
     .eq('tenant_id', tenantId);
+  let { data, error } = await query(base + ', options');
+  // 42703 = columna inexistente (migración regalos_fase1 aún no aplicada): seguir sin options.
+  if (error && error.code === '42703') ({ data, error } = await query(base));
   if (error) throw error;
 
   return new Map((data || []).map(product => [product.slug, product]));
@@ -272,6 +359,10 @@ async function buildOrderItems(cartItems, tenantId) {
     thumbnailUrl: cleanString(item.thumbnailUrl, 250000),
     printFile: cleanString(item.printFile, 600000),
     qty: Math.max(1, Math.min(10, Number.parseInt(item.qty, 10) || 1)),
+    // Regalos (solo se usan si el producto tiene options.editor)
+    design: item.design,
+    files: item.files,
+    variant: item.variant,
   }));
 
   const slugs = [...new Set(normalized.map(item => item.productSlug).filter(Boolean))];
@@ -282,6 +373,32 @@ async function buildOrderItems(cartItems, tenantId) {
     if (!product) throw new Error(`Producto invalido: ${item.productSlug || 'sin slug'}`);
 
     const unitPrice = cents(product.price);
+    if (product.options && product.options.editor) {
+      // Producto de regalos: exige diseño + archivo de producción subido.
+      const g = validateGiftDesign(item, product, tenantId);
+      return {
+        product_id: product.id || null,
+        product_slug: item.productSlug,
+        product_name: cleanString(product.name, 120),
+        design_text: item.designText,
+        design_font: item.font,
+        design_text_color: item.textColor,
+        design_icon_index: null,
+        design_position: 'wrap',
+        design_border_color: null,
+        design_pulsera_color: g.variant ? g.variant.color_hex : null,
+        design_thumbnail_url: item.thumbnailUrl,
+        variant: g.variant,
+        design: g.design,
+        files: null,                  // se completa al mover los archivos al pedido
+        _pendingFiles: g.pending,
+        _ship: g.ship,
+        quantity: item.qty,
+        units_total: item.qty * Number(product.units_per_set || 1),
+        unit_price: unitPrice,
+        subtotal: item.qty * unitPrice,
+      };
+    }
     return {
       product_id: product.id || null,
       product_slug: item.productSlug,
@@ -319,7 +436,7 @@ function normalizeProductSlug(value) {
   return aliases[raw] || raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-async function quoteShippingCents(zip, tenant, andreaniCreds = {}) {
+async function quoteShippingCents(zip, tenant, andreaniCreds = {}, parcel = null) {
   const fallback = cents(tenant?.default_shipping_cost || process.env.DEFAULT_SHIPPING_COST_CENTS || 0);
   const user = andreaniCreds.user;
   const pass = andreaniCreds.pass;
@@ -340,7 +457,7 @@ async function quoteShippingCents(zip, tenant, andreaniCreds = {}) {
     const qs = buildQuery({
       cpDestino: zip,
       contrato,
-      bultos: [{ kilos: 0.15, largoCm: 15, anchoCm: 10, altoCm: 2, volumen: 300, valorDeclarado: 10000 }],
+      bultos: [parcel || buildParcel([])],
     });
     const tarifaRes = await fetch(`${baseUrl}/v1/tarifas?${qs}`, {
       method: 'GET',

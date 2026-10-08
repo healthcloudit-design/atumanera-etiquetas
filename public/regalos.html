@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regalos personalizados · A tu manera Gráfica</title>
+<meta name="description" content="Tazas, remeras, buzos y vasos personalizados con tu foto y tu frase. Diseñalo y miralo en 3D antes de comprar.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Pacifico&family=Lobster&family=Dancing+Script:wght@700&family=Great+Vibes&family=Caveat:wght@700&family=Permanent+Marker&family=Amatic+SC:wght@700&family=Bebas+Neue&family=Montserrat:wght@800&family=Righteous&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--celeste:#00AEEF;--fucsia:#EC008C;--verde:#8DC63F;--amarillo:#FFC107;--ink:#1A1A1A;--muted:#5F6670;--line:#E4E9F0;--bg:#FAFBFD;--card:#fff;--radius:18px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:var(--bg);overflow-x:clip;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer}
+[hidden]{display:none!important}
+.muted{color:var(--muted)}
+
+/* Barra superior */
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.top img.logo{height:42px;width:auto;mix-blend-mode:multiply;display:block}
+.back-all{font-size:13.5px;font-weight:800;color:var(--muted);text-decoration:none;white-space:nowrap}
+.back-all:hover{color:var(--celeste)}
+.spacer{flex:1}
+.cart-btn{position:relative;border:0;background:var(--fucsia);color:#fff;font-weight:800;font-size:14px;border-radius:999px;padding:10px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 16px rgba(236,0,140,.25)}
+.cart-btn svg{width:18px;height:18px}
+.cart-count{background:#fff;color:var(--fucsia);border-radius:999px;font-size:12px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+@media(max-width:560px){.back-all span{display:none}.cart-btn .lbl{display:none}}
+
+/* Hero */
+.hero{max-width:1180px;margin:0 auto;padding:44px 16px 18px;text-align:center}
+.dots{display:flex;gap:9px;justify-content:center;margin-bottom:16px}
+.dots i{width:12px;height:12px;border-radius:50%;animation:bounce 1.2s ease-in-out infinite}
+.dots i:nth-child(1){background:var(--celeste)}.dots i:nth-child(2){background:var(--fucsia);animation-delay:.15s}
+.dots i:nth-child(3){background:var(--verde);animation-delay:.3s}.dots i:nth-child(4){background:var(--amarillo);animation-delay:.45s}
+@keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-9px)}}
+.hero h1{font-family:'Pacifico',cursive;font-weight:400;font-size:clamp(34px,6vw,56px);line-height:1.15;color:var(--fucsia)}
+.hero p{color:var(--muted);font-size:18px;max-width:600px;margin:12px auto 0;line-height:1.55}
+.steps{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+.steps span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px}
+.steps b{color:var(--celeste)}
+
+/* Catálogo */
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 40px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
+a.card:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(20,40,80,.1)}
+.cimg{aspect-ratio:1;background:linear-gradient(#fff,#f1f5fa);display:flex;align-items:center;justify-content:center;position:relative}
+.cimg img{width:100%;height:100%;object-fit:cover;display:block}
+.cimg svg{width:46%;height:46%}
+.skel{position:absolute;inset:18%;border-radius:24px;background:linear-gradient(90deg,#eef2f7 25%,#f8fafc 50%,#eef2f7 75%);background-size:200% 100%;animation:sk 1.3s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.cbody{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
+.cbody h3{font-size:18px;font-weight:800;line-height:1.25}
+.cbody p{font-size:14px;color:var(--muted);line-height:1.45}
+.chip{align-self:flex-start;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--celeste);background:#e6f7fe;padding:4px 10px;border-radius:999px}
+.soonchip{color:#8a6d00;background:#fff4cc}
+.crow{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:8px}
+.crow strong{font-size:22px;font-weight:900}
+.cta{background:var(--celeste);color:#fff;font-weight:800;font-size:14px;padding:9px 14px;border-radius:999px}
+.card.soon{opacity:.85}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px;background:#fff;border:1px dashed var(--line);border-radius:var(--radius)}
+
+/* Editor */
+.ed{max-width:1240px;margin:0 auto;padding:14px 16px 40px}
+.crumb{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:var(--muted);text-decoration:none;font-size:14px;margin-bottom:12px}
+.crumb:hover{color:var(--celeste)}
+.ed-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:22px;align-items:start}
+@media(max-width:900px){.ed-grid{grid-template-columns:1fr}}
+.preview{position:sticky;top:76px;display:flex;flex-direction:column;gap:14px}
+@media(max-width:900px){
+  /* Celular: la taza 3D queda fija arriba mientras se edita y se baja por los controles */
+  .preview{display:contents}
+  .ed-grid .stage{position:sticky;top:62px;z-index:6;aspect-ratio:auto;height:38vh;min-height:230px;box-shadow:0 10px 24px rgba(20,40,80,.14)}
+  .views button{padding:6px 8px;font-size:12px}
+}
+.stage{position:relative;border-radius:var(--radius);background:radial-gradient(120% 90% at 50% 20%,#ffffff 0%,#f2f5f9 60%,#e7ecf3 100%);border:1px solid var(--line);aspect-ratio:4/3.1;overflow:hidden}
+@media(max-width:560px){.stage{aspect-ratio:1/1}}
+#stage3d{position:absolute;inset:0;cursor:grab}
+#stage3d:active{cursor:grabbing}
+.stage .hint3d{position:absolute;left:14px;top:12px;font-size:12.5px;font-weight:800;color:var(--muted);background:rgba(255,255,255,.8);padding:5px 10px;border-radius:999px;pointer-events:none}
+.views{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:6px;background:rgba(255,255,255,.9);padding:5px;border-radius:999px;box-shadow:0 4px 18px rgba(20,40,80,.1)}
+.views button{border:0;background:transparent;font-weight:800;font-size:12.5px;padding:7px 11px;border-radius:999px;color:var(--ink);white-space:nowrap}
+.views button:hover,.views button.on{background:var(--celeste);color:#fff}
+.nogl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted);font-weight:700}
+
+.flat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px 12px}
+.flat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.flat-head h4{font-size:14px;font-weight:900}
+.flat-head span{font-size:12px;color:var(--muted)}
+.flat-wrap{position:relative;width:100%;background:repeating-conic-gradient(#f4f6f9 0% 25%,#fff 0% 50%) 50%/16px 16px;border-radius:6px;outline:1px solid #d9e0ea}
+#flatHost,#flatHost .canvas-container{position:absolute!important;inset:0}
+.guide{position:absolute;pointer-events:none}
+.g-center{left:50%;top:0;bottom:0;border-left:1.5px dashed rgba(0,174,239,.55)}
+.g-safe{inset:3.3% 1.5%;border:1px dashed rgba(236,0,140,.35);border-radius:3px}
+.g-edge{top:0;bottom:0;width:4%;background:repeating-linear-gradient(135deg,rgba(0,0,0,.05) 0 6px,transparent 6px 12px)}
+.g-l{left:0}.g-r{right:0}
+.flat-labels{display:grid;grid-template-columns:1fr auto 1fr;font-size:11.5px;font-weight:800;color:var(--muted);margin-top:7px;gap:6px}
+.flat-labels span:nth-child(2){color:var(--celeste)}
+.flat-labels span:last-child{text-align:right}
+.empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:800;pointer-events:none}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:18px}
+.panel h1{font-size:24px;font-weight:900;line-height:1.2}
+.price{font-size:28px;font-weight:900;color:var(--fucsia)}
+.info{font-size:13px;color:var(--muted);line-height:1.6}
+.sec h5{font-size:12.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;display:flex;justify-content:space-between}
+.sec h5 em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--ink)}
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;border:2px dashed #9fdcf6;background:#f3fbff;border-radius:14px;padding:18px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--celeste);background:#e6f7fe}
+.drop b{font-size:15px;color:#0088bd}
+.drop small{color:var(--muted);font-size:12px}
+.drop input{display:none}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;font-size:15px;background:var(--celeste);color:#fff;transition:filter .15s,transform .15s}
+.btn:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn.pink{background:var(--fucsia);box-shadow:0 8px 20px rgba(236,0,140,.25)}
+.btn.block{width:100%}
+.btn.sm{padding:8px 11px;font-size:13px;border-radius:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools{background:#f7f9fc;border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+input[type=text],input[type=email],input[type=tel],select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:11px;font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--celeste)}
+input[type=range]{width:100%;accent-color:var(--fucsia)}
+.sws{display:flex;gap:8px;flex-wrap:wrap}
+.sw{width:32px;height:32px;border-radius:50%;border:2px solid #fff;background:var(--sw);box-shadow:0 0 0 1.5px #d5dce6;transition:transform .12s}
+.sw:hover{transform:scale(1.1)}
+.sw.on{box-shadow:0 0 0 3px var(--fucsia)}
+.sw.none{background:linear-gradient(135deg,#fff 45%,#e33 46%,#e33 54%,#fff 55%)}
+.chk{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.qty{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.qty button{border:0;background:#fff;width:40px;height:42px;font-size:20px;font-weight:800;color:var(--celeste)}
+.qty span{min-width:34px;text-align:center;font-weight:900}
+.qty.sm button{width:30px;height:30px;font-size:16px}
+.buy{display:flex;gap:12px;align-items:center}
+.buy .btn{flex:1}
+.note{font-size:12.5px;color:var(--muted);line-height:1.5;background:#fffbea;border:1px solid #ffe8a3;border-radius:12px;padding:10px 12px}
+
+/* Carrito */
+.shade{position:fixed;inset:0;background:rgba(10,20,40,.4);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:#fff;z-index:41;transform:translateX(100%);transition:transform .28s ease;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,.12)}
+.drawer.open{transform:none}
+.dhead{display:flex;justify-content:space-between;align-items:center;padding:18px 18px 12px;border-bottom:1px solid var(--line)}
+.dhead h3{font-family:'Pacifico',cursive;font-weight:400;font-size:24px;color:var(--fucsia)}
+.x{border:0;background:#f2f4f8;width:36px;height:36px;border-radius:50%;font-size:18px}
+#cartItems{flex:1;overflow:auto;padding:6px 18px}
+.citem{display:grid;grid-template-columns:72px 1fr auto;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.citem img{width:72px;height:72px;border-radius:12px;object-fit:cover;background:#f1f5fa}
+.cinfo{display:flex;flex-direction:column;gap:3px;font-size:13.5px;min-width:0}
+.cinfo .muted{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1px #0002}
+.cright{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between}
+.link{border:0;background:none;color:var(--muted);font-size:12.5px;text-decoration:underline}
+.cempty{text-align:center;color:var(--muted);padding:40px 10px;line-height:1.8}
+.dfoot{border-top:1px solid var(--line);padding:16px 18px 20px;display:flex;flex-direction:column;gap:12px}
+.tot{display:flex;justify-content:space-between;font-size:18px;font-weight:900}
+
+/* Modales */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,20,40,.45);display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:640px){.modal{align-items:center;padding:20px}}
+.sheet{background:#fff;width:100%;max-width:520px;max-height:94vh;overflow:auto;border-radius:22px 22px 0 0;padding:22px}
+@media(min-width:640px){.sheet{border-radius:22px}}
+.sheet h3{font-size:22px;font-weight:900;margin-bottom:12px}
+.sheet label{display:block;font-size:12.5px;font-weight:800;color:var(--muted);margin:12px 0 5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ships{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.sheet .ship{display:flex;margin:0;color:var(--ink);gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;cursor:pointer;font-weight:700;font-size:14px}
+.ship small{display:block;font-weight:600;color:var(--muted);font-size:12.5px}
+.ship:has(input:checked){border-color:var(--celeste);background:#f3fbff}
+.ship input{margin-top:3px;accent-color:var(--celeste)}
+.shipinfo{font-size:13.5px;font-weight:700;color:#01579b;background:#e8f6fd;border-radius:10px;padding:9px 12px;margin-top:10px}
+.shipinfo:empty{display:none}
+.summary{background:#f7f9fc;border-radius:14px;padding:12px 14px;margin-top:14px;font-size:14px}
+.srow{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.srow.total{font-weight:900;font-size:17px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.err{color:#c62828;font-size:13.5px;font-weight:700;min-height:18px;margin-top:10px}
+.actions{display:flex;gap:10px;margin-top:12px}
+.actions .btn{flex:1}
+.result{text-align:center}
+.result h3{font-family:'Pacifico',cursive;font-weight:400;color:var(--fucsia);font-size:28px}
+.result p{color:var(--muted);line-height:1.6;margin:8px 0 16px}
+
+.busy{position:fixed;inset:0;z-index:60;background:rgba(255,255,255,.82);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-weight:800;font-size:16px}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid #d9f1fb;border-top-color:var(--celeste);animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;transition:.25s;z-index:70;max-width:calc(100% - 32px);text-align:center;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.ok{background:#2e7d32}.toast.err{background:#c62828}
+
+.wa{position:fixed;right:18px;bottom:18px;z-index:25;width:54px;height:54px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,211,102,.4)}
+.wa svg{width:28px;height:28px}
+footer{text-align:center;padding:30px 16px 40px;color:var(--muted);font-size:13px;line-height:1.8}
+footer a{font-weight:800;text-decoration:none}
+footer .powered{font-size:12.5px;margin-top:6px}
+footer .powered a{color:var(--ink)}
+footer .powered a:hover{color:var(--celeste)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <a href="/" aria-label="Regalos personalizados — inicio"><img class="logo" src="/assets/img/logo-header.png" alt="A tu manera Gráfica"></a>
+    <a class="back-all" href="https://atumaneragraf.com">← <span>Todos nuestros productos</span></a>
+    <div class="spacer"></div>
+    <button class="cart-btn" id="cartBtn" aria-label="Ver carrito">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 4h2.2l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2L21 8H6"/></svg>
+      <span class="lbl">Carrito</span><span class="cart-count" id="cartCount" hidden>0</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── CATÁLOGO ── -->
+<main id="catalogView">
+  <section class="hero">
+    <div class="dots"><i></i><i></i><i></i><i></i></div>
+    <h1>Regalos personalizados</h1>
+    <p>Subí tu foto, escribí tu frase y mirá en 3D cómo va a quedar tu regalo antes de comprarlo.</p>
+    <div class="steps"><span><b>1.</b> Elegí el producto</span><span><b>2.</b> Diseñalo a tu manera</span><span><b>3.</b> Lo producimos y te lo enviamos</span></div>
+  </section>
+  <section class="wrap"><div class="grid" id="grid"><div class="empty">Cargando productos…</div></div></section>
+</main>
+
+<!-- ── EDITOR ── -->
+<main id="editorView" class="ed" hidden>
+  <a href="#" class="crumb" id="backBtn">← Volver a regalos</a>
+  <div class="ed-grid">
+    <div class="preview">
+      <div class="stage">
+        <div id="stage3d"></div>
+        <div class="nogl" id="noGl" hidden>Tu navegador no permite la vista 3D. Igual podés diseñar abajo: así se imprime.</div>
+        <span class="hint3d">↔ Arrastrá para girar la taza</span>
+        <div class="views">
+          <button data-view="left">Asa izq.</button>
+          <button data-view="front">Frente</button>
+          <button data-view="right">Asa der.</button>
+          <button data-view="handle">Atrás</button>
+          <button data-view="spin" aria-label="Girar automáticamente">⟳ Girar</button>
+        </div>
+      </div>
+      <div class="flat">
+        <div class="flat-head"><h4>Tu diseño · área de impresión</h4><span id="flatSize">20 × 9 cm · se imprime alrededor de la taza</span></div>
+        <div class="flat-wrap" id="flatWrap">
+          <div id="flatHost"></div>
+          <div class="guide g-edge g-l"></div><div class="guide g-edge g-r"></div>
+          <div class="guide g-safe"></div><div class="guide g-center"></div>
+          <div class="empty-hint" id="emptyHint" hidden>Subí una foto o agregá un texto</div>
+        </div>
+        <div class="flat-labels"><span>◀ se ve con el asa a la izquierda</span><span>frente</span><span>se ve con el asa a la derecha ▶</span></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div>
+        <h1 id="edTitle">Taza personalizada</h1>
+        <div class="price" id="edPrice"></div>
+        <div class="info" id="edInfo"></div>
+      </div>
+
+      <div class="sec">
+        <h5>1 · Tu foto</h5>
+        <label class="drop" id="dropZone">
+          <input type="file" id="photoInput" accept="image/*">
+          <b>📷 Subir foto</b>
+          <small>JPG o PNG, la mejor calidad que tengas (hasta 25 MB)</small>
+        </label>
+      </div>
+
+      <div class="sec">
+        <h5>2 · Tu texto</h5>
+        <button class="btn ghost block" id="addTextBtn">✎ Agregar texto</button>
+      </div>
+
+      <div class="tools" id="objTools" hidden>
+        <div class="tools" id="textTools" hidden style="padding:0;border:0;background:none">
+          <textarea id="textInput" rows="2" placeholder="Escribí tu frase"></textarea>
+          <div class="two"><select id="fontSel" aria-label="Tipografía"></select>
+            <input type="range" id="sizeRange" min="20" max="220" aria-label="Tamaño"></div>
+          <div class="sws" id="textColorRow"></div>
+          <label class="chk"><input type="checkbox" id="strokeChk"> Borde para que se lea sobre la foto</label>
+        </div>
+        <div class="row" id="photoTools" hidden>
+          <button class="btn sm ghost" id="fitFront">Ajustar al frente</button>
+          <button class="btn sm ghost" id="fitCover">Cubrir toda la taza</button>
+        </div>
+        <div class="row">
+          <button class="btn sm ghost" id="centerBtn">Centrar</button>
+          <button class="btn sm ghost" id="bothSides">A los dos lados</button>
+          <button class="btn sm ghost" id="fwdBtn" title="Traer adelante">▲</button>
+          <button class="btn sm ghost" id="backLayerBtn" title="Mandar atrás">▼</button>
+          <button class="btn sm ghost" id="delBtn" style="color:#c62828">Eliminar</button>
+        </div>
+      </div>
+
+      <div class="sec" id="colorSection" hidden>
+        <h5><span id="colorLabel">Color</span><em id="colorName"></em></h5>
+        <div class="sws" id="colorRow"></div>
+      </div>
+
+      <div class="sec">
+        <h5>Fondo del diseño</h5>
+        <div class="sws" id="bgRow"></div>
+      </div>
+
+      <div class="buy">
+        <div class="qty"><button id="qtyMinus" aria-label="Menos">−</button><span id="qtyVal">1</span><button id="qtyPlus" aria-label="Más">+</button></div>
+        <button class="btn pink" id="addBtn">Agregar al carrito</button>
+      </div>
+      <div class="note">Antes de producir revisamos cada diseño. Si la foto no tiene buena calidad para imprimir, te escribimos por mail para pedirte otra.</div>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  <div><a href="https://etiquetas.atumaneragraf.com" style="color:var(--celeste)">Etiquetas para ropa</a> · <a href="https://wa.me/5491176309675" target="_blank" rel="noopener" style="color:#1faa59">WhatsApp 11 7630-9675</a></div>
+  <div class="powered">Tienda powered by <a href="https://praxisoperativa.com/?utm_source=regalos&utm_medium=footer&utm_campaign=powered_by" target="_blank" rel="noopener">PraxisOperativa.com</a></div>
+</footer>
+
+<a class="wa" href="https://wa.me/5491176309675?text=Hola!%20Tengo%20una%20consulta%20sobre%20regalos%20personalizados" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
+  <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3Z"/></svg>
+</a>
+
+<!-- Carrito -->
+<div class="shade" id="shade" hidden></div>
+<aside class="drawer" id="cartDrawer" aria-label="Carrito">
+  <div class="dhead"><h3>Tu carrito</h3><button class="x" id="closeCart" aria-label="Cerrar">✕</button></div>
+  <div id="cartItems"></div>
+  <div class="dfoot">
+    <div class="tot"><span>Total</span><span id="cartTotal">$0</span></div>
+    <button class="btn pink block" id="checkoutBtn">Finalizar compra</button>
+  </div>
+</aside>
+
+<!-- Checkout -->
+<div class="modal" id="checkoutModal" hidden>
+  <div class="sheet">
+    <h3>Finalizar compra</h3>
+    <label for="bName">Nombre y apellido</label><input type="text" id="bName" autocomplete="name">
+    <div class="two">
+      <div><label for="bEmail">Email</label><input type="email" id="bEmail" autocomplete="email"></div>
+      <div><label for="bPhone">WhatsApp</label><input type="tel" id="bPhone" autocomplete="tel"></div>
+    </div>
+    <label>Entrega</label>
+    <div class="ships">
+      <label class="ship"><input type="radio" name="ship" value="retiro" checked><span>Retiro en San Fernando<small>Sin cargo · coordinamos por WhatsApp</small></span></label>
+      <label class="ship"><input type="radio" name="ship" value="moto"><span>Motomensajería GBA / CABA<small>Llega en el día una vez listo</small></span></label>
+      <label class="ship"><input type="radio" name="ship" value="andreani"><span>Envío Andreani a todo el país<small>A domicilio · 3 a 6 días hábiles</small></span></label>
+    </div>
+    <div id="motoFields" hidden>
+      <label for="motoLocality">Localidad</label><select id="motoLocality"></select>
+      <label for="motoAddr">Dirección de entrega</label><input type="text" id="motoAddr" autocomplete="street-address">
+    </div>
+    <div id="andreaniFields" hidden>
+      <div class="two">
+        <div><label for="shipZip">Código postal</label><input type="text" id="shipZip" inputmode="numeric" maxlength="4"></div>
+        <div><label for="shipProv">Provincia</label><input type="text" id="shipProv"></div>
+      </div>
+      <label for="shipAddr">Dirección</label><input type="text" id="shipAddr" autocomplete="street-address">
+      <label for="shipCity">Localidad</label><input type="text" id="shipCity">
+    </div>
+    <div class="shipinfo" id="shipInfo"></div>
+    <div class="summary">
+      <div id="coItems"></div>
+      <div class="srow"><span>Envío</span><span id="coShip">—</span></div>
+      <div class="srow total"><span>Total</span><span id="coTotal">$0</span></div>
+    </div>
+    <div class="err" id="coErr"></div>
+    <div class="actions">
+      <button class="btn ghost" id="closeCheckout">Volver</button>
+      <button class="btn pink" id="payBtn">Pagar con Mercado Pago</button>
+    </div>
+  </div>
+</div>
+
+<!-- Resultado del pago -->
+<div class="modal" id="resultModal" hidden>
+  <div class="sheet result">
+    <h3 id="resultTitle"></h3>
+    <p id="resultMsg"></p>
+    <button class="btn pink block" id="resultOk">Seguir</button>
+  </div>
+</div>
+
+<div class="busy" id="busy" hidden><div class="spin"></div><div id="busyMsg">Procesando…</div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="/assets/regalos/app.js"></script>
+</body>
+</html>

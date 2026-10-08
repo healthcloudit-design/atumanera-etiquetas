@@ -2,7 +2,7 @@
 // Cotiza Andreani para el tenant actual.
 
 const { createClient } = require('@supabase/supabase-js');
-const { applyCors, sendOptions, publicError, getTenantSlug, cleanString } = require('./_utils');
+const { applyCors, sendOptions, publicError, getTenantSlug, cleanString, buildParcel } = require('./_utils');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -54,14 +54,10 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: false, fallback: true, error: 'No se recibio token' });
     }
 
-    const bultos = [{
-      kilos: 0.15,
-      largoCm: 15,
-      anchoCm: 10,
-      altoCm: 2,
-      volumen: 300,
-      valorDeclarado: 10000,
-    }];
+    // Bulto: por defecto el sobre de etiquetas (igual que siempre). La tienda de
+    // regalos manda `items` con peso/medidas y `declared` (valor en pesos).
+    const reqItems = Array.isArray(req.body?.items) ? req.body.items.slice(0, 30) : [];
+    const bultos = [buildParcel(reqItems, req.body?.declared)];
 
     const qs = buildQuery({ cpDestino, cpOrigen, contrato: contratoFinal, bultos });
     const tarifaRes = await fetch(`${baseUrl}/v1/tarifas?${qs}`, {

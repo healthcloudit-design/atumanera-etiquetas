@@ -28,13 +28,17 @@ const ETIQUETAS_HOSTS = new Set(['etiquetas.atumaneragraf.com']);
 // apex        → landing con menú (landing.html)
 // www         → 301 al apex
 // etiquetas.* → tienda/editor actual (index.html) — ver ETIQUETAS_HOSTS
-// regalos.*     → sitio único de Regalos + Impresiones ("Próximamente" hasta que exista)
+// regalos.*     → sitio único de Regalos + Impresiones (regalos.html; "Próximamente" hasta REGALOS_LIVE)
 // impresiones.* → 302 a regalos.* (temporal a propósito: si se cambia el nombre, el navegador no lo cachea)
 const BRAND_APEX = 'atumaneragraf.com';
 const LANDING_HOSTS = new Set([BRAND_APEX]);
 const WWW_TO_APEX = { 'www.atumaneragraf.com': BRAND_APEX };
 const REGALOS_HOST = 'regalos.atumaneragraf.com';
-const PROXIMAMENTE_HOSTS = new Set([REGALOS_HOST]);
+// Tienda de regalos (regalos.html). Mientras REGALOS_LIVE sea false, el público
+// sigue viendo "Próximamente"; para probar en producción: entrar una vez con
+// ?preview=regalos (deja una cookie por 30 días). Al lanzar: REGALOS_LIVE = true.
+const REGALOS_LIVE = false;
+const REGALOS_PREVIEW_COOKIE = 'rg_preview=1';
 const ALIAS_TO_REGALOS = new Set(['impresiones.atumaneragraf.com']);
 const ETIQUETAS_ORIGIN = 'https://etiquetas.atumaneragraf.com';
 // Mercado Pago vuelve al apex (ver getPublicSiteUrl en api/create-preference.js);
@@ -62,8 +66,18 @@ export default function middleware(request) {
     const u = new URL(request.url);
     return Response.redirect(`https://${REGALOS_HOST}${u.pathname}${u.search}`, 302);
   }
-  if (PROXIMAMENTE_HOSTS.has(host)) {
+  if (host === REGALOS_HOST) {
     const u = new URL(request.url);
+    const wantsPreview = u.searchParams.get('preview') === 'regalos';
+    const hasPreview = (request.headers.get('cookie') || '').includes(REGALOS_PREVIEW_COOKIE);
+    if (REGALOS_LIVE || wantsPreview || hasPreview) {
+      // Todo el sitio (incluidas las vueltas /pago-* de Mercado Pago) lo resuelve regalos.html.
+      u.pathname = '/regalos.html';
+      if (wantsPreview && !hasPreview) {
+        return rewrite(u, { headers: { 'Set-Cookie': `${REGALOS_PREVIEW_COOKIE}; Path=/; Max-Age=2592000; Secure; SameSite=Lax` } });
+      }
+      return rewrite(u);
+    }
     u.pathname = '/proximamente.html';
     return rewrite(u);
   }

@@ -29,12 +29,17 @@ module.exports = async function handler(req, res) {
     if (tErr) throw tErr;
     if (!tenant) return publicError(res, 404, 'Tienda no encontrada');
 
-    const { data: products, error: pErr } = await supabase
-      .from('products')
-      .select('name, slug, category, price, units_per_set, unit_label, material, size_description, elaboration_days, notes')
-      .eq('tenant_id', tenant.id)
-      .eq('active', true)
-      .order('price', { ascending: true });
+    const baseCols = 'name, slug, category, price, units_per_set, unit_label, material, size_description, elaboration_days, notes';
+    const productsQuery = cols => {
+      let q = supabase.from('products').select(cols).eq('tenant_id', tenant.id).eq('active', true);
+      // ?category=Regalos → solo esa categoría (lo usa regalos.atumaneragraf.com)
+      const cat = cleanString(req.query.category, 60);
+      if (cat) q = q.eq('category', cat);
+      return q.order('price', { ascending: true });
+    };
+    // `options` (config del editor de regalos) solo existe tras la migración regalos_fase1.
+    let { data: products, error: pErr } = await productsQuery(baseCols + ', options');
+    if (pErr && pErr.code === '42703') ({ data: products, error: pErr } = await productsQuery(baseCols));
     if (pErr) throw pErr;
 
     return res.status(200).json({

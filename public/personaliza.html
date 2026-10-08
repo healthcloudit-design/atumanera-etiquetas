@@ -143,6 +143,11 @@
           <button class="tab" data-tt="products" onclick="tnTab('products')">Productos y precios</button>
         </div>
         <div id="tt-orders" class="ttpane">
+          <div class="tabs" id="lineFilter" style="margin-top:0">
+            <button class="tab active" data-line="" onclick="tnLine('')">Todos</button>
+            <button class="tab" data-line="etiquetas" onclick="tnLine('etiquetas')">🏷️ Etiquetas</button>
+            <button class="tab" data-line="regalos" onclick="tnLine('regalos')">🎁 Regalos</button>
+          </div>
           <table><thead><tr><th>#</th><th>Comprador</th><th>Diseño</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="ordersBody"></tbody></table>
         </div>
         <div id="tt-products" class="ttpane" style="display:none">
@@ -281,20 +286,24 @@ function thumbCell(o){const it=(o.order_items||[]).find(x=>x.design_thumbnail_ur
   if(!it)return '<span class="muted">—</span>';
   return `<img src="${esc(it.design_thumbnail_url)}" onclick="lightbox(this.src)" title="Ampliar" style="width:44px;height:44px;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid var(--line)">`;}
 function lightbox(url){const m=$('lb');m.querySelector('img').src=url;m.classList.add('show');}
-function tnRenderOrders(){const b=$('ordersBody');const os=window._orders||[];b.innerHTML=os.length?'':'<tr><td colspan="6" class="muted">Sin pedidos todavía.</td></tr>';
+// Línea del pedido: 'regalos' si algún ítem es de la tienda de regalos (tiene archivos de producción).
+function orderLine(o){return (o.order_items||[]).some(it=>it.line==='regalos')?'regalos':'etiquetas';}
+let lineSel='';
+function tnLine(l){lineSel=l;document.querySelectorAll('#lineFilter .tab').forEach(b=>b.classList.toggle('active',b.dataset.line===l));tnRenderOrders();}
+function tnRenderOrders(){const b=$('ordersBody');const os=(window._orders||[]).filter(o=>!lineSel||orderLine(o)===lineSel);b.innerHTML=os.length?'':'<tr><td colspan="6" class="muted">Sin pedidos todavía.</td></tr>';
   os.forEach(o=>{const tr=document.createElement('tr');const sel=myRole==='admin'?`<select onchange="tnSetStatus('${o.id}',this.value)" style="width:auto">${STATES.map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATE_LABELS[s]||s}</option>`).join('')}</select>`:`<span class="pill ${o.status==='paid'?'on':'off'}">${esc(STATE_LABELS[o.status]||o.status)}</span>`;
-    tr.innerHTML=`<td><a onclick="openOrderDetail('${o.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${o.order_number}</a></td><td>${esc(o.buyer_name)}</td><td>${thumbCell(o)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
+    tr.innerHTML=`<td><a onclick="openOrderDetail('${o.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${o.order_number}</a>${orderLine(o)==='regalos'?' <span title="Regalos">🎁</span>':''}</td><td>${esc(o.buyer_name)}</td><td>${thumbCell(o)}</td><td>${money(o.total)}</td><td>${sel}</td><td class="muted">${(o.created_at||'').slice(0,10)}</td>`;b.appendChild(tr);});}
 const MP_LABELS={approved:'Aprobado',pending:'Pendiente',in_process:'En proceso',rejected:'Rechazado',cancelled:'Cancelado',refunded:'Reintegrado'};
 function openOrderDetail(id){
   const o=(window._orders||[]).find(x=>x.id===id); if(!o) return;
   const items=o.order_items||[];
   const rows=items.map(it=>`<tr>
     <td>${it.design_thumbnail_url?`<img src="${esc(it.design_thumbnail_url)}" onclick="lightbox(this.src)" style="width:54px;height:54px;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid var(--line)">`:'<span class="muted">—</span>'}</td>
-    <td>${esc(it.product_name)}<div class="muted" style="font-size:11px">SKU: ${esc(it.product_slug||'—')}</div><div class="muted" style="font-size:11px">Texto: "${esc(it.design_text||'')}"${it.design_font?' · '+esc(it.design_font):''}</div></td>
+    <td>${esc(it.product_name)}<div class="muted" style="font-size:11px">SKU: ${esc(it.product_slug||'—')}</div>${it.variant&&it.variant.color?`<div style="font-size:12px;margin-top:3px"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${esc(it.variant.color_hex||'#ccc')};vertical-align:-1px;border:1px solid #fff5"></span> ${esc(it.variant.label||'Color')}: <strong>${esc(it.variant.color)}</strong></div>`:''}<div class="muted" style="font-size:11px">Texto: "${esc(it.design_text||'')}"${it.design_font?' · '+esc(it.design_font):''}</div></td>
     <td>${it.quantity}</td>
     <td>${money(it.subtotal)}</td>
-    <td style="white-space:nowrap">${it.design_print_url?`<a class="btn sm" href="${esc(it.design_print_url)}" target="_blank" rel="noopener" title="Archivo listo para imprimir, tamaño real">⬇ Diseño</a> `:''}${it.design_thumbnail_url?`<a class="btn sec sm" href="${esc(it.design_thumbnail_url)}" target="_blank" rel="noopener">Mockup</a>`:''}</td></tr>`).join('');
-  const ship=o.shipping_method==='retiro'?'Retiro en local':'Envío Andreani';
+    <td>${itemFiles(it)}</td></tr>`).join('');
+  const ship=o.shipping_method==='retiro'?'Retiro en local':(o.shipping_method==='moto'?'Motomensajería':'Envío Andreani');
   const addr=[o.shipping_address,o.shipping_city,o.shipping_province,o.shipping_zip].filter(Boolean).join(', ');
   $('odBody').innerHTML=`<h3 style="margin:0 0 10px">Pedido #${o.order_number} <span class="muted" style="font-size:12px;font-weight:400">· ${(o.created_at||'').slice(0,10)}</span></h3>
     <div class="odgrid">
@@ -305,6 +314,17 @@ function openOrderDetail(id){
     </div>
     <table style="margin-top:14px"><thead><tr><th>Diseño</th><th>Producto / SKU</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
   $('odModal').classList.add('show');
+}
+// Botones de archivos por ítem. Regalos: PNG de producción 300 dpi + fotos originales del cliente.
+function itemFiles(it){
+  const a=(url,label,cls,title)=>`<a class="btn ${cls} sm" style="margin:0 4px 4px 0;display:inline-block" href="${esc(url)}" target="_blank" rel="noopener"${title?` title="${esc(title)}"`:''}>${label}</a>`;
+  let h='';
+  if(it.line==='regalos'){
+    if(it.design_print_url)h+=a(it.design_print_url,'⬇ Producción','', 'PNG del área de impresión a tamaño real, 300 dpi, fondo transparente');
+    (it.original_urls||[]).forEach((u,k,arr)=>{if(u)h+=a(u,'⬇ Foto original'+(arr.length>1?' '+(k+1):''),'sec','Archivo tal cual lo subió el cliente');});
+  }else if(it.design_print_url){h+=a(it.design_print_url,'⬇ Diseño','','Archivo listo para imprimir, tamaño real');}
+  if(it.design_thumbnail_url)h+=a(it.design_thumbnail_url,'Mockup','sec');
+  return h||'<span class="muted">—</span>';
 }
 async function tnSetStatus(id,status){try{const{error}=await sb.from('orders').update({status}).eq('id',id);if(error)throw error;const o=(window._orders||[]).find(x=>x.id===id);if(o)o.status=status;toast('Pedido actualizado');}catch(e){toast(e.message,false);}}
 function tnRenderProducts(){const b=$('productsBody');const ps=window._products||[];b.innerHTML=ps.length?'':'<tr><td colspan="4" class="muted">Sin productos.</td></tr>';

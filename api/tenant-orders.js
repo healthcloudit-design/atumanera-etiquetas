@@ -48,12 +48,17 @@ module.exports = async function handler(req, res) {
   if (!ctx) return publicError(res, 401, 'No autorizado');
 
   try {
-    const { data: orders, error } = await supabase
+    const orderCols = 'id, order_number, buyer_name, buyer_email, buyer_phone, shipping_method, shipping_address, shipping_city, shipping_zip, shipping_province, shipping_cost, tracking_number, mp_status, mp_payment_id, total, status, created_at';
+    const itemCols = 'product_name, product_slug, design_text, design_font, design_border_color, design_thumbnail_url, quantity, units_total, unit_price, subtotal';
+    const query = extra => supabase
       .from('orders')
-      .select('id, order_number, buyer_name, buyer_email, buyer_phone, shipping_method, shipping_address, shipping_city, shipping_zip, shipping_province, shipping_cost, tracking_number, mp_status, mp_payment_id, total, status, created_at, order_items(product_name, product_slug, design_text, design_font, design_border_color, design_thumbnail_url, quantity, units_total, unit_price, subtotal)')
+      .select(`${orderCols}, order_items(${itemCols}${extra})`)
       .eq('tenant_id', ctx.tenantId)
       .order('created_at', { ascending: false })
       .limit(300);
+    // variant/files (regalos) existen tras la migración regalos_fase1; si no, seguir sin ellas.
+    let { data: orders, error } = await query(', variant, files');
+    if (error && error.code === '42703') ({ data: orders, error } = await query(''));
     if (error) throw error;
 
     await Promise.all((orders || []).map(async (o) => {
@@ -61,7 +66,16 @@ module.exports = async function handler(req, res) {
         await Promise.all(o.order_items.map(async (it) => {
           const raw = it.design_thumbnail_url;
           it.design_thumbnail_url = await signThumb(raw);
-          it.design_print_url = await signPrint(raw);
+          if (it.files && typeof it.files === 'object') {
+            // Regalos: archivo de producción + fotos originales del cliente.
+            it.design_print_url = await signThumb(it.files.production);
+            it.original_urls = await Promise.all((it.files.originals || []).map(signThumb));
+            it.line = 'regalos';
+          } else {
+            it.design_print_url = await signPrint(raw);
+            it.line = 'etiquetas';
+          }
+          delete it.files;
         }));
       }
     }));
