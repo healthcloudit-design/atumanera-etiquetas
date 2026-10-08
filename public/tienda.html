@@ -102,6 +102,8 @@
   .toast.show{opacity:1}
   .err{color:#c0392b;font-size:13px;margin-top:8px}
   .powered{text-align:center;color:var(--mut);font-size:11.5px;letter-spacing:.5px;margin-top:44px}
+  .powered a{color:var(--ink);font-weight:800;text-decoration:none}
+  .powered a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -289,7 +291,7 @@ function renderStore(){
     <header class="hd">${logo}</header>
     ${nav}
     ${hero}
-    <div class="wrap">${sections}<div class="powered">Tienda impulsada por Praxis Personaliza</div></div>
+    <div class="wrap">${sections}<div class="powered">Tienda powered by <a href="https://praxisoperativa.com/?utm_source=${encodeURIComponent(slug||'tienda')}&utm_medium=footer&utm_campaign=powered_by" target="_blank" rel="noopener">PraxisOperativa.com</a></div></div>
     <div class="cartbar" id="cartbar">
       <div><strong id="cartCount">0</strong> <span class="muted">en el carrito</span> · <strong id="cartTotal">$0</strong></div>
       <button class="btn" onclick="openCheckout()">Finalizar compra</button>
