@@ -219,6 +219,21 @@ footer .powered a:hover{color:var(--celeste)}
 .pbreak{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:2px}
 .desde{font-size:13px;font-weight:700;color:var(--muted)}
 body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff 0% 50%) 50%/14px 14px}
+
+/* Elementos del diseño + quitar */
+.layers h5{font-size:12.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+#layersList{display:flex;flex-direction:column;gap:6px}
+.layer{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:12px;padding:6px 6px 6px 8px;cursor:pointer;background:#fff;transition:.12s}
+.layer:hover{border-color:#9fdcf6}
+.layer.on{border-color:var(--celeste);background:#f3fbff}
+.layer img,.layer .lt{width:38px;height:38px;border-radius:8px;object-fit:contain;background:repeating-conic-gradient(#eef1f5 0% 25%,#fff 0% 50%) 50%/10px 10px;flex:none}
+.layer .lt{display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid var(--line)}
+.layer .ln{flex:1;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrm{border:0;background:#fdecec;color:#c62828;width:40px;height:38px;border-radius:10px;font-size:17px;flex:none}
+.lrm:hover{background:#f9d4d4}
+.btn.danger{background:#fdecec;color:#c62828;border:1.5px solid #f6c9c9}
+.undo{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:71;background:#1A1A1A;color:#fff;border-radius:12px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:14px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.undo button{border:0;background:var(--amarillo);color:#1A1A1A;font-weight:900;border-radius:9px;padding:8px 12px}
 </style>
 </head>
 <body>
@@ -306,6 +321,11 @@ body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff
         <button class="btn ghost block" id="addTextBtn">✎ Agregar texto</button>
       </div>
 
+      <div class="layers" id="layers" hidden>
+        <h5 id="layersTitle">Elementos</h5>
+        <div id="layersList"></div>
+      </div>
+
       <div class="tools" id="objTools" hidden>
         <div class="tools" id="textTools" hidden style="padding:0;border:0;background:none">
           <textarea id="textInput" rows="2" placeholder="Escribí tu frase"></textarea>
@@ -323,7 +343,7 @@ body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff
           <button class="btn sm ghost" id="bothSides">A los dos lados</button>
           <button class="btn sm ghost" id="fwdBtn" title="Traer adelante">▲</button>
           <button class="btn sm ghost" id="backLayerBtn" title="Mandar atrás">▼</button>
-          <button class="btn sm ghost" id="delBtn" style="color:#c62828">Eliminar</button>
+          <button class="btn sm danger" id="delBtn">🗑 Quitar</button>
         </div>
       </div>
 
@@ -423,6 +443,7 @@ body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff
 
 <div class="busy" id="busy" hidden><div class="spin"></div><div id="busyMsg">Procesando…</div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="undo" id="undoBar" hidden role="status"><span id="undoMsg">Elemento quitado</span><button id="undoBtn">Deshacer</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script type="importmap">

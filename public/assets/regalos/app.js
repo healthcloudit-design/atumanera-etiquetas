@@ -58,6 +58,12 @@ function toast(msg, kind = 'ok') {
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 async function loadFont(f, w = 400) { try { await document.fonts.load(`${w} 60px "${f}"`); } catch {} }
+function isDarkHex(h) {
+  const v = String(h || '').replace('#', '');
+  if (v.length !== 6) return false;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(v.slice(i, i + 2), 16));
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.45;
+}
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
 // ── Estado ───────────────────────────────────────────────────────────────────
@@ -66,12 +72,87 @@ let cart = lsGet(CART_KEY, []);
 const HAS_GL = webglAvailable();
 let ed = null;   // editor actual
 
+// ── Quitar elementos: ✕ sobre el objeto, lista de elementos y "Deshacer" ─────
+function installDeleteControl() {
+  const draw = (ctx, left, top) => {
+    const r = 13;
+    ctx.save();
+    ctx.translate(left, top);
+    ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = '#E53935'; ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 2.6; ctx.strokeStyle = '#fff'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(5, 5); ctx.moveTo(5, -5); ctx.lineTo(-5, 5); ctx.stroke();
+    ctx.restore();
+  };
+  const ctl = new fabric.Control({
+    // En la esquina superior derecha (reemplaza ese manejador de escala; se escala desde las otras 3).
+    // Si quedara afuera del objeto, caería fuera del lienzo y no se podría tocar.
+    x: 0.5, y: -0.5, offsetX: 0, offsetY: 0, cursorStyle: 'pointer', sizeX: 28, sizeY: 28, touchSizeX: 44, touchSizeY: 44,
+    mouseUpHandler: (e, t) => { removeObj(t.target); return true; },
+    render: (ctx, left, top) => draw(ctx, left, top),
+  });
+  for (const proto of [fabric.Object.prototype, fabric.IText && fabric.IText.prototype].filter(Boolean)) {
+    if (!proto.controls) continue;
+    delete proto.controls.tr;
+    proto.controls.deleteControl = ctl;
+  }
+}
+
+let undoInfo = null;
+function removeObj(o, fc = ed && ed.fc) {
+  if (!o || !fc) return;
+  const idx = fc.getObjects().indexOf(o);
+  fc.remove(o); fc.discardActiveObject(); fc.requestRenderAll();
+  syncSelection();
+  undoInfo = { o, fc, idx, zone: ed && ed.zone };
+  const bar = $('#undoBar');
+  $('#undoMsg').textContent = o.type === 'image' ? 'Imagen quitada' : 'Texto quitado';
+  bar.hidden = false;
+  clearTimeout(removeObj._t);
+  removeObj._t = setTimeout(() => { bar.hidden = true; undoInfo = null; }, 6000);
+}
+function undoRemove() {
+  if (!undoInfo || !ed) return;
+  const { o, fc, idx, zone } = undoInfo;
+  if (zone && ed.mode === 'tee' && ed.zone !== zone) selectZone(zone);
+  fc.insertAt(o, Math.max(0, idx));
+  fc.setActiveObject(o); fc.requestRenderAll();
+  syncSelection();
+  $('#undoBar').hidden = true; undoInfo = null;
+}
+
+// Lista de elementos del diseño (zona actual), con seleccionar y quitar
+function renderLayers() {
+  const box = $('#layers');
+  if (!ed || !ed.fc) { box.hidden = true; return; }
+  const objs = ed.fc.getObjects();
+  box.hidden = !objs.length;
+  if (!objs.length) return;
+  const act = ed.fc.getActiveObject();
+  const where = ed.mode === 'tee' ? `en ${esc((ed.cv[ed.zone] || {}).z ? ed.cv[ed.zone].z.name.toLowerCase() : 'esta zona')}` : 'en tu diseño';
+  $('#layersTitle').innerHTML = `Elementos ${where}`;
+  $('#layersList').innerHTML = objs.slice().reverse().map(o => {
+    const i = objs.indexOf(o);
+    const ph = o.rgPhotoId && ed.photos.get(o.rgPhotoId);
+    const thumb = o.type === 'image'
+      ? `<img src="${esc(ph ? ph.url : '')}" alt="">`
+      : `<span class="lt" style="font-family:'${esc(o.fontFamily)}';color:${esc(o.fill)};${String(o.fill).toLowerCase() === '#ffffff' ? 'background:#1c1c1e' : ''}">Aa</span>`;
+    const label = o.type === 'image' ? 'Imagen' : '“' + esc((o.text || '').replace(/\s+/g, ' ').trim().slice(0, 28) || 'Texto') + '”';
+    return `<div class="layer${o === act ? ' on' : ''}" data-li="${i}">
+      ${thumb}<span class="ln">${label}</span>
+      <button class="lrm" data-lrm="${i}" aria-label="Quitar ${o.type === 'image' ? 'imagen' : 'texto'}" title="Quitar">🗑</button>
+    </div>`;
+  }).join('');
+}
+
 // ── Arranque ─────────────────────────────────────────────────────────────────
 async function init() {
   fabric.Object.prototype.set({
     transparentCorners: false, cornerColor: '#EC008C', cornerStrokeColor: '#fff', borderColor: '#00AEEF',
     cornerStyle: 'circle', cornerSize: 14, touchCornerSize: 36, borderScaleFactor: 2, padding: 4,
   });
+  installDeleteControl();
   updateCartBadge();
   bindGlobal();
   try {
@@ -295,7 +376,7 @@ async function openEditor(p) {
 }
 
 function bindSelection(fc) {
-  ['selection:created', 'selection:updated', 'selection:cleared', 'object:modified'].forEach(ev => fc.on(ev, syncSelection));
+  ['selection:created', 'selection:updated', 'selection:cleared', 'object:modified', 'object:added', 'object:removed'].forEach(ev => fc.on(ev, syncSelection));
 }
 
 // Muestra/oculta las piezas de la UI según el tipo de producto
@@ -434,6 +515,7 @@ function closeEditor() {
     ed = null;
   }
   document.body.classList.remove('editing');
+  const ub = document.getElementById('undoBar'); if (ub) ub.hidden = true; undoInfo = null;
   $('#editorView').hidden = true;
   $('#catalogView').hidden = false;
 }
@@ -469,6 +551,7 @@ function syncSelection() {
   }
   $('#emptyHint').hidden = ed.fc.getObjects().length > 0;
   $('#emptyHint').textContent = ed.mode === 'tee' ? 'Subí tu logo o escribí un texto para esta zona' : 'Subí una foto o agregá un texto';
+  renderLayers();
 }
 
 // Foto
@@ -519,7 +602,7 @@ async function addText() {
   if (!ed) return;
   await loadFont('Pacifico');
   const tee = ed.mode === 'tee';
-  const dark = tee && ed.color && /^#(1|0|2)/.test(ed.color.hex);
+  const dark = tee && ed.color && isDarkHex(ed.color.hex);
   const t = new fabric.IText(tee && ed.zone && ed.zone.startsWith('sleeve') ? 'Nombre' : 'Tu texto', {
     left: ed.DW / 2, top: tee ? ed.DH / 2 : ed.DH * 0.78, originX: 'center', originY: 'center',
     fontFamily: 'Pacifico', fontSize: tee ? Math.round(Math.min(ed.DH * 0.42, 150)) : 64,
@@ -940,14 +1023,14 @@ function bindGlobal() {
   ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop', e => handlePhoto(e.dataTransfer.files[0]));
   $('#addTextBtn').onclick = addText;
-  $('#textInput').oninput = e => { const o = activeObj(); if (o && o.type === 'i-text') { o.set({ text: e.target.value || ' ', rgPlaceholder: false }); ed.fc.requestRenderAll(); } };
+  $('#textInput').oninput = e => { const o = activeObj(); if (o && o.type === 'i-text') { o.set({ text: e.target.value || ' ', rgPlaceholder: false }); ed.fc.requestRenderAll(); renderLayers(); } };
   $('#fontSel').innerHTML = FONTS.map(f => `<option value="${esc(f.f)}" style="font-family:'${esc(f.f)}'">${esc(f.l)}</option>`).join('');
   $('#fontSel').onchange = async e => {
     const o = activeObj(); if (!o || o.type !== 'i-text') return;
     const f = FONTS.find(x => x.f === e.target.value) || {};
     await loadFont(e.target.value, f.w || 400);
     o.set({ fontFamily: e.target.value, fontWeight: f.w || 'normal' });
-    ed.fc.requestRenderAll();
+    ed.fc.requestRenderAll(); renderLayers();
   };
   $('#sizeRange').oninput = e => { const o = activeObj(); if (o && o.type === 'i-text') { o.set({ fontSize: +e.target.value, scaleX: 1, scaleY: 1 }); o.setCoords(); ed.fc.requestRenderAll(); } };
   $('#textColorRow').innerHTML = TEXT_COLORS.map(c => `<button class="sw" style="--sw:${c}" data-c="${c}" aria-label="Color ${c}"></button>`).join('');
@@ -967,11 +1050,20 @@ function bindGlobal() {
   $('#centerBtn').onclick = () => { const o = activeObj(); if (!o) return; o.set({ left: ed.DW / 2, top: ed.DH / 2 }); o.setCoords(); ed.fc.requestRenderAll(); if (ed.viewer) ed.viewer.setView(0); };
   $('#fwdBtn').onclick = () => { const o = activeObj(); if (o) { ed.fc.bringForward(o); ed.fc.requestRenderAll(); } };
   $('#backLayerBtn').onclick = () => { const o = activeObj(); if (o) { ed.fc.sendBackwards(o); ed.fc.requestRenderAll(); } };
-  $('#delBtn').onclick = () => { const o = activeObj(); if (o) { ed.fc.remove(o); ed.fc.discardActiveObject(); ed.fc.requestRenderAll(); syncSelection(); } };
+  $('#delBtn').onclick = () => removeObj(activeObj());
+  $('#undoBtn').onclick = undoRemove;
+  $('#layersList').onclick = e => {
+    if (!ed) return;
+    const objs = ed.fc.getObjects();
+    const rm = e.target.closest('[data-lrm]');
+    if (rm) { removeObj(objs[+rm.dataset.lrm]); return; }
+    const li = e.target.closest('[data-li]');
+    if (li) { ed.fc.setActiveObject(objs[+li.dataset.li]); ed.fc.requestRenderAll(); syncSelection(); }
+  };
   document.addEventListener('keydown', e => {
     if (!ed || !['Delete', 'Backspace'].includes(e.key)) return;
     if (/input|textarea|select/i.test(document.activeElement.tagName)) return;
-    const o = activeObj(); if (o && !o.isEditing) { ed.fc.remove(o); ed.fc.requestRenderAll(); syncSelection(); }
+    const o = activeObj(); if (o && !o.isEditing) removeObj(o);
   });
   $('#colorRow').onclick = e => {
     const b = e.target.closest('[data-color]'); if (!b || !ed) return;
