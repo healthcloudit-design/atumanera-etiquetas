@@ -12,28 +12,32 @@
 //   m.viewOf(zoneId) → 'front' | 'back'
 
 // Calibración por foto (coordenadas en px de la imagen original, 1264×848).
-// pxcm = píxeles por centímetro (ancho de pecho: remera 52 cm, buzo 54 cm, talle L).
+// pxcm = píxeles por centímetro. Las prendas generadas son más largas que las reales,
+// así que se usa el promedio geométrico entre la escala por ancho de pecho y por largo
+// (remera L 52 × 74 cm, buzo L 59 × 70 cm): así el A4 no queda chico a lo alto.
+const K_REMERA = Math.sqrt((297 / 52) * (575 / 74));   // ≈ 6,66 px/cm
+const K_BUZO = Math.sqrt((355 / 59) * (500 / 70));      // ≈ 6,56 px/cm
 export const GARMENTS = {
   remera: {
     photo: '/assets/regalos/mockups/remera.jpg', map: '/assets/regalos/mockups/remera-map.png',
-    pxcm: { front: 297 / 52, back: 303 / 52 },
+    pxcm: { front: K_REMERA, back: K_REMERA },
     crops: { front: [73, 180, 640, 640], back: [576, 180, 640, 640] },
     zones: {
-      front:    { view: 'front', cx: 455, cy: 372, rot: 0 },     // pecho izquierdo (lado del corazón)
-      back:     { view: 'back',  cx: 896, top: 288, rot: 0 },    // A4 centrado bajo el cuello
-      sleeve_r: { view: 'front', cx: 201, cy: 428, rot: 27 },    // manga derecha (a la izquierda del que mira)
-      sleeve_l: { view: 'front', cx: 588, cy: 430, rot: -24 },
+      front:    { view: 'front', cx: 456, cy: 362, rot: 0 },     // pecho izquierdo (lado del corazón)
+      back:     { view: 'back',  cx: 896, top: 290, rot: 0 },    // A4 centrado, justo bajo el cuello
+      sleeve_r: { view: 'front', cx: 206, cy: 392, rot: 27 },    // centro de la manga derecha
+      sleeve_l: { view: 'front', cx: 586, cy: 394, rot: -24 },
     },
   },
   buzo: {
     photo: '/assets/regalos/mockups/buzo.jpg', map: '/assets/regalos/mockups/buzo-map.png',
-    pxcm: { front: 318 / 54, back: 318 / 54 },
+    pxcm: { front: K_BUZO, back: K_BUZO },
     crops: { front: [30, 140, 640, 640], back: [586, 140, 640, 640] },
     zones: {
-      front:    { view: 'front', cx: 445, cy: 345, rot: 0 },
-      back:     { view: 'back',  cx: 906, top: 345, rot: 0 },    // debajo de la capucha
-      sleeve_r: { view: 'front', cx: 148, cy: 455, rot: -4 },
-      sleeve_l: { view: 'front', cx: 553, cy: 455, rot: 4 },
+      front:    { view: 'front', cx: 428, cy: 352, rot: 0 },     // al costado del cordón
+      back:     { view: 'back',  cx: 906, top: 336, rot: 0 },    // arranca debajo de la capucha
+      sleeve_r: { view: 'front', cx: 149, cy: 364, rot: -6 },    // parte de arriba del brazo
+      sleeve_l: { view: 'front', cx: 554, cy: 364, rot: 6 },
     },
   },
 };
