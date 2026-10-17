@@ -15,18 +15,19 @@
 // pxcm = píxeles por centímetro. Las prendas generadas son más largas que las reales,
 // así que se usa el promedio geométrico entre la escala por ancho de pecho y por largo
 // (remera L 52 × 74 cm, buzo L 59 × 70 cm): así el A4 no queda chico a lo alto.
-const K_REMERA = Math.sqrt((297 / 52) * (575 / 74));   // ≈ 6,66 px/cm
+const K_REMERA_F = Math.sqrt((292 / 52) * (560 / 74));   // ≈ 6,55 px/cm (frente)
+const K_REMERA_B = Math.sqrt((306 / 52) * (570 / 74));   // ≈ 6,70 px/cm (espalda)
 const K_BUZO = Math.sqrt((355 / 59) * (500 / 70));      // ≈ 6,56 px/cm
 export const GARMENTS = {
   remera: {
     photo: '/assets/regalos/mockups/remera.jpg', map: '/assets/regalos/mockups/remera-map.png',
-    pxcm: { front: K_REMERA, back: K_REMERA },
-    crops: { front: [73, 180, 640, 640], back: [576, 180, 640, 640] },
+    pxcm: { front: K_REMERA_F, back: K_REMERA_B },
+    crops: { front: [85, 170, 640, 640], back: [545, 170, 640, 640] },
     zones: {
-      front:    { view: 'front', cx: 456, cy: 362, rot: 0 },     // pecho izquierdo (lado del corazón)
-      back:     { view: 'back',  cx: 896, top: 290, rot: 0 },    // A4 centrado, justo bajo el cuello
-      sleeve_r: { view: 'front', cx: 206, cy: 392, rot: 27 },    // centro de la manga derecha
-      sleeve_l: { view: 'front', cx: 586, cy: 394, rot: -24 },
+      front:    { view: 'front', cx: 467, cy: 365, rot: 0 },     // pecho izquierdo (lado del corazón)
+      back:     { view: 'back',  cx: 864, top: 275, rot: 0 },    // A4 centrado, ~6 cm bajo el cuello
+      sleeve_r: { view: 'front', cx: 228, cy: 414, rot: 25 },    // manga derecha (a la izquierda del que mira)
+      sleeve_l: { view: 'front', cx: 599, cy: 414, rot: -25 },
     },
   },
   buzo: {
@@ -95,10 +96,9 @@ function recolor(g, hex) {
   const out = canvasOf(g.W, g.H); const ox = out.getContext('2d');
   const img = ox.createImageData(g.W, g.H);
   const p = g.photoData.data, m = g.mapData.data, o = img.data;
-  const white = hex.toLowerCase() === '#ffffff';
   for (let i = 0; i < p.length; i += 4) {
     const a = m[i + 3] / 255;
-    if (a === 0 || white) { o[i] = p[i]; o[i + 1] = p[i + 1]; o[i + 2] = p[i + 2]; o[i + 3] = 255; continue; }
+    if (a === 0) { o[i] = p[i]; o[i + 1] = p[i + 1]; o[i + 2] = p[i + 2]; o[i + 3] = 255; continue; }
     const S = (m[i] / 255) * 1.4;
     const f = Math.pow(Math.min(S, 1.25), gam);
     let ex = 0;
