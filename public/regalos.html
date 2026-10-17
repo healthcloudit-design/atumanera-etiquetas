@@ -201,8 +201,8 @@ footer .powered a{color:var(--ink)}
 footer .powered a:hover{color:var(--celeste)}
 
 /* Remera */
-.stage.tee{aspect-ratio:90/84;display:flex;align-items:center;justify-content:center}
-#teeCanvas{width:100%;height:auto;display:block}
+.stage.tee{aspect-ratio:90/84;display:flex;align-items:center;justify-content:center;background:#e9edf2}
+#teeCanvas{width:100%;height:100%;display:block;object-fit:contain}
 .zones{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
 @media(max-width:560px){.zones{grid-template-columns:repeat(2,1fr)}}
 .ztab{position:relative;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 8px;text-align:left;display:flex;flex-direction:column;gap:2px;transition:.15s}
@@ -268,8 +268,9 @@ body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff
     <div class="preview">
       <div class="stage tee" id="teeStage" hidden>
         <canvas id="teeCanvas"></canvas>
-        <span class="hint3d">Vista a escala real · talle L</span>
+        <span class="hint3d">Vista a escala · talle L</span>
         <div class="views">
+          <button data-tview="both" hidden>Las dos</button>
           <button data-tview="front" class="on">Frente</button>
           <button data-tview="back">Espalda</button>
         </div>
@@ -277,7 +278,7 @@ body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff
       <div class="stage" id="mugStage">
         <div id="stage3d"></div>
         <div class="nogl" id="noGl" hidden>Tu navegador no permite la vista 3D. Igual podés diseñar abajo: así se imprime.</div>
-        <span class="hint3d">↔ Arrastrá para girar la taza</span>
+        <span class="hint3d" id="hint3d">↔ Arrastrá para girar la taza</span>
         <div class="views">
           <button data-view="left">Asa izq.</button>
           <button data-view="front">Frente</button>

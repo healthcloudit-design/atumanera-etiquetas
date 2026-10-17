@@ -6,6 +6,7 @@
 
 import { createMugViewer, webglAvailable } from './mug3d.js';
 import { createTeeMockup, ZONE_PLACEMENT } from './tee2d.js';
+import { loadPhotoMockup, GARMENTS } from './photo-mockup.js';
 
 const TENANT = 'atumanera';
 const WHATSAPP = '5491176309675';
@@ -41,8 +42,6 @@ const BG_COLORS = [null, '#FDE2EF', '#DDF3FD', '#E8F5D5', '#FFF3CD', '#EC008C', 
 
 // Próximamente (etapa 2): se muestran en el catálogo como adelanto.
 const COMING_SOON = [
-  { name: 'Buzos personalizados', desc: 'Con capucha y canguro', icon: 'hoodie', color: '#8DC63F' },
-  { name: 'Vasos personalizados', desc: 'Polímero y térmicos', icon: 'glass', color: '#FFC107' },
 ];
 
 // ── Utilidades ───────────────────────────────────────────────────────────────
@@ -185,7 +184,7 @@ function renderCatalog() {
     <a class="card" href="#/p/${esc(p.slug)}">
       <div class="cimg" data-thumb="${esc(p.slug)}"><div class="skel"></div></div>
       <div class="cbody">
-        <span class="chip">${p.options.editor === 'tee' ? 'Remera' : 'Taza 11 oz'}</span>
+        <span class="chip">${chipOf(p)}</span>
         <h3>${esc(p.name)}</h3>
         <p>${esc(p.notes || p.size_description || '')}</p>
         <div class="crow"><strong>${p.options.editor === 'tee' ? '<small class="desde">desde</small> ' + money(teeFromPrice(p)) : money(p.price)}</strong><span class="cta">Diseñar ✎</span></div>
@@ -201,6 +200,11 @@ function renderCatalog() {
 }
 
 const thumbCache = {};
+function chipOf(p) {
+  const o = p.options || {};
+  if (o.editor === 'tee') return o.garment === 'buzo' ? 'Buzo' : 'Remera';
+  return o.mug && o.mug.model === 'travel' ? 'Vaso térmico' : 'Taza 11 oz';
+}
 function teeFromPrice(p) {
   const zs = (p.options.zones || []).map(z => z.price || 0);
   return p.price + (zs.length ? Math.min(...zs) : 0);
@@ -212,7 +216,7 @@ async function generateThumbs() {
     const box = $(`[data-thumb="${p.slug}"]`);
     if (!box) continue;
     if (!thumbCache[p.slug] && p.options.editor === 'tee') {
-      try { thumbCache[p.slug] = sampleTeeThumb(p); } catch (e) { console.warn('thumb tee', e); }
+      try { thumbCache[p.slug] = await sampleTeeThumb(p); } catch (e) { console.warn('thumb tee', e); }
     }
     if (!thumbCache[p.slug] && HAS_GL) {
       const holder = document.createElement('div');
@@ -255,7 +259,7 @@ function sampleDesign(spec) {
 }
 
 // Remera de ejemplo para la tarjeta del catálogo (escudo + nombre en la manga)
-function sampleTeeThumb(p) {
+async function sampleTeeThumb(p) {
   const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return c; };
   const shield = mk(400, 400, (x) => {
     x.fillStyle = '#00AEEF'; x.beginPath(); x.moveTo(200, 14); x.lineTo(372, 76); x.lineTo(350, 270); x.lineTo(200, 386); x.lineTo(50, 270); x.lineTo(28, 76); x.closePath(); x.fill();
@@ -263,8 +267,11 @@ function sampleTeeThumb(p) {
   });
   const sleeve = mk(600, 200, (x) => { x.fillStyle = '#EC008C'; x.font = '800 130px Nunito'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('Cami', 300, 104); });
   const tmp = document.createElement('canvas');
-  const m = createTeeMockup(tmp);
-  return m.snapshot({ view: 'front', color: '#FFFFFF', size: 520, zones: p.options.zones || [], textures: { front: shield, sleeve_r: sleeve } });
+  const opts = { view: 'front', color: '#FFFFFF', size: 520, zones: p.options.zones || [], textures: { front: shield, sleeve_r: sleeve } };
+  if (GARMENTS[p.options.garment]) {
+    try { return (await loadPhotoMockup(tmp, p.options.garment)).snapshot(opts); } catch (e) { console.warn('foto', e); }
+  }
+  return createTeeMockup(tmp).snapshot(opts);
 }
 
 const ICONS = {
@@ -279,6 +286,7 @@ function specOf(p) {
   return {
     printW: (o.print && o.print.w_cm) || 20, printH: (o.print && o.print.h_cm) || 9, dpi: (o.print && o.print.dpi) || 300,
     height: (o.mug && o.mug.height_cm) || 9.5, diameter: (o.mug && o.mug.diameter_cm) || 8.2,
+    model: (o.mug && o.mug.model) || 'mug', baseDiameter: o.mug && o.mug.base_diameter_cm,
   };
 }
 
@@ -396,7 +404,12 @@ function setMode(mode) {
   $('#fitCover').textContent = tee ? 'Cubrir toda la zona' : 'Cubrir toda la taza';
   const wrap = $('#flatWrap');
   wrap.style.maxWidth = ''; wrap.style.margin = '';
-  $('#flatSize').textContent = tee ? '' : '20 × 9 cm · se imprime alrededor de la taza';
+  if (!tee && ed) {
+    const vaso = ed.spec.model === 'travel';
+    $('#flatSize').textContent = `${fmtCm(ed.spec.printW)} × ${fmtCm(ed.spec.printH)} cm · se imprime alrededor ${vaso ? 'del vaso' : 'de la taza'}`;
+    $('#fitCover').textContent = vaso ? 'Cubrir todo el vaso' : 'Cubrir toda la taza';
+    $('#hint3d').textContent = vaso ? '↔ Arrastrá para girar el vaso' : '↔ Arrastrá para girar la taza';
+  } else $('#flatSize').textContent = '';
 }
 
 // ── Editor de remera (zonas: escudo, espalda, mangas) ───────────────────────
@@ -428,7 +441,18 @@ async function openTeeEditor(p) {
     fc.on('object:removed', updateTeeState);
     bindSelection(fc);
   }
-  ed.mock = createTeeMockup($('#teeCanvas'));
+  ed.mock = null;
+  if (GARMENTS[o.garment]) {
+    try { ed.mock = await loadPhotoMockup($('#teeCanvas'), o.garment); } catch (e) { console.warn('mockup foto', e); }
+  }
+  if (!ed) return;
+  if (!ed.mock) {                       // respaldo: remera dibujada
+    ed.mock = createTeeMockup($('#teeCanvas'));
+    ed.mock.viewOf = zid => (ZONE_PLACEMENT[zid] || {}).view || 'front';
+    ed.mock.aspect = () => 90 / 84;
+  }
+  ed.photo = !!ed.mock.garment;
+  $('[data-tview="both"]').hidden = !ed.photo;
   ed.ro = new ResizeObserver(() => { sizeFlat(); renderTeeMock(); });
   ed.ro.observe($('#flatWrap'));
   ed.ro.observe($('#teeStage'));
@@ -452,11 +476,16 @@ function selectZone(id) {
   $('#flatSize').textContent = `${fmtCm(c.z.w_cm)} × ${fmtCm(c.z.h_cm)} cm · se imprime a este tamaño`;
   ed.lastW = null;
   sizeFlat();
-  const pl = ZONE_PLACEMENT[id];
-  if (pl) ed.view = pl.view;
-  $$('[data-tview]').forEach(b => b.classList.toggle('on', b.dataset.tview === ed.view));
-  renderTeeMock();
+  ed.view = ed.mock.viewOf(id);
+  setTeeView(ed.view);
   syncSelection();
+}
+
+function setTeeView(v) {
+  ed.view = v;
+  $$('[data-tview]').forEach(b => b.classList.toggle('on', b.dataset.tview === v));
+  $('#teeStage').style.aspectRatio = String(ed.mock.aspect(v));
+  renderTeeMock();
 }
 
 function scheduleZoneTexture(c) {
@@ -482,9 +511,9 @@ function renderTeeMock() {
   if (!ed || ed.mode !== 'tee' || !ed.mock) return;
   const textures = {};
   for (const [id, c] of Object.entries(ed.cv)) if (zoneUsed(c)) textures[id] = c.tex;
-  const pl = ZONE_PLACEMENT[ed.zone];
+  const zv = ed.mock.viewOf(ed.zone);
   ed.mock.render({ view: ed.view, color: ed.color ? ed.color.hex : '#ffffff', textures, zones: ed.zones,
-    highlight: pl && pl.view === ed.view ? ed.zone : null });
+    highlight: ed.view === 'both' || zv === ed.view ? ed.zone : null });
 }
 
 function teeUnitPrice() {
@@ -687,7 +716,7 @@ async function addToCart() {
   const fc = ed.fc;
   const objs = fc.getObjects();
   const onlyPlaceholder = objs.length && objs.every(o => o.rgPlaceholder && o.text === 'Tu frase acá');
-  if (!objs.length || onlyPlaceholder) return toast('Personalizá tu taza: subí una foto o escribí tu frase.', 'err');
+  if (!objs.length || onlyPlaceholder) return toast('Personalizá tu diseño: subí una foto o escribí tu frase.', 'err');
 
   fc.discardActiveObject(); fc.requestRenderAll(); syncSelection();
   const btn = $('#addBtn'); btn.disabled = true;
@@ -816,8 +845,9 @@ async function addTeeToCart() {
 // Miniatura: una vista si se usó solo frente o solo espalda; las dos lado a lado si se usaron ambas
 async function teeThumb(used) {
   const textures = {}; used.forEach(c => (textures[c.z.id] = c.tex));
-  const views = [...new Set(used.map(c => (ZONE_PLACEMENT[c.z.id] || {}).view))].filter(Boolean).sort((a, b) => (a === 'front' ? -1 : 1));
+  const views = [...new Set(used.map(c => ed.mock.viewOf(c.z.id)))].filter(Boolean).sort((a, b) => (a === 'front' ? -1 : 1));
   const base = { color: ed.color ? ed.color.hex : '#fff', textures, zones: ed.zones };
+  if (ed.photo) return ed.mock.snapshot({ ...base, view: views.length > 1 ? 'both' : views[0], size: 480 });
   if (views.length < 2) return ed.mock.snapshot({ ...base, view: views[0] || 'front', size: 480 });
   const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
   const [a, b] = await Promise.all(views.map(v => load(ed.mock.snapshot({ ...base, view: v, size: 480 }))));
@@ -1087,9 +1117,7 @@ function bindGlobal() {
   $('#zoneTabs').onclick = e => { const b = e.target.closest('[data-zone]'); if (b && ed && ed.mode === 'tee') selectZone(b.dataset.zone); };
   $$('[data-tview]').forEach(b => (b.onclick = () => {
     if (!ed || ed.mode !== 'tee') return;
-    ed.view = b.dataset.tview;
-    $$('[data-tview]').forEach(x => x.classList.toggle('on', x === b));
-    renderTeeMock();
+    setTeeView(b.dataset.tview);
   }));
   $('#sizeRow').onclick = e => {
     const b = e.target.closest('[data-size]'); if (!b || !ed) return;

@@ -56,6 +56,12 @@ function ovalTube(curve, segs, radial, rThick, rWide) {
 export function createMugViewer(container, opts = {}) {
   const printW = opts.printW || 20, printH = opts.printH || 9;
   const H = opts.height || 9.5, R = (opts.diameter || 8.2) / 2;
+  // model 'travel' = vaso térmico de viaje: base angosta, cuerpo ancho, tapa y asa
+  const TRAVEL = opts.model === 'travel';
+  const RB = TRAVEL ? (opts.baseDiameter || 6.9) / 2 : R;        // radio de la base
+  const LID = TRAVEL ? 1.3 : 0;                                    // alto de la tapa
+  const BODY_TOP = H - LID;
+  const SCALE = Math.max(1, (H / 9.5) * 0.82);                    // encuadre de cámara según alto
   const WALL = 0.32;
 
   // ── Renderer / escena ──────────────────────────────────────────────────────
@@ -86,8 +92,8 @@ export function createMugViewer(container, opts = {}) {
   key.position.set(-7, 26, 14);
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
-  key.shadow.camera.left = -10; key.shadow.camera.right = 10;
-  key.shadow.camera.top = 10; key.shadow.camera.bottom = -10;
+  key.shadow.camera.left = -10 * SCALE; key.shadow.camera.right = 10 * SCALE;
+  key.shadow.camera.top = 10 * SCALE; key.shadow.camera.bottom = -10 * SCALE;
   key.shadow.camera.near = 1; key.shadow.camera.far = 60;
   key.shadow.bias = -0.0006;
   key.shadow.radius = 5;
@@ -108,31 +114,73 @@ export function createMugViewer(container, opts = {}) {
   const mug = new THREE.Group();
   scene.add(mug);
 
-  // ── Cuerpo (torno): exterior blanco ────────────────────────────────────────
+  // ── Geometría por modelo ───────────────────────────────────────────────────
   const V = (x, y) => new THREE.Vector2(x, y);
-  const outerProfile = [
-    V(0.001, 0.14), V(R - 0.78, 0.14), V(R - 0.66, 0.0), V(R - 0.24, 0.0), V(R - 0.06, 0.12),
-    V(R - 0.01, 0.2), V(R, 0.3), V(R, H - 0.12), V(R - 0.012, H - 0.06), V(R - 0.07, H - 0.008),
-    V(R - WALL * 0.5, H),
-  ];
-  const outer = new THREE.Mesh(new THREE.LatheGeometry(outerProfile, 160), outerMat);
-  outer.castShadow = true; outer.receiveShadow = true;
-  mug.add(outer);
-
-  // Interior + borde superior (va del color del interior en las tazas de color)
-  const innerProfile = [
-    V(R - WALL * 0.5, H), V(R - WALL + 0.07, H - 0.008), V(R - WALL + 0.01, H - 0.07), V(R - WALL, H - 0.2),
-    V(R - WALL, 1.0), V(R - WALL - 0.06, 0.82), V(R - WALL - 0.32, 0.7), V(0.001, 0.68),
-  ];
-  const inner = new THREE.Mesh(new THREE.LatheGeometry(innerProfile, 160), innerMat);
-  inner.receiveShadow = true;
-  mug.add(inner);
+  let wallBottom, wallTop, handleCurve;
+  const z = d => -(R + d);
+  if (!TRAVEL) {
+    // Taza 11 oz: cuerpo blanco + interior/borde (color en las tazas de color)
+    const outerProfile = [
+      V(0.001, 0.14), V(R - 0.78, 0.14), V(R - 0.66, 0.0), V(R - 0.24, 0.0), V(R - 0.06, 0.12),
+      V(R - 0.01, 0.2), V(R, 0.3), V(R, H - 0.12), V(R - 0.012, H - 0.06), V(R - 0.07, H - 0.008),
+      V(R - WALL * 0.5, H),
+    ];
+    const outer = new THREE.Mesh(new THREE.LatheGeometry(outerProfile, 160), outerMat);
+    outer.castShadow = true; outer.receiveShadow = true;
+    mug.add(outer);
+    const innerProfile = [
+      V(R - WALL * 0.5, H), V(R - WALL + 0.07, H - 0.008), V(R - WALL + 0.01, H - 0.07), V(R - WALL, H - 0.2),
+      V(R - WALL, 1.0), V(R - WALL - 0.06, 0.82), V(R - WALL - 0.32, 0.7), V(0.001, 0.68),
+    ];
+    const inner = new THREE.Mesh(new THREE.LatheGeometry(innerProfile, 160), innerMat);
+    inner.receiveShadow = true;
+    mug.add(inner);
+    // Pared recta exterior: de y=0.3 a y=H-0.12
+    wallBottom = 0.3; wallTop = H - 0.12;
+    handleCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, H - 1.55, z(-0.35)), new THREE.Vector3(0, H - 1.45, z(0.9)),
+      new THREE.Vector3(0, H - 1.9, z(2.35)), new THREE.Vector3(0, H * 0.5, z(2.95)),
+      new THREE.Vector3(0, 2.25, z(2.4)), new THREE.Vector3(0, 1.75, z(1.0)),
+      new THREE.Vector3(0, 1.85, z(-0.35)),
+    ], false, 'catmullrom', 0.5);
+  } else {
+    // Vaso térmico de viaje: base angosta (posavasos), transición cónica, cuerpo ancho
+    const T = BODY_TOP;
+    const bodyProfile = [
+      V(0.001, 0.12), V(RB - 0.5, 0.12), V(RB - 0.4, 0.0), V(RB - 0.1, 0.0), V(RB, 0.16),
+      V(RB, 6.0), V(RB + 0.06, 6.14), V(R - 0.07, 7.26), V(R, 7.42),
+      V(R, T - 0.1), V(R - 0.05, T), V(0.001, T),
+    ];
+    const body = new THREE.Mesh(new THREE.LatheGeometry(bodyProfile, 160), outerMat);
+    body.castShadow = true; body.receiveShadow = true;
+    mug.add(body);
+    // Tapa negra a presión
+    const lidMat = new THREE.MeshPhysicalMaterial({ color: 0x0b0b0d, roughness: 0.42, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.14, envMapIntensity: 0.45, side: THREE.DoubleSide });
+    const lidProfile = [
+      V(R - 0.25, T - 0.04), V(R + 0.06, T - 0.04), V(R + 0.16, T + 0.12), V(R + 0.16, T + 0.72),
+      V(R + 0.05, T + 1.08), V(R - 0.3, T + 1.24), V(R - 1.2, T + 1.26), V(R - 1.4, T + 1.12),
+      V(0.001, T + 1.12),
+    ];
+    const lid = new THREE.Mesh(new THREE.LatheGeometry(lidProfile, 160), lidMat);
+    lid.castShadow = true;
+    mug.add(lid);
+    // pestaña de la tapa (del lado del asa)
+    const tab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.22, 1.2), lidMat);
+    tab.position.set(0, T + 1.0, z(0.35));
+    mug.add(tab);
+    wallBottom = 7.6; wallTop = T - 0.16;
+    // Asa cuadrada, pegada al cuerpo ancho
+    handleCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, T - 1.25, z(-0.3)), new THREE.Vector3(0, T - 1.15, z(1.4)),
+      new THREE.Vector3(0, T - 1.55, z(3.0)), new THREE.Vector3(0, (T - 1.25 + 9.6) / 2, z(3.35)),
+      new THREE.Vector3(0, 9.95, z(3.0)), new THREE.Vector3(0, 9.5, z(1.4)),
+      new THREE.Vector3(0, 9.6, z(-0.3)),
+    ], false, 'catmullrom', 0.35);
+  }
 
   // ── Banda de impresión (textura del diseño) ────────────────────────────────
+  // Mide EXACTAMENTE el alto de impresión (1:1 con el archivo de producción).
   const thetaLen = Math.min(printW / R, Math.PI * 2 * 0.9);
-  // Pared recta exterior: de y=0.3 a y=H-0.12. La banda mide EXACTAMENTE el alto
-  // de impresión (1:1 con el archivo de producción); solo se recorta si no entra.
-  const wallBottom = 0.3, wallTop = H - 0.12;
   const bandH = Math.min(printH, wallTop - wallBottom);
   const bandGeo = new THREE.CylinderGeometry(R + 0.006, R + 0.006, bandH, 200, 1, true, -thetaLen / 2, thetaLen);
   const bandMat = new THREE.MeshPhysicalMaterial({
@@ -145,18 +193,8 @@ export function createMugViewer(container, opts = {}) {
   band.visible = false;
   mug.add(band);
 
-  // ── Asa (tubo ovalado en el plano de la parte trasera, θ = π) ─────────────
-  const z = d => -(R + d);
-  const handleCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, H - 1.55, z(-0.35)),
-    new THREE.Vector3(0, H - 1.45, z(0.9)),
-    new THREE.Vector3(0, H - 1.9, z(2.35)),
-    new THREE.Vector3(0, H * 0.5, z(2.95)),
-    new THREE.Vector3(0, 2.25, z(2.4)),
-    new THREE.Vector3(0, 1.75, z(1.0)),
-    new THREE.Vector3(0, 1.85, z(-0.35)),
-  ], false, 'catmullrom', 0.5);
-  const handle = new THREE.Mesh(ovalTube(handleCurve, 140, 36, 0.44, 0.74), handleMat);
+  // ── Asa (tubo ovalado en el plano trasero, θ = π) ─────────────────────────
+  const handle = new THREE.Mesh(ovalTube(handleCurve, 140, 36, TRAVEL ? 0.42 : 0.44, TRAVEL ? 0.62 : 0.74), handleMat);
   handle.castShadow = true; handle.receiveShadow = true;
   mug.add(handle);
 
@@ -173,7 +211,7 @@ export function createMugViewer(container, opts = {}) {
   grd.addColorStop(0, 'rgba(0,0,0,0.55)'); grd.addColorStop(0.45, 'rgba(0,0,0,0.28)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
   bctx.fillStyle = grd; bctx.fillRect(0, 0, 256, 256);
   const blob = new THREE.Mesh(
-    new THREE.PlaneGeometry(R * 2.9, R * 2.9),
+    new THREE.PlaneGeometry(RB * 2.9, RB * 2.9),
     new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(blobCanvas), transparent: true, depthWrite: false })
   );
   blob.rotation.x = -Math.PI / 2; blob.position.y = 0.01;
@@ -186,10 +224,10 @@ export function createMugViewer(container, opts = {}) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.rotateSpeed = 0.75;
-  controls.minDistance = 24; controls.maxDistance = 48;
+  controls.minDistance = 24 * SCALE; controls.maxDistance = 48 * SCALE;
   controls.minPolarAngle = 0.95; controls.maxPolarAngle = 1.6;
   controls.autoRotateSpeed = 2.2;
-  const DIST = 34, POLAR = 1.3;
+  const DIST = 34 * SCALE, POLAR = 1.3;
   const sph = new THREE.Spherical(DIST, POLAR, Math.PI / 2);
   camera.position.copy(new THREE.Vector3().setFromSpherical(sph).add(target));
   controls.update();
@@ -272,7 +310,7 @@ export function createMugViewer(container, opts = {}) {
       renderer.setSize(size, size, false);
       camera.aspect = 1; camera.updateProjectionMatrix();
       // handle=true: encuadre de catálogo con el asa asomando a la derecha
-      const s = new THREE.Spherical(39, 1.3, handle ? Math.max(uToAzimuth(u), 0.9) : uToAzimuth(u) + 0.38);
+      const s = new THREE.Spherical(39 * SCALE, 1.3, handle ? Math.max(uToAzimuth(u), 0.9) : uToAzimuth(u) + 0.38);
       camera.position.copy(new THREE.Vector3().setFromSpherical(s).add(controls.target));
       camera.lookAt(controls.target);
       renderer.render(scene, camera);
