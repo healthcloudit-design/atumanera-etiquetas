@@ -68,7 +68,11 @@ module.exports = async function handler(req, res) {
           it.design_thumbnail_url = await signThumb(raw);
           if (it.files && typeof it.files === 'object') {
             // Regalos: archivo de producción + fotos originales del cliente.
-            it.design_print_url = await signThumb(it.files.production);
+            it.design_print_url = it.files.production ? await signThumb(it.files.production) : null;
+            if (it.files.zones) {          // remeras: un PNG de producción por zona
+              it.zone_urls = {};
+              for (const [z, path] of Object.entries(it.files.zones)) it.zone_urls[z] = await signThumb(path);
+            }
             it.original_urls = await Promise.all((it.files.originals || []).map(signThumb));
             it.line = 'regalos';
           } else {

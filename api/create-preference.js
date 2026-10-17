@@ -137,7 +137,7 @@ module.exports = async function handler(req, res) {
     const mpItems = orderItems.map(item => ({
       id: item.product_slug || item.product_id || item.product_name,
       title: item._pendingFiles
-        ? `${item.product_name}${item.variant && item.variant.color ? ' · ' + item.variant.color : ''}`
+        ? [item.product_name, item.variant && item.variant.color, item.variant && item.variant.size && 'Talle ' + item.variant.size].filter(Boolean).join(' · ')
         : `${item.product_name} - "${item.design_text}"`,
       quantity: item.quantity,
       unit_price: item.unit_price / 100,
@@ -285,24 +285,46 @@ async function claimPendingFiles(tenantId, orderId, idx, pending) {
     if (error) { console.error('claimPendingFiles', from, error.message); return `storage:designs/${from}`; }
     return `storage:designs/${to}`;
   };
-  const production = await move(pending.production, 'production');
-  const originals = [];
-  for (let k = 0; k < pending.originals.length; k++) originals.push(await move(pending.originals[k], `original-${k + 1}`));
-  return { production, originals };
+  const out = { originals: [] };
+  if (pending.production) out.production = await move(pending.production, 'production');   // taza
+  if (pending.zones) {                                                                       // remera: un PNG por zona
+    out.zones = {};
+    for (const [zid, path] of Object.entries(pending.zones)) out.zones[zid] = await move(path, `zona-${zid}`);
+  }
+  for (let k = 0; k < pending.originals.length; k++) out.originals.push(await move(pending.originals[k], `original-${k + 1}`));
+  return out;
 }
 
 // Valida y normaliza el diseño de un ítem de regalos (producto con options.editor).
+//   mug → files.production (PNG del área de impresión)
+//   tee → files.zones { <zona>: PNG } (al menos una), variant { color, size };
+//         el precio unitario suma options.zones[].price de cada zona usada.
 function validateGiftDesign(item, product, tenantId) {
   const opts = product.options || {};
   const pathRe = new RegExp(`^${tenantId}/pending/\\d{8}/[0-9a-f-]{36}-(original|production)\\.(jpg|png|webp|heic|heif)$`);
+  const isProd = p => typeof p === 'string' && pathRe.test(p) && p.endsWith('-production.png');
   const files = item.files || {};
-  const production = typeof files.production === 'string' ? files.production : '';
-  if (!pathRe.test(production) || !production.endsWith('-production.png')) {
-    throw new Error(`Falta el archivo de producción: ${product.slug}`);
+  const pending = { originals: [] };
+  let extra = 0;
+
+  if (opts.editor === 'tee') {
+    const zonesCfg = Array.isArray(opts.zones) ? opts.zones : [];
+    const sent = files.zones && typeof files.zones === 'object' ? files.zones : {};
+    pending.zones = {};
+    for (const z of zonesCfg) {
+      if (sent[z.id] === undefined) continue;
+      if (!isProd(sent[z.id])) throw new Error(`Archivo invalido en zona ${z.id}: ${product.slug}`);
+      pending.zones[z.id] = sent[z.id];
+      extra += cents(z.price);
+    }
+    if (!Object.keys(pending.zones).length) throw new Error(`Falta el diseño: ${product.slug}`);
+  } else {
+    if (!isProd(files.production)) throw new Error(`Falta el archivo de producción: ${product.slug}`);
+    pending.production = files.production;
   }
-  const originals = (Array.isArray(files.originals) ? files.originals : [])
+  pending.originals = (Array.isArray(files.originals) ? files.originals : [])
     .filter(p => typeof p === 'string' && pathRe.test(p) && /-original\./.test(p))
-    .slice(0, 6);
+    .slice(0, 8);
 
   let variant = null;
   if (Array.isArray(opts.colors) && opts.colors.length) {
@@ -311,11 +333,17 @@ function validateGiftDesign(item, product, tenantId) {
     if (!c) throw new Error(`Color invalido para ${product.slug}`);
     variant = { color: c.name, color_hex: c.hex, label: opts.color_label || 'Color' };
   }
+  if (Array.isArray(opts.sizes) && opts.sizes.length) {
+    const size = cleanString(item.variant && item.variant.size, 10);
+    if (!opts.sizes.includes(size)) throw new Error(`Talle invalido para ${product.slug}`);
+    variant = { ...(variant || {}), size };
+  }
+  if (variant && pending.zones) variant.zones = Object.keys(pending.zones);
 
   let design = null;
   if (item.design && typeof item.design === 'object') {
     const json = JSON.stringify(item.design);
-    if (json.length > 60000) throw new Error('Diseño demasiado grande');
+    if (json.length > 150000) throw new Error('Diseño demasiado grande');
     design = JSON.parse(json);
   }
 
@@ -323,7 +351,7 @@ function validateGiftDesign(item, product, tenantId) {
     ? { kg: Number(opts.shipping.kg), l: Number(opts.shipping.l), w: Number(opts.shipping.w), h: Number(opts.shipping.h) }
     : null;
 
-  return { variant, design, pending: { production, originals }, ship };
+  return { variant, design, pending, ship, extra };
 }
 
 async function getProductsBySlug(slugs, tenantId) {
@@ -372,10 +400,11 @@ async function buildOrderItems(cartItems, tenantId) {
     const product = products.get(item.productSlug);
     if (!product) throw new Error(`Producto invalido: ${item.productSlug || 'sin slug'}`);
 
-    const unitPrice = cents(product.price);
+    let unitPrice = cents(product.price);
     if (product.options && product.options.editor) {
-      // Producto de regalos: exige diseño + archivo de producción subido.
+      // Producto de regalos: exige diseño + archivo(s) de producción subido(s).
       const g = validateGiftDesign(item, product, tenantId);
+      unitPrice += g.extra;
       return {
         product_id: product.id || null,
         product_slug: item.productSlug,

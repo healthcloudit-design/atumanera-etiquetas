@@ -299,7 +299,7 @@ function openOrderDetail(id){
   const items=o.order_items||[];
   const rows=items.map(it=>`<tr>
     <td>${it.design_thumbnail_url?`<img src="${esc(it.design_thumbnail_url)}" onclick="lightbox(this.src)" style="width:54px;height:54px;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid var(--line)">`:'<span class="muted">—</span>'}</td>
-    <td>${esc(it.product_name)}<div class="muted" style="font-size:11px">SKU: ${esc(it.product_slug||'—')}</div>${it.variant&&it.variant.color?`<div style="font-size:12px;margin-top:3px"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${esc(it.variant.color_hex||'#ccc')};vertical-align:-1px;border:1px solid #fff5"></span> ${esc(it.variant.label||'Color')}: <strong>${esc(it.variant.color)}</strong></div>`:''}<div class="muted" style="font-size:11px">Texto: "${esc(it.design_text||'')}"${it.design_font?' · '+esc(it.design_font):''}</div></td>
+    <td>${esc(it.product_name)}<div class="muted" style="font-size:11px">SKU: ${esc(it.product_slug||'—')}</div>${it.variant&&it.variant.size?`<div style="font-size:12px;margin-top:3px">Talle: <strong>${esc(it.variant.size)}</strong></div>`:''}${it.variant&&it.variant.color?`<div style="font-size:12px;margin-top:3px"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${esc(it.variant.color_hex||'#ccc')};vertical-align:-1px;border:1px solid #fff5"></span> ${esc(it.variant.label||'Color')}: <strong>${esc(it.variant.color)}</strong></div>`:''}<div class="muted" style="font-size:11px">Texto: "${esc(it.design_text||'')}"${it.design_font?' · '+esc(it.design_font):''}</div></td>
     <td>${it.quantity}</td>
     <td>${money(it.subtotal)}</td>
     <td>${itemFiles(it)}</td></tr>`).join('');
@@ -321,6 +321,8 @@ function itemFiles(it){
   let h='';
   if(it.line==='regalos'){
     if(it.design_print_url)h+=a(it.design_print_url,'⬇ Producción','', 'PNG del área de impresión a tamaño real, 300 dpi, fondo transparente');
+    const ZN={front:'Escudo',back:'Espalda',sleeve_r:'Manga der.',sleeve_l:'Manga izq.'};
+    Object.entries(it.zone_urls||{}).forEach(([z,u])=>{if(u)h+=a(u,'⬇ '+(ZN[z]||z),'','PNG de la zona a tamaño real, 300 dpi, fondo transparente');});
     (it.original_urls||[]).forEach((u,k,arr)=>{if(u)h+=a(u,'⬇ Foto original'+(arr.length>1?' '+(k+1):''),'sec','Archivo tal cual lo subió el cliente');});
   }else if(it.design_print_url){h+=a(it.design_print_url,'⬇ Diseño','','Archivo listo para imprimir, tamaño real');}
   if(it.design_thumbnail_url)h+=a(it.design_thumbnail_url,'Mockup','sec');

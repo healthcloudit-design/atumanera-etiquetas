@@ -199,6 +199,26 @@ footer a{font-weight:800;text-decoration:none}
 footer .powered{font-size:12.5px;margin-top:6px}
 footer .powered a{color:var(--ink)}
 footer .powered a:hover{color:var(--celeste)}
+
+/* Remera */
+.stage.tee{aspect-ratio:90/84;display:flex;align-items:center;justify-content:center}
+#teeCanvas{width:100%;height:auto;display:block}
+.zones{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:560px){.zones{grid-template-columns:repeat(2,1fr)}}
+.ztab{position:relative;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 8px;text-align:left;display:flex;flex-direction:column;gap:2px;transition:.15s}
+.ztab b{font-size:13px;font-weight:900}
+.ztab small{font-size:11px;color:var(--muted);font-weight:700}
+.ztab .ok{position:absolute;top:6px;right:8px;font-style:normal;font-weight:900;color:var(--verde);display:none}
+.ztab.used .ok{display:block}
+.ztab.on{border-color:var(--fucsia);box-shadow:0 0 0 2px rgba(236,0,140,.15)}
+.zhost,.zhost .canvas-container{position:absolute!important;inset:0}
+.sizes{display:flex;gap:8px;flex-wrap:wrap}
+.szb{min-width:48px;height:42px;border:1.5px solid var(--line);background:#fff;border-radius:11px;font-weight:900;font-size:14px}
+.szb:hover{border-color:var(--celeste)}
+.szb.on{background:var(--celeste);border-color:var(--celeste);color:#fff}
+.pbreak{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:2px}
+.desde{font-size:13px;font-weight:700;color:var(--muted)}
+body.mode-tee .flat-wrap{background:repeating-conic-gradient(#eef1f5 0% 25%,#fff 0% 50%) 50%/14px 14px}
 </style>
 </head>
 <body>
@@ -220,7 +240,7 @@ footer .powered a:hover{color:var(--celeste)}
   <section class="hero">
     <div class="dots"><i></i><i></i><i></i><i></i></div>
     <h1>Regalos personalizados</h1>
-    <p>Subí tu foto, escribí tu frase y mirá en 3D cómo va a quedar tu regalo antes de comprarlo.</p>
+    <p>Subí tu foto o tu logo, escribí tu frase y mirá cómo va a quedar tu regalo antes de comprarlo.</p>
     <div class="steps"><span><b>1.</b> Elegí el producto</span><span><b>2.</b> Diseñalo a tu manera</span><span><b>3.</b> Lo producimos y te lo enviamos</span></div>
   </section>
   <section class="wrap"><div class="grid" id="grid"><div class="empty">Cargando productos…</div></div></section>
@@ -231,7 +251,15 @@ footer .powered a:hover{color:var(--celeste)}
   <a href="#" class="crumb" id="backBtn">← Volver a regalos</a>
   <div class="ed-grid">
     <div class="preview">
-      <div class="stage">
+      <div class="stage tee" id="teeStage" hidden>
+        <canvas id="teeCanvas"></canvas>
+        <span class="hint3d">Vista a escala real · talle L</span>
+        <div class="views">
+          <button data-tview="front" class="on">Frente</button>
+          <button data-tview="back">Espalda</button>
+        </div>
+      </div>
+      <div class="stage" id="mugStage">
         <div id="stage3d"></div>
         <div class="nogl" id="noGl" hidden>Tu navegador no permite la vista 3D. Igual podés diseñar abajo: así se imprime.</div>
         <span class="hint3d">↔ Arrastrá para girar la taza</span>
@@ -244,6 +272,7 @@ footer .powered a:hover{color:var(--celeste)}
         </div>
       </div>
       <div class="flat">
+        <div class="zones" id="zoneTabs" hidden></div>
         <div class="flat-head"><h4>Tu diseño · área de impresión</h4><span id="flatSize">20 × 9 cm · se imprime alrededor de la taza</span></div>
         <div class="flat-wrap" id="flatWrap">
           <div id="flatHost"></div>
@@ -251,7 +280,7 @@ footer .powered a:hover{color:var(--celeste)}
           <div class="guide g-safe"></div><div class="guide g-center"></div>
           <div class="empty-hint" id="emptyHint" hidden>Subí una foto o agregá un texto</div>
         </div>
-        <div class="flat-labels"><span>◀ se ve con el asa a la izquierda</span><span>frente</span><span>se ve con el asa a la derecha ▶</span></div>
+        <div class="flat-labels" id="flatLabels"><span>◀ se ve con el asa a la izquierda</span><span>frente</span><span>se ve con el asa a la derecha ▶</span></div>
       </div>
     </div>
 
@@ -259,6 +288,7 @@ footer .powered a:hover{color:var(--celeste)}
       <div>
         <h1 id="edTitle">Taza personalizada</h1>
         <div class="price" id="edPrice"></div>
+        <div class="pbreak" id="priceBreak" hidden></div>
         <div class="info" id="edInfo"></div>
       </div>
 
@@ -266,7 +296,7 @@ footer .powered a:hover{color:var(--celeste)}
         <h5>1 · Tu foto</h5>
         <label class="drop" id="dropZone">
           <input type="file" id="photoInput" accept="image/*">
-          <b>📷 Subir foto</b>
+          <b>📷 Subir foto o logo</b>
           <small>JPG o PNG, la mejor calidad que tengas (hasta 25 MB)</small>
         </label>
       </div>
@@ -302,7 +332,12 @@ footer .powered a:hover{color:var(--celeste)}
         <div class="sws" id="colorRow"></div>
       </div>
 
-      <div class="sec">
+      <div class="sec" id="sizeSection" hidden>
+        <h5>Talle <em id="sizeName"></em></h5>
+        <div class="sizes" id="sizeRow"></div>
+      </div>
+
+      <div class="sec" id="bgSection">
         <h5>Fondo del diseño</h5>
         <div class="sws" id="bgRow"></div>
       </div>

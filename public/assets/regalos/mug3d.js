@@ -112,7 +112,7 @@ export function createMugViewer(container, opts = {}) {
   const V = (x, y) => new THREE.Vector2(x, y);
   const outerProfile = [
     V(0.001, 0.14), V(R - 0.78, 0.14), V(R - 0.66, 0.0), V(R - 0.24, 0.0), V(R - 0.06, 0.12),
-    V(R - 0.005, 0.36), V(R, 0.5), V(R, H - 0.16), V(R - 0.012, H - 0.06), V(R - 0.07, H - 0.008),
+    V(R - 0.01, 0.2), V(R, 0.3), V(R, H - 0.12), V(R - 0.012, H - 0.06), V(R - 0.07, H - 0.008),
     V(R - WALL * 0.5, H),
   ];
   const outer = new THREE.Mesh(new THREE.LatheGeometry(outerProfile, 160), outerMat);
@@ -130,7 +130,10 @@ export function createMugViewer(container, opts = {}) {
 
   // ── Banda de impresión (textura del diseño) ────────────────────────────────
   const thetaLen = Math.min(printW / R, Math.PI * 2 * 0.9);
-  const bandH = Math.min(printH, H - 0.7);
+  // Pared recta exterior: de y=0.3 a y=H-0.12. La banda mide EXACTAMENTE el alto
+  // de impresión (1:1 con el archivo de producción); solo se recorta si no entra.
+  const wallBottom = 0.3, wallTop = H - 0.12;
+  const bandH = Math.min(printH, wallTop - wallBottom);
   const bandGeo = new THREE.CylinderGeometry(R + 0.006, R + 0.006, bandH, 200, 1, true, -thetaLen / 2, thetaLen);
   const bandMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, roughness: 0.34, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.06,
@@ -138,7 +141,7 @@ export function createMugViewer(container, opts = {}) {
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
   });
   const band = new THREE.Mesh(bandGeo, bandMat);
-  band.position.y = 0.5 + (H - 0.66) / 2;
+  band.position.y = (wallBottom + wallTop) / 2;
   band.visible = false;
   mug.add(band);
 
