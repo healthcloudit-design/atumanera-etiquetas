@@ -202,6 +202,7 @@ function renderCatalog() {
 const thumbCache = {};
 function chipOf(p) {
   const o = p.options || {};
+  if (o.chip) return o.chip;
   if (o.editor === 'tee') return o.garment === 'buzo' ? 'Buzo' : 'Remera';
   return o.mug && o.mug.model === 'travel' ? 'Vaso térmico' : 'Taza 11 oz';
 }
@@ -310,7 +311,7 @@ async function openEditor(p) {
 
   // Color de taza
   const colorBox = $('#colorSection');
-  if (colors.length) {
+  if (colors.length > 1) {
     colorBox.hidden = false;
     $('#colorLabel').textContent = p.options.color_label || 'Color';
     $('#colorRow').innerHTML = colors.map((c, i) => `<button class="sw${i === 0 ? ' on' : ''}" style="--sw:${esc(c.hex)}" data-color="${i}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('');
@@ -424,7 +425,7 @@ async function openTeeEditor(p) {
   $('#sizeRow').innerHTML = (o.sizes || []).map(sz => `<button class="szb" data-size="${esc(sz)}">${esc(sz)}</button>`).join('');
   $('#sizeName').textContent = 'elegí uno';
   // pestañas de zonas
-  $('#zoneTabs').innerHTML = ed.zones.map(z => `<button class="ztab" data-zone="${esc(z.id)}"><b>${esc(z.name)}</b><small>${fmtCm(z.w_cm)} × ${fmtCm(z.h_cm)} cm · +${money(z.price)}</small><i class="ok">✓</i></button>`).join('');
+  $('#zoneTabs').innerHTML = ed.zones.map(z => `<button class="ztab" data-zone="${esc(z.id)}"><b>${esc(z.name)}</b><small>${fmtCm(z.w_cm)} × ${fmtCm(z.h_cm)} cm${z.price ? ' · +' + money(z.price) : ''}</small><i class="ok">✓</i></button>`).join('');
   // un canvas Fabric por zona
   const host = $('#flatHost');
   host.innerHTML = ed.zones.map(z => `<div class="zhost" data-z="${esc(z.id)}" hidden><canvas id="zc_${esc(z.id)}"></canvas></div>`).join('');
@@ -452,7 +453,13 @@ async function openTeeEditor(p) {
     ed.mock.aspect = () => 90 / 84;
   }
   ed.photo = !!ed.mock.garment;
-  $('[data-tview="both"]').hidden = !ed.photo;
+  const views = ed.photo ? ed.mock.views : ['front', 'back'];
+  $$('[data-tview]').forEach(b => (b.hidden = !views.includes(b.dataset.tview)));
+  $('#teeStage .views').hidden = views.length < 2;
+  // sin talles (ej. vaso) → no se pide talle; una sola zona → sin pestañas
+  $('#sizeSection').hidden = !(o.sizes && o.sizes.length);
+  $('#zoneTabs').hidden = ed.zones.length < 2;
+  $('#teeHint').textContent = (o.sizes && o.sizes.length) ? 'Vista a escala · talle L' : 'Vista a escala';
   ed.ro = new ResizeObserver(() => { sizeFlat(); renderTeeMock(); });
   ed.ro.observe($('#flatWrap'));
   ed.ro.observe($('#teeStage'));
@@ -477,6 +484,7 @@ function selectZone(id) {
   ed.lastW = null;
   sizeFlat();
   ed.view = ed.mock.viewOf(id);
+  if (ed.photo && !ed.mock.views.includes(ed.view)) ed.view = ed.mock.views[0];
   setTeeView(ed.view);
   syncSelection();
 }
@@ -527,8 +535,10 @@ function updateTeeState() {
   const used = Object.values(ed.cv).filter(zoneUsed);
   $$('#zoneTabs .ztab').forEach(b => b.classList.toggle('used', zoneUsed(ed.cv[b.dataset.zone])));
   $('#edPrice').textContent = money(teeUnitPrice());
-  $('#priceBreak').innerHTML = `Remera ${money(ed.p.price)}` + (used.length
-    ? used.map(c => ` + ${esc(c.z.name)} ${money(c.z.price)}`).join('')
+  const paid = used.filter(c => c.z.price > 0);
+  $('#priceBreak').hidden = !(ed.zones.some(z => z.price > 0));
+  $('#priceBreak').innerHTML = `${esc(chipOf(ed.p))} ${money(ed.p.price)}` + (used.length
+    ? paid.map(c => ` + ${esc(c.z.name)} ${money(c.z.price)}`).join('')
     : ' · <em>sumá al menos una zona</em>');
   renderTeeMock();
   syncSelection();
@@ -783,8 +793,8 @@ async function addToCart() {
 
 async function addTeeToCart() {
   const used = Object.values(ed.cv).filter(zoneUsed);
-  if (!used.length) return toast('Personalizá al menos una zona: escudo, espalda o mangas.', 'err');
-  if (!ed.size) { toast('Elegí el talle.', 'err'); $('#sizeSection').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  if (!used.length) return toast(ed.zones.length > 1 ? 'Personalizá al menos una zona: escudo, espalda o mangas.' : 'Personalizá tu diseño: subí una foto o escribí un texto.', 'err');
+  if (!ed.size && (ed.p.options.sizes || []).length) { toast('Elegí el talle.', 'err'); $('#sizeSection').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   used.forEach(c => { c.fc.discardActiveObject(); c.fc.requestRenderAll(); });
   syncSelection();
   const btn = $('#addBtn'); btn.disabled = true;

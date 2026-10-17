@@ -30,6 +30,19 @@ export const GARMENTS = {
       sleeve_l: { view: 'front', cx: 599, cy: 414, rot: -25 },
     },
   },
+  // Vaso térmico de aluminio (negro, sin teñir). Cuerpo cónico: el diseño se envuelve
+  // sobre el cono (radio en px que se achica hacia abajo). Ø superior ≈ 8,8 cm → 38 px/cm.
+  vaso2: {
+    photo: '/assets/regalos/mockups/vaso2.jpg', map: '/assets/regalos/mockups/vaso2-map.png',
+    recolor: false,
+    shadeStrength: 0.45,        // impresión a color sobre metal: sombreado suave, colores vivos
+    views: ['front'],
+    pxcm: { front: 37.94 },
+    crops: { front: [58, 330, 700, 760] },
+    zones: {
+      front: { view: 'front', cx: 410, cy: 738, rot: 0, cyl: { y0: 525, r0: 166.9, dr: -0.08839, x0: 409.9, dx: -0.00292 } },
+    },
+  },
   buzo: {
     photo: '/assets/regalos/mockups/buzo.jpg', map: '/assets/regalos/mockups/buzo-map.png',
     pxcm: { front: K_BUZO, back: K_BUZO },
@@ -74,10 +87,12 @@ async function prepare(key) {
   const mk = maskCanvas.getContext('2d').createImageData(W, H);
   const sh = shadeMul.getContext('2d').createImageData(W, H);
   const d = mapData.data;
+  const strength = cfg.shadeStrength ?? 1;
   for (let i = 0; i < d.length; i += 4) {
     mk.data[i + 3] = d[i + 3];
     // sombra real S (lineal) llevada a sRGB para el "multiply" del canvas; tope 1
-    const s = 255 * Math.pow(Math.min(1, (d[i] / 255) * 1.4 * 1.02), 1 / 2.2);
+    const s0 = Math.pow(Math.min(1, (d[i] / 255) * 1.4 * 1.02), 1 / 2.2);
+    const s = 255 * (1 - strength * (1 - s0));
     sh.data[i] = sh.data[i + 1] = sh.data[i + 2] = s; sh.data[i + 3] = 255;
   }
   maskCanvas.getContext('2d').putImageData(mk, 0, 0);
@@ -119,7 +134,28 @@ function zoneRect(g, z, zc) {
   const k = g.cfg.pxcm[zc.view];
   const w = z.w_cm * k, h = z.h_cm * k;
   const cy = zc.top !== undefined ? zc.top + h / 2 : zc.cy;
+  if (zc.cyl) {                       // ancho visible del área envuelta en el cono
+    const R = zc.cyl.r0 + (cy - zc.cyl.y0) * zc.cyl.dr;
+    return { cx: zc.cx, cy, w: 2 * R * Math.sin(Math.min(Math.PI / 2, w / (2 * R))), h, rot: 0, arc: w };
+  }
   return { cx: zc.cx, cy, w, h, rot: zc.rot || 0 };
+}
+
+// Dibuja la textura envuelta sobre un cono (vaso): por franjas horizontales (radio
+// distinto en cada altura) y columnas (proyección del arco: x = eje + R·sen(u/R)).
+function drawCyl(lx, tex, r, cyl) {
+  const rows = 28, cols = 44, top = r.cy - r.h / 2;
+  for (let j = 0; j < rows; j++) {
+    const y0 = top + (r.h * j) / rows, y1 = top + (r.h * (j + 1)) / rows, ym = (y0 + y1) / 2;
+    const R = cyl.r0 + (ym - cyl.y0) * cyl.dr, ax = cyl.x0 + (ym - cyl.y0) * cyl.dx;
+    const sy = (tex.height * j) / rows, sh = tex.height / rows;
+    for (let i = 0; i < cols; i++) {
+      const u0 = -r.arc / 2 + (r.arc * i) / cols, u1 = u0 + r.arc / cols;
+      const xa = ax + R * Math.sin(Math.max(-1.55, Math.min(1.55, u0 / R)));
+      const xb = ax + R * Math.sin(Math.max(-1.55, Math.min(1.55, u1 / R)));
+      lx.drawImage(tex, (tex.width * i) / cols, sy, tex.width / cols, sh, xa, y0, xb - xa + 0.7, y1 - y0 + 0.7);
+    }
+  }
 }
 
 // Compone la foto completa (prenda teñida + estampados con sombras)
@@ -127,7 +163,7 @@ function compose(g, { color = '#ffffff', textures = {}, zones = [] }) {
   if (!g.full) { g.full = canvasOf(g.W, g.H); g.layer = canvasOf(g.W, g.H); g.alpha = canvasOf(g.W, g.H); }
   const fx = g.full.getContext('2d'), lx = g.layer.getContext('2d'), ax = g.alpha.getContext('2d');
   fx.globalCompositeOperation = 'source-over';
-  fx.drawImage(recolor(g, color), 0, 0);
+  fx.drawImage(g.cfg.recolor === false ? g.photo : recolor(g, color), 0, 0);
   lx.globalCompositeOperation = 'source-over';
   lx.clearRect(0, 0, g.W, g.H);
   let any = false;
@@ -135,9 +171,12 @@ function compose(g, { color = '#ffffff', textures = {}, zones = [] }) {
     const zc = g.cfg.zones[z.id], tex = textures[z.id];
     if (!zc || !tex || !tex.width) continue;
     const r = zoneRect(g, z, zc);
-    lx.save(); lx.translate(r.cx, r.cy); lx.rotate(r.rot * Math.PI / 180);
-    lx.drawImage(tex, -r.w / 2, -r.h / 2, r.w, r.h);
-    lx.restore();
+    if (zc.cyl) drawCyl(lx, tex, r, zc.cyl);
+    else {
+      lx.save(); lx.translate(r.cx, r.cy); lx.rotate(r.rot * Math.PI / 180);
+      lx.drawImage(tex, -r.w / 2, -r.h / 2, r.w, r.h);
+      lx.restore();
+    }
     any = true;
   }
   if (any) {
@@ -152,6 +191,7 @@ function compose(g, { color = '#ffffff', textures = {}, zones = [] }) {
 }
 
 function srcRect(g, view) {
+  if (g.cfg.views && g.cfg.views.length === 1) return g.cfg.crops[g.cfg.views[0]];
   if (view === 'front' || view === 'back') return g.cfg.crops[view];
   return [0, 0, g.W, g.H];
 }
@@ -162,6 +202,7 @@ export async function loadPhotoMockup(canvas, key) {
   let last = null;
   const api = {
     garment: key,
+    views: g.cfg.views || ['both', 'front', 'back'],
     aspect(view) { const r = srcRect(g, view); return r[2] / r[3]; },
     viewOf(zid) { return (g.cfg.zones[zid] || {}).view || 'front'; },
     render(opts) {
