@@ -9,7 +9,7 @@ import { createTeeMockup, ZONE_PLACEMENT } from './tee2d.js';
 import { loadPhotoMockup, GARMENTS } from './photo-mockup.js';
 
 const TENANT = 'atumanera';
-const WHATSAPP = '5491176309675';
+const WHATSAPP = '5491176602462';
 const CART_KEY = 'rg_cart_v1';
 const DESIGN_W = 1000;                      // unidades lógicas del diseño (ancho)
 const fabric = window.fabric;

@@ -91,6 +91,14 @@ footer svg{width:18px;height:18px}
   .card h2{font-size:23px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* Globito flotante de WhatsApp */
+.wa-float{position:fixed;right:20px;bottom:20px;z-index:50;width:58px;height:58px;border-radius:50%;
+  background:#25D366;color:#fff;display:grid;place-items:center;text-decoration:none;
+  box-shadow:0 6px 20px rgba(37,211,102,.45);transition:transform .2s;animation:wa-pulse 2.4s ease-in-out infinite}
+.wa-float:hover{transform:scale(1.08)}
+.wa-float svg{width:30px;height:30px}
+@keyframes wa-pulse{0%,100%{box-shadow:0 6px 20px rgba(37,211,102,.45)}50%{box-shadow:0 6px 30px rgba(37,211,102,.75)}}
+@media (max-width:620px){.wa-float{right:14px;bottom:14px;width:52px;height:52px}}
 </style>
 </head>
 <body>
@@ -134,7 +142,7 @@ footer svg{width:18px;height:18px}
 
 <footer>
   <div class="links">
-    <a href="https://wa.me/5491176309675" target="_blank" rel="noopener">
+    <a href="https://wa.me/5491176602462" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>WhatsApp</a>
     <a href="https://instagram.com/atumaneraetiquetas" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>Instagram</a>
@@ -142,6 +150,9 @@ footer svg{width:18px;height:18px}
   © <span id="y"></span> A tu manera Gráfica
   <div class="powered">Tienda powered by <a href="https://praxisoperativa.com/?utm_source=atumaneragraf&amp;utm_medium=footer&amp;utm_campaign=powered_by" target="_blank" rel="noopener">PraxisOperativa.com</a></div>
 </footer>
+<a class="wa-float" href="https://wa.me/5491176602462?text=%C2%A1Hola!%20Quiero%20hacer%20una%20consulta" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+</a>
 <script>document.getElementById('y').textContent=new Date().getFullYear();</script>
 </body>
 </html>
