@@ -141,6 +141,7 @@
         <div class="tabs">
           <button class="tab active" data-tt="orders" onclick="tnTab('orders')">Pedidos</button>
           <button class="tab" data-tt="products" onclick="tnTab('products')">Productos y precios</button>
+          <button class="tab" data-tt="prints" onclick="tnTab('prints')">🖨️ Impresiones</button>
         </div>
         <div id="tt-orders" class="ttpane">
           <div class="tabs" id="lineFilter" style="margin-top:0">
@@ -149,6 +150,21 @@
             <button class="tab" data-line="regalos" onclick="tnLine('regalos')">🎁 Regalos</button>
           </div>
           <table><thead><tr><th>#</th><th>Comprador</th><th>Diseño</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="ordersBody"></tbody></table>
+        </div>
+        <div id="tt-prints" class="ttpane" style="display:none">
+          <div class="tabs" style="margin-top:0">
+            <select id="printStatusFilter" onchange="pjRender()" style="width:auto">
+              <option value="">Todos los estados</option>
+              <option value="enviado">Enviado (revisar)</option>
+              <option value="devuelto">Devuelto</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="en_imprenta">En imprenta</option>
+              <option value="recibido_imprenta">Recibido de imprenta</option>
+              <option value="entregado">Entregado</option>
+              <option value="completado">Completado</option>
+            </select>
+          </div>
+          <table><thead><tr><th>#</th><th>Cliente</th><th>Trabajo</th><th>Archivo</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="printsBody"></tbody></table>
         </div>
         <div id="tt-products" class="ttpane" style="display:none">
           <p class="hint">Editá el precio (en pesos) y guardá. Se aplica al instante en tu tienda.</p>
@@ -173,6 +189,12 @@
 
 <div id="toast" class="toast"></div>
 <div id="lb" class="lb" onclick="this.classList.remove('show')"><img alt="Diseño"></div>
+<div id="pjModal" class="modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="card" style="max-width:820px;width:100%;max-height:90vh;overflow:auto">
+    <div id="pjBody"></div>
+    <div style="text-align:right;margin-top:14px"><button class="btn ghost sm" onclick="$('pjModal').classList.remove('show')">Cerrar</button></div>
+  </div>
+</div>
 <div id="odModal" class="modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="card" style="max-width:780px;width:100%;max-height:90vh;overflow:auto">
     <div id="odBody"></div>
@@ -266,11 +288,12 @@ async function initTenant(){
   await tnLoad();
 }
 async function tnLoad(){
-  const[orders,{data:products}]=await Promise.all([
+  const[orders,{data:products},prints]=await Promise.all([
     api('/api/tenant-orders').catch(()=>[]),
-    sb.from('products').select('id,name,price,active,slug').eq('tenant_id',myTenant.id).order('name')
+    sb.from('products').select('id,name,price,active,slug').eq('tenant_id',myTenant.id).order('name'),
+    api('/api/print-admin').catch(()=>[])
   ]);
-  window._orders=orders||[]; window._products=products||[];
+  window._orders=orders||[]; window._products=products||[]; window._prints=prints||[];
   const paid=(orders||[]).filter(o=>o.status==='paid'||o.status==='in_production'||o.status==='shipped'||o.status==='delivered');
   const revenue=paid.reduce((a,o)=>a+(o.total||0),0);
   $('tnKpis').innerHTML=`
@@ -278,7 +301,7 @@ async function tnLoad(){
     <div class="kpi"><div class="n">${paid.length}</div><div class="l">Pagados</div></div>
     <div class="kpi"><div class="n">${money(revenue)}</div><div class="l">Facturado</div></div>
     <div class="kpi"><div class="n">${(products||[]).length}</div><div class="l">Productos</div></div>`;
-  tnRenderOrders(); tnRenderProducts();
+  tnRenderOrders(); tnRenderProducts(); pjRender();
 }
 const STATES=['pending_payment','paid','in_production','shipped','delivered','cancelled'];
 const STATE_LABELS={pending_payment:'Pendiente de pago',paid:'Pagado',in_production:'En producción',shipped:'Enviado',delivered:'Entregado',cancelled:'Cancelado'};
@@ -338,6 +361,101 @@ function tnRenderProducts(){const b=$('productsBody');const ps=window._products|
 async function tnSavePrice(id){const v=$('pp_'+id).value;const cents=Math.max(0,Math.round(parseFloat(v)*100));try{const{error}=await sb.from('products').update({price:cents}).eq('id',id);if(error)throw error;const p=(window._products||[]).find(x=>x.id===id);if(p)p.price=cents;toast('Precio actualizado');}catch(e){toast(e.message,false);}}
 async function tnToggleProduct(id){const p=(window._products||[]).find(x=>x.id===id);if(!p)return;try{const{error}=await sb.from('products').update({active:!p.active}).eq('id',id);if(error)throw error;p.active=!p.active;tnRenderProducts();toast('Producto actualizado');}catch(e){toast(e.message,false);}}
 function tnTab(n){document.querySelectorAll('[data-tt]').forEach(b=>b.classList.toggle('active',b.dataset.tt===n));document.querySelectorAll('.ttpane').forEach(p=>p.style.display='none');$('tt-'+n).style.display='block';}
+
+// ===== IMPRESIONES / PLOTTER =====
+const PJ_STATES=['enviado','devuelto','confirmado','en_imprenta','recibido_imprenta','entregado','completado'];
+const PJ_LABELS={enviado:'Enviado (revisar)',devuelto:'Devuelto',confirmado:'Confirmado',en_imprenta:'En imprenta',recibido_imprenta:'Recibido de imprenta',entregado:'Entregado',completado:'Completado'};
+const PJ_KIND={creado:'Pedido cargado',archivo_subido:'Archivo subido',status:'Estado',mail:'Mail'};
+let pjCur=null;
+function pjPill(s){const cls=s==='devuelto'?'off':((s==='entregado'||s==='completado')?'on':'role');return `<span class="pill ${cls}">${esc(PJ_LABELS[s]||s)}</span>`;}
+function pjActor(a){a=String(a||'');return a.startsWith('staff:')?'Taller':(a==='cliente'?'Cliente':'Sistema');}
+// Chequeo automático: orientativo (lo corre el navegador del cliente). Sandra decide.
+function pjCheckText(c){
+  if(!c||!c.w_cm) return 'Sin chequeo automático';
+  const ok=!!c.ok&&!(c.warnings&&c.warnings.length);
+  let t=`${ok?'✅':'⚠️'} mide ${c.w_cm} × ${c.h_cm} cm`+(c.dpi?` · ${c.dpi} dpi`:'');
+  if(c.warnings&&c.warnings.length) t+=' — '+c.warnings.map(esc).join('; ');
+  return t;
+}
+function pjRender(){
+  const b=$('printsBody'); if(!b) return;
+  const f=$('printStatusFilter')?$('printStatusFilter').value:'';
+  const js=(window._prints||[]).filter(j=>!f||j.status===f);
+  b.innerHTML=js.length?'':'<tr><td colspan="6" class="muted">Sin pedidos de impresión todavía.</td></tr>';
+  js.forEach(j=>{const tr=document.createElement('tr');
+    const file=j.file_name?`${esc(j.file_name)}<div class="muted" style="font-size:11px">${pjCheckText(j.file_check)}</div>`:'<span class="muted">Sin archivo</span>';
+    const sel=myRole==='admin'?`<select onchange="pjSetStatus('${j.id}',this.value)" style="width:auto">${PJ_STATES.map(s=>`<option value="${s}" ${s===j.status?'selected':''}>${PJ_LABELS[s]}</option>`).join('')}</select>`:pjPill(j.status);
+    tr.innerHTML=`<td><a onclick="pjOpen('${j.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${j.job_number}</a></td><td>${esc(j.client_name)}<div class="muted" style="font-size:11px">${esc(j.client_phone)}</div></td><td style="max-width:260px">${esc(j.description)}</td><td>${file}</td><td>${sel}</td><td class="muted">${(j.created_at||'').slice(0,10)}</td>`;
+    b.appendChild(tr);});
+}
+async function pjOpen(id){
+  try{ pjCur=await api('/api/print-admin?id='+encodeURIComponent(id)); pjDraw(); $('pjModal').classList.add('show'); }
+  catch(e){ toast(e.message,false); }
+}
+function pjDraw(){
+  const j=pjCur.job, pv=pjCur.previewUrl, admin=myRole==='admin';
+  const isImg=!!(j.file_mime&&j.file_mime.startsWith('image/'));
+  const preview=!j.file_path?'<div class="muted">Todavía no subió archivo.</div>'
+    :(isImg?`<img src="${esc(pv)}" onclick="lightbox(this.src)" title="Ampliar" style="max-width:100%;max-height:340px;border-radius:8px;border:1px solid var(--line);cursor:pointer">`
+      :`<a class="btn sec sm" href="${esc(pv)}" target="_blank" rel="noopener">Abrir PDF</a>`);
+  const wa=j.client_phone?`https://wa.me/${String(j.client_phone).replace(/\D/g,'')}`:null;
+  const stSel=admin?`<select onchange="pjSetStatus('${j.id}',this.value)" style="width:auto">${PJ_STATES.map(s=>`<option value="${s}" ${s===j.status?'selected':''}>${PJ_LABELS[s]}</option>`).join('')}</select>`:pjPill(j.status);
+  const ev=(pjCur.events||[]).map(e=>{
+    const what=e.kind==='status'?(PJ_LABELS[e.to_status]||e.to_status):(PJ_KIND[e.kind]||e.kind);
+    return `<li style="margin-bottom:6px"><span class="muted" style="font-size:11px">${String(e.created_at||'').slice(0,16).replace('T',' ')}</span> · <strong>${esc(pjActor(e.actor))}</strong> · ${esc(what)}${e.note?` — <span class="muted">${esc(e.note)}</span>`:''}</li>`;
+  }).join('');
+  let actions='';
+  if(admin){
+    const confirmBlock=j.file_path
+      ?`<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+          <div style="flex:0 0 170px"><label class="muted" style="font-size:11px">Plazo (días hábiles)</label><input id="pjDays" type="number" min="1" max="60" value="${j.deadline_business_days||''}"></div>
+          <button class="btn sm" onclick="pjConfirm()">Confirmar a cliente</button>
+        </div>`
+      :'<p class="muted" style="margin:0 0 12px">Esperando el archivo del cliente para poder confirmar o devolver.</p>';
+    const returnBlock=j.file_path
+      ?`<label class="muted" style="font-size:11px">Observaciones (obligatorias para devolver)</label>
+        <textarea id="pjObs" rows="3" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0e1727;color:var(--txt);font-size:13.5px"></textarea>
+        <button class="btn pink sm" style="margin-top:8px" onclick="pjReturn()">Devolver imagen</button>`:'';
+    actions=`<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:14px"><div class="odk" style="margin-bottom:8px">Decisión</div>${confirmBlock}${returnBlock}</div>`;
+  }
+  $('pjBody').innerHTML=`
+    <h3 style="margin:0 0 10px">Impresión #${j.job_number} <span class="muted" style="font-size:12px;font-weight:400">· ${String(j.created_at||'').slice(0,10)}</span></h3>
+    <div class="odgrid">
+      <div><div class="odk">Cliente</div>${esc(j.client_name)}<br><span class="muted">${esc(j.client_email)}${wa?` · <a href="${wa}" target="_blank" rel="noopener" style="color:var(--pri)">WhatsApp</a>`:''}</span></div>
+      <div><div class="odk">Estado</div>${stSel}${j.deadline_business_days?`<br><span class="muted">Plazo: ${j.deadline_business_days} días hábiles</span>`:''}</div>
+      <div style="grid-column:1/-1"><div class="odk">Trabajo</div>${esc(j.description)}</div>
+      <div style="grid-column:1/-1"><div class="odk">Archivo</div>${j.file_name?esc(j.file_name)+' · '+pjCheckText(j.file_check):'<span class="muted">Sin archivo</span>'}</div>
+    </div>
+    ${j.observations?`<div style="margin-top:10px;font-size:13px"><div class="odk">Última observación</div>${esc(j.observations)}</div>`:''}
+    <div style="margin-top:14px">${preview}</div>
+    ${actions}
+    <div style="margin-top:14px"><div class="odk">Historial</div><ul style="padding-left:18px;font-size:13px">${ev||'<li class="muted">Sin eventos</li>'}</ul></div>`;
+}
+async function pjReload(id){
+  window._prints=await api('/api/print-admin').catch(()=>window._prints||[]);
+  pjRender();
+  if($('pjModal').classList.contains('show')&&id){ pjCur=await api('/api/print-admin?id='+encodeURIComponent(id)); pjDraw(); }
+}
+async function pjAct(body){
+  try{
+    const r=await api('/api/print-admin',{method:'POST',body:JSON.stringify(body)});
+    if(r.mailError) toast('Cambio guardado, pero el mail no salió: '+r.mailError,false); else toast('Listo');
+    await pjReload(body.id);
+  }catch(e){ toast(e.message,false); await pjReload(body.id).catch(()=>{}); }
+}
+function pjConfirm(){
+  const days=Number($('pjDays').value);
+  if(!days||days<1) return toast('Indicá el plazo en días hábiles',false);
+  if(!confirm(`¿Confirmar a cliente con plazo de ${days} días hábiles? Se le envía mail.`)) return;
+  pjAct({id:pjCur.job.id,action:'confirm',days});
+}
+function pjReturn(){
+  const obs=$('pjObs').value.trim();
+  if(!obs) return toast('Escribí las observaciones',false);
+  if(!confirm('¿Devolver la imagen? Se le envía mail con tus observaciones.')) return;
+  pjAct({id:pjCur.job.id,action:'return',observations:obs});
+}
+function pjSetStatus(id,status){ pjAct({id,action:'status',status}); }
 
 boot();
 </script>
