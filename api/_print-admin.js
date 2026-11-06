@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
 
       let q = supabase
         .from('print_jobs')
-        .select('id, job_number, status, client_name, client_phone, client_email, description, file_name, file_size_bytes, file_check, deadline_business_days, created_at, updated_at')
+        .select('id, job_number, status, client_name, client_phone, client_email, description, file_name, file_size_bytes, file_check, external_link, deadline_business_days, created_at, updated_at')
         .eq('tenant_id', ctx.tenantId)
         .order('created_at', { ascending: false })
         .limit(300);
@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
       if (!Number.isInteger(days) || days < 1 || days > 60) {
         return publicError(res, 400, 'Indicá el plazo en días hábiles (1 a 60)');
       }
-      if (!job.file_path) return publicError(res, 409, 'El pedido todavía no tiene archivo');
+      if (!job.file_path && !job.external_link) return publicError(res, 409, 'El pedido todavía no tiene archivo ni link');
       args = { p_status: 'confirmado', p_note: `Confirmado a cliente · plazo ${days} días hábiles`, p_obs: null, p_days: days };
       mailType = 'confirmado';
     } else if (b.action === 'return') {

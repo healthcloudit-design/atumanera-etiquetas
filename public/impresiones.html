@@ -77,9 +77,12 @@ h2{font-size:17px;margin:26px 0 0}
       <label for="desc">¿Qué querés imprimir?</label>
       <textarea id="desc" name="desc" placeholder="Tamaño, cantidad, material, para qué es…" required></textarea>
       <label for="file">Archivo</label>
-      <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.pdf" required>
+      <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.pdf">
       <p class="hint">JPG, PNG, TIFF, WebP o PDF. Hasta 50 MB.</p>
       <div id="check" class="check"></div>
+      <label for="link">Link de descarga (si tu archivo pesa más de 50 MB)</label>
+      <input id="link" type="url" placeholder="https://drive.google.com/…">
+      <p class="hint">Podés subir el archivo, pegar un link, o las dos cosas.</p>
       <div id="err" class="msg err"></div>
       <button id="send" class="btn" type="submit">Enviar pedido</button>
     </form>
@@ -242,7 +245,7 @@ h2{font-size:17px;margin:26px 0 0}
     msg('err', '');
     if (!f) return;
     if (!MIMES[mimeOf(f)]) { msg('err', 'Formato no permitido. Usá JPG, PNG, TIFF, WebP o PDF.'); e.target.value = ''; return; }
-    if (f.size > MAX) { msg('err', 'El archivo supera los 50 MB.'); e.target.value = ''; return; }
+    if (f.size > MAX) { msg('err', 'El archivo supera los 50 MB. Pegá un link de descarga abajo.'); e.target.value = ''; return; }
     picked = f;
     renderCheck($('check'), await checkFile(f));
   });
@@ -251,17 +254,24 @@ h2{font-size:17px;margin:26px 0 0}
     ev.preventDefault();
     msg('err', '');
     var data = { name: $('name').value.trim(), phone: $('phone').value.trim(), email: $('email').value.trim(), description: $('desc').value.trim() };
+    var link = $('link').value.trim();
     if (!data.name || !data.phone || !data.email || !data.description) { msg('err', 'Completá todos los datos.'); return; }
-    if (!picked) { msg('err', 'Subí tu archivo.'); return; }
-    var mime = mimeOf(picked);
+    if (!picked && !link) { msg('err', 'Subí tu archivo o pegá un link de descarga.'); return; }
+    if (link && !/^https?:\/\//i.test(link)) { msg('err', 'El link tiene que empezar con https://'); return; }
     var btn = $('send');
     btn.disabled = true; btn.textContent = 'Enviando…';
     try {
-      var check = await checkFile(picked);
-      var created = await api('/api/print-jobs', { name: data.name, phone: data.phone, email: data.email, description: data.description, fileName: picked.name, fileMime: mime, fileSize: picked.size });
-      var up = await fetch(created.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: picked });
-      if (!up.ok) throw new Error('No pudimos subir el archivo. Probá de nuevo.');
-      await api('/api/print-track', { token: created.token, action: 'attach', path: created.uploadPath, name: picked.name, mime: mime, size: picked.size, check: check });
+      var body = { name: data.name, phone: data.phone, email: data.email, description: data.description };
+      if (link) body.externalLink = link;
+      var mime = picked ? mimeOf(picked) : null;
+      if (picked) { body.fileName = picked.name; body.fileMime = mime; body.fileSize = picked.size; }
+      var created = await api('/api/print-jobs', body);
+      if (picked) {
+        var check = await checkFile(picked);
+        var up = await fetch(created.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: picked });
+        if (!up.ok) throw new Error('No pudimos subir el archivo. Probá de nuevo.');
+        await api('/api/print-track', { token: created.token, action: 'attach', path: created.uploadPath, name: picked.name, mime: mime, size: picked.size, check: check });
+      }
       rememberToken(created.token);
       showDone(created.token, created.jobNumber, created.trackUrl);
     } catch (e) {

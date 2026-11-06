@@ -371,6 +371,7 @@ function pjPill(s){const cls=s==='devuelto'?'off':((s==='entregado'||s==='comple
 function pjActor(a){a=String(a||'');return a.startsWith('staff:')?'Taller':(a==='cliente'?'Cliente':'Sistema');}
 // Chequeo automático: orientativo (lo corre el navegador del cliente). Sandra decide.
 function pjCheckText(c){
+  if(c&&!c.w_cm&&c.w_px){ return `${c.ok?'✅':'⚠️'} mide ${c.w_px} × ${c.h_px} px · sin DPI`+(c.warnings&&c.warnings.length?' — '+c.warnings.map(esc).join('; '):''); }
   if(!c||!c.w_cm) return 'Sin chequeo automático';
   const ok=!!c.ok&&!(c.warnings&&c.warnings.length);
   let t=`${ok?'✅':'⚠️'} mide ${c.w_cm} × ${c.h_cm} cm`+(c.dpi?` · ${c.dpi} dpi`:'');
@@ -383,7 +384,7 @@ function pjRender(){
   const js=(window._prints||[]).filter(j=>!f||j.status===f);
   b.innerHTML=js.length?'':'<tr><td colspan="6" class="muted">Sin pedidos de impresión todavía.</td></tr>';
   js.forEach(j=>{const tr=document.createElement('tr');
-    const file=j.file_name?`${esc(j.file_name)}<div class="muted" style="font-size:11px">${pjCheckText(j.file_check)}</div>`:'<span class="muted">Sin archivo</span>';
+    const file=j.file_name?`${esc(j.file_name)}<div class="muted" style="font-size:11px">${pjCheckText(j.file_check)}</div>`:(j.external_link?'<span class="muted">🔗 Link de descarga</span>':'<span class="muted">Sin archivo</span>');
     const sel=myRole==='admin'?`<select onchange="pjSetStatus('${j.id}',this.value)" style="width:auto">${PJ_STATES.map(s=>`<option value="${s}" ${s===j.status?'selected':''}>${PJ_LABELS[s]}</option>`).join('')}</select>`:pjPill(j.status);
     tr.innerHTML=`<td><a onclick="pjOpen('${j.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${j.job_number}</a></td><td>${esc(j.client_name)}<div class="muted" style="font-size:11px">${esc(j.client_phone)}</div></td><td style="max-width:260px">${esc(j.description)}</td><td>${file}</td><td>${sel}</td><td class="muted">${(j.created_at||'').slice(0,10)}</td>`;
     b.appendChild(tr);});
@@ -395,7 +396,7 @@ async function pjOpen(id){
 function pjDraw(){
   const j=pjCur.job, pv=pjCur.previewUrl, admin=myRole==='admin';
   const isImg=!!(j.file_mime&&j.file_mime.startsWith('image/'));
-  const preview=!j.file_path?'<div class="muted">Todavía no subió archivo.</div>'
+  const preview=!j.file_path?(j.external_link?'<div class="muted">El archivo viene por link, no se puede previsualizar acá.</div>':'<div class="muted">Todavía no subió archivo.</div>')
     :(isImg?`<img src="${esc(pv)}" onclick="lightbox(this.src)" title="Ampliar" style="max-width:100%;max-height:340px;border-radius:8px;border:1px solid var(--line);cursor:pointer">`
       :`<a class="btn sec sm" href="${esc(pv)}" target="_blank" rel="noopener">Abrir PDF</a>`);
   const wa=j.client_phone?`https://wa.me/${String(j.client_phone).replace(/\D/g,'')}`:null;
@@ -406,13 +407,14 @@ function pjDraw(){
   }).join('');
   let actions='';
   if(admin){
-    const confirmBlock=j.file_path
+    const hasAny=!!(j.file_path||j.external_link);
+    const confirmBlock=hasAny
       ?`<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
           <div style="flex:0 0 170px"><label class="muted" style="font-size:11px">Plazo (días hábiles)</label><input id="pjDays" type="number" min="1" max="60" value="${j.deadline_business_days||''}"></div>
           <button class="btn sm" onclick="pjConfirm()">Confirmar a cliente</button>
         </div>`
       :'<p class="muted" style="margin:0 0 12px">Esperando el archivo del cliente para poder confirmar o devolver.</p>';
-    const returnBlock=j.file_path
+    const returnBlock=hasAny
       ?`<label class="muted" style="font-size:11px">Observaciones (obligatorias para devolver)</label>
         <textarea id="pjObs" rows="3" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0e1727;color:var(--txt);font-size:13.5px"></textarea>
         <button class="btn pink sm" style="margin-top:8px" onclick="pjReturn()">Devolver imagen</button>`:'';
@@ -424,6 +426,7 @@ function pjDraw(){
       <div><div class="odk">Cliente</div>${esc(j.client_name)}<br><span class="muted">${esc(j.client_email)}${wa?` · <a href="${wa}" target="_blank" rel="noopener" style="color:var(--pri)">WhatsApp</a>`:''}</span></div>
       <div><div class="odk">Estado</div>${stSel}${j.deadline_business_days?`<br><span class="muted">Plazo: ${j.deadline_business_days} días hábiles</span>`:''}</div>
       <div style="grid-column:1/-1"><div class="odk">Trabajo</div>${esc(j.description)}</div>
+      <div style="grid-column:1/-1"><div class="odk">Link de descarga</div>${j.external_link?`<a href="${esc(j.external_link)}" target="_blank" rel="noopener" style="color:var(--pri);word-break:break-all">${esc(j.external_link)}</a>`:'<span class="muted">—</span>'}</div>
       <div style="grid-column:1/-1"><div class="odk">Archivo</div>${j.file_name?esc(j.file_name)+' · '+pjCheckText(j.file_check):'<span class="muted">Sin archivo</span>'}</div>
     </div>
     ${j.observations?`<div style="margin-top:10px;font-size:13px"><div class="odk">Última observación</div>${esc(j.observations)}</div>`:''}
