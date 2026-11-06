@@ -4,6 +4,7 @@
 //   POST {token, action:'attach', path, name, mime, size, check} → registra el archivo subido
 // Nunca expone ids internos, rutas de storage ni datos de otros pedidos.
 
+const crypto = require('crypto');
 const { applyCors, sendOptions, publicError, cleanString } = require('./_utils');
 const { supabase, BUCKET, MAX_BYTES, MIMES, TOKEN_RE, actorLabel } = require('./_print');
 
@@ -65,6 +66,22 @@ module.exports = async function handler(req, res) {
 
     // POST: registrar archivo subido
     const b = req.body || {};
+    if (b.action === 'sign') {
+      if (!['enviado', 'devuelto'].includes(job.status)) {
+        return publicError(res, 409, 'Este pedido ya no admite archivos nuevos');
+      }
+      const mime = String(b.mime || '').toLowerCase();
+      const size = Number(b.size);
+      const ext = MIMES[mime];
+      if (!ext) return publicError(res, 400, 'Formato no permitido (JPG, PNG, TIFF, WebP o PDF)');
+      if (!Number.isFinite(size) || size <= 0 || size > MAX_BYTES) {
+        return publicError(res, 400, 'El archivo supera los 50 MB');
+      }
+      const path = `${job.tenant_id}/${job.id}/${crypto.randomUUID()}.${ext}`;
+      const { data: up, error: upErr } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path);
+      if (upErr) throw upErr;
+      return res.status(200).json({ uploadPath: path, uploadUrl: up.signedUrl });
+    }
     if (b.action !== 'attach') return publicError(res, 400, 'Acción no válida');
     if (!['enviado', 'devuelto'].includes(job.status)) {
       return publicError(res, 409, 'Este pedido ya no admite archivos nuevos');

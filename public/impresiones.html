@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Impresiones y plotter · A tu manera Gráfica</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+:root{--fucsia:#EC008C;--celeste:#00AEEF;--ink:#1A1A1A;--muted:#5F6670;--bg:#FAFBFD;--card:#FFFFFF;--line:#E8ECF2}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:var(--bg);
+  padding-top:0;padding-bottom:40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto}
+header{display:flex;align-items:center;padding:22px 0 6px}
+header img{height:46px;width:auto;max-width:100%}
+h1{font-size:clamp(26px,5vw,34px);font-weight:800;margin:14px 0 6px;line-height:1.15;text-wrap:balance}
+.lead{color:var(--muted);margin:0 0 20px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 10px 26px rgba(20,30,50,.08)}
+label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px}
+label:first-child{margin-top:0}
+input,textarea{width:100%;font:inherit;font-size:16px;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+textarea{min-height:92px;resize:vertical}
+input:focus,textarea:focus,.btn:focus-visible,a:focus-visible{outline:3px solid rgba(236,0,140,.3);outline-offset:2px}
+input:focus,textarea:focus{border-color:var(--fucsia)}
+input[type=file]{padding:9px;background:#fbfcfe}
+.btn{display:block;width:100%;margin-top:20px;background:var(--fucsia);color:#fff;border:0;border-radius:999px;padding:14px 20px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;text-align:center}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.sec{background:#fff;color:var(--fucsia);border:2px solid var(--fucsia)}
+.btn.inline{display:inline-block;width:auto;margin-top:0;padding:9px 16px;font-size:14px}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.msg{border-radius:12px;padding:10px 12px;margin-top:14px;font-size:14.5px;display:none}
+.msg.show{display:block}
+.msg.err{background:#fdecec;color:#a51b1b}
+.check{border-radius:12px;padding:11px 13px;margin-top:12px;font-size:14px;display:none}
+.check.show{display:block}
+.check.ok{background:#eaf7ef;color:#1d6b3e}
+.check.warn{background:#fff4e0;color:#7a4a00}
+.check small{display:block;margin-top:6px;opacity:.85}
+.pill{display:inline-block;padding:5px 12px;border-radius:999px;font-weight:800;font-size:13px;background:#eef1f6;color:var(--ink)}
+.pill.prog{background:#e7f6fd;color:#0a6e9c}
+.pill.ok{background:#eaf7ef;color:#1d6b3e}
+.pill.devuelto{background:#fdecec;color:#a51b1b}
+.status{font-size:clamp(18px,3.6vw,21px);font-weight:800;margin:14px 0 0;line-height:1.3}
+.muted{color:var(--muted)}
+.obs{background:#fdecec;border-radius:14px;padding:14px;margin-top:14px;color:#6e1616}
+.obs b{display:block;font-size:13px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.timeline{list-style:none;padding:0;margin:12px 0 0}
+.timeline li{position:relative;padding:4px 0 14px 20px;border-left:3px solid var(--line);margin-left:6px;font-size:14.5px}
+.timeline li:last-child{border-left-color:transparent}
+.timeline li:before{content:"";position:absolute;left:-8px;top:6px;width:13px;height:13px;border-radius:50%;background:var(--fucsia)}
+.timeline .when{display:block;font-size:12px;color:var(--muted)}
+.timeline .note{display:block;color:var(--muted);font-size:13.5px}
+h2{font-size:17px;margin:26px 0 0}
+.hidden{display:none!important}
+.linkbox{word-break:break-all;background:#f4f6fa;border-radius:12px;padding:11px 12px;margin-top:12px;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="https://regalos.atumaneragraf.com/"><img src="/assets/img/logo-header.png" alt="A tu manera Gráfica"></a></header>
+
+  <!-- ===== INTAKE: enviar proyecto ===== -->
+  <section id="viewIntake" class="hidden">
+    <h1>Enviá tu proyecto para imprimir</h1>
+    <p class="lead">Tazas, remeras, plotter, gran formato y cartelería. Subí tu archivo y te escribimos para confirmarlo. El pago lo coordinamos aparte.</p>
+    <form id="intake" class="panel" novalidate>
+      <label for="name">Nombre y apellido</label>
+      <input id="name" name="name" autocomplete="name" required>
+      <label for="phone">WhatsApp</label>
+      <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="11 1234-5678" required>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <label for="desc">¿Qué querés imprimir?</label>
+      <textarea id="desc" name="desc" placeholder="Tamaño, cantidad, material, para qué es…" required></textarea>
+      <label for="file">Archivo</label>
+      <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.pdf" required>
+      <p class="hint">JPG, PNG, TIFF, WebP o PDF. Hasta 50 MB.</p>
+      <div id="check" class="check"></div>
+      <div id="err" class="msg err"></div>
+      <button id="send" class="btn" type="submit">Enviar pedido</button>
+    </form>
+  </section>
+
+  <!-- ===== ENVIADO ===== -->
+  <section id="viewDone" class="hidden">
+    <h1 id="dTitle">¡Recibimos tu pedido!</h1>
+    <div class="panel">
+      <p class="status" id="dNum"></p>
+      <p class="muted" style="margin:10px 0 0">Guardá este link para seguir tu pedido. Te escribimos por mail cuando lo confirmemos o si hace falta algún ajuste en el archivo.</p>
+      <div class="linkbox" id="dLink"></div>
+      <div class="row" style="margin-top:12px">
+        <button id="dCopy" class="btn inline sec" type="button">Copiar link</button>
+        <a id="dOpen" class="btn inline" href="#" style="text-decoration:none">Ver mi pedido</a>
+      </div>
+      <div id="dMsg" class="msg err"></div>
+    </div>
+  </section>
+
+  <!-- ===== SEGUIMIENTO ===== -->
+  <section id="viewTrack" class="hidden">
+    <h1 id="tTitle">Tu pedido</h1>
+    <div class="panel">
+      <div class="row"><span id="tPill" class="pill"></span></div>
+      <p class="status" id="tStatus"></p>
+      <p class="muted" id="tDeadline" style="margin:8px 0 0"></p>
+      <div id="tObs" class="obs hidden"></div>
+
+      <div id="tUpload" class="hidden" style="margin-top:20px">
+        <label for="tFile" id="tUploadLabel">Subí una nueva versión</label>
+        <input id="tFile" type="file" accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.pdf">
+        <p class="hint">JPG, PNG, TIFF, WebP o PDF. Hasta 50 MB.</p>
+        <div id="tCheck" class="check"></div>
+        <div id="tErr" class="msg err"></div>
+        <button id="tSend" class="btn" type="button">Subir archivo</button>
+      </div>
+
+      <h2>Historial</h2>
+      <ul id="tTimeline" class="timeline"></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var MAX = 52428800;
+  var MIMES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/tiff': 'tif', 'image/webp': 'webp', 'application/pdf': 'pdf' };
+  var EXT_MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', tif: 'image/tiff', tiff: 'image/tiff', webp: 'image/webp', pdf: 'application/pdf' };
+  var SHORT = { enviado: 'Revisando', devuelto: 'Ajuste pendiente', confirmado: 'Confirmado', en_imprenta: 'En imprenta', recibido_imprenta: 'Listo para entregar', entregado: 'Entregado', completado: 'Completado' };
+  var FRIENDLY = {
+    enviado: 'Recibimos tu archivo y lo estamos revisando.',
+    devuelto: 'Necesitamos un ajuste en tu archivo. Mirá las observaciones y subí una nueva versión.',
+    confirmado: 'Confirmado. Tu pedido está en marcha.',
+    en_imprenta: 'Tu pedido está en la imprenta.',
+    recibido_imprenta: 'Llegó de la imprenta. Lo estamos preparando para entregarte.',
+    entregado: 'Entregado.',
+    completado: '¡Pedido completado! Gracias por elegirnos.'
+  };
+  var PILL = { enviado: 'prog', devuelto: 'devuelto', confirmado: 'prog', en_imprenta: 'prog', recibido_imprenta: 'prog', entregado: 'ok', completado: 'ok' };
+  var PROGRESS_WITH_DEADLINE = ['confirmado', 'en_imprenta', 'recibido_imprenta'];
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function show(id) { ['viewIntake', 'viewDone', 'viewTrack'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); }
+  function msg(id, text) { var el = $(id); el.textContent = text || ''; el.classList.toggle('show', !!text); }
+  function mimeOf(f) { if (f.type) return f.type.toLowerCase(); var ext = (f.name.split('.').pop() || '').toLowerCase(); return EXT_MIME[ext] || ''; }
+  function fmtWhen(iso) { try { return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } }
+
+  async function api(path, body) {
+    var opts = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    var r = await fetch(path, opts);
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(j.error || ('Error ' + r.status));
+    return j;
+  }
+
+  // ---- Chequeo orientativo de DPI y tamaño (lo hace el navegador; el taller decide) ----
+  async function readDpi(file) {
+    var head = new Uint8Array(await file.slice(0, 131072).arrayBuffer());
+    if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47) { // PNG
+      var p = 8;
+      while (p + 12 <= head.length) {
+        var len = ((head[p] << 24) | (head[p + 1] << 16) | (head[p + 2] << 8) | head[p + 3]) >>> 0;
+        var type = String.fromCharCode(head[p + 4], head[p + 5], head[p + 6], head[p + 7]);
+        if (type === 'pHYs' && len === 9 && p + 25 <= head.length) {
+          var ppu = ((head[p + 8] << 24) | (head[p + 9] << 16) | (head[p + 10] << 8) | head[p + 11]) >>> 0;
+          return head[p + 16] === 1 ? ppu * 0.0254 : null;
+        }
+        if (type === 'IDAT') break;
+        p += 12 + len;
+      }
+      return null;
+    }
+    if (head[0] === 0xFF && head[1] === 0xD8) { // JPEG
+      var q = 2;
+      while (q + 4 < head.length) {
+        if (head[q] !== 0xFF) { q++; continue; }
+        var m = head[q + 1];
+        var seg = (head[q + 2] << 8) | head[q + 3];
+        if (m === 0xE0 && head[q + 4] === 0x4A && head[q + 5] === 0x46 && head[q + 6] === 0x49 && head[q + 7] === 0x46) {
+          var units = head[q + 11];
+          var xd = (head[q + 12] << 8) | head[q + 13];
+          if (units === 1) return xd;
+          if (units === 2) return xd * 2.54;
+          return null;
+        }
+        if (m === 0xDA) break;
+        q += 2 + seg;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  async function checkFile(file) {
+    var res = { warnings: [], ok: false };
+    if (mimeOf(file) === 'application/pdf') {
+      res.warnings.push('Es un PDF: no podemos medir el tamaño real. El taller lo revisa antes de producir.');
+      return res;
+    }
+    var w = null, h = null;
+    try { var bmp = await createImageBitmap(file); w = bmp.width; h = bmp.height; if (bmp.close) bmp.close(); } catch (e) {}
+    var dpi = null;
+    try { dpi = await readDpi(file); } catch (e) {}
+    if (w) { res.w_px = w; res.h_px = h; } else { res.warnings.push('No pudimos leer las dimensiones de la imagen.'); }
+    if (dpi) {
+      res.dpi = Math.round(dpi);
+      if (w) { res.w_cm = +(w / dpi * 2.54).toFixed(1); res.h_cm = +(h / dpi * 2.54).toFixed(1); }
+      if (dpi < 150) res.warnings.push('Resolución baja (' + Math.round(dpi) + ' dpi). Para impresión conviene 300 dpi.');
+    } else {
+      res.warnings.push('El archivo no trae información de DPI. Confirmamos el tamaño en el taller.');
+    }
+    res.ok = !!(w && dpi && dpi >= 150);
+    return res;
+  }
+
+  function renderCheck(el, c) {
+    el.className = 'check show ' + (c.ok ? 'ok' : 'warn');
+    var dims = c.w_cm ? ('Mide ' + c.w_cm + ' × ' + c.h_cm + ' cm' + (c.dpi ? ' a ' + c.dpi + ' dpi' : '')) : '';
+    el.innerHTML = (c.ok ? '✅ ' : '⚠️ ') + esc(dims || 'Revisamos tu archivo') +
+      (c.warnings.length ? '<br>' + c.warnings.map(esc).join('<br>') : '') +
+      '<small>Esto es orientativo. El taller revisa cada archivo antes de producir.</small>';
+  }
+
+  function rememberToken(token) {
+    try {
+      var list = JSON.parse(localStorage.getItem('impr_tokens') || '[]');
+      if (list.indexOf(token) === -1) list.unshift(token);
+      localStorage.setItem('impr_tokens', JSON.stringify(list.slice(0, 20)));
+    } catch (e) {}
+  }
+
+  // ---- Intake ----
+  var picked = null;
+  $('file').addEventListener('change', async function (e) {
+    var f = e.target.files[0];
+    picked = null; $('check').className = 'check';
+    msg('err', '');
+    if (!f) return;
+    if (!MIMES[mimeOf(f)]) { msg('err', 'Formato no permitido. Usá JPG, PNG, TIFF, WebP o PDF.'); e.target.value = ''; return; }
+    if (f.size > MAX) { msg('err', 'El archivo supera los 50 MB.'); e.target.value = ''; return; }
+    picked = f;
+    renderCheck($('check'), await checkFile(f));
+  });
+
+  $('intake').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    msg('err', '');
+    var data = { name: $('name').value.trim(), phone: $('phone').value.trim(), email: $('email').value.trim(), description: $('desc').value.trim() };
+    if (!data.name || !data.phone || !data.email || !data.description) { msg('err', 'Completá todos los datos.'); return; }
+    if (!picked) { msg('err', 'Subí tu archivo.'); return; }
+    var mime = mimeOf(picked);
+    var btn = $('send');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      var check = await checkFile(picked);
+      var created = await api('/api/print-jobs', { name: data.name, phone: data.phone, email: data.email, description: data.description, fileName: picked.name, fileMime: mime, fileSize: picked.size });
+      var up = await fetch(created.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: picked });
+      if (!up.ok) throw new Error('No pudimos subir el archivo. Probá de nuevo.');
+      await api('/api/print-track', { token: created.token, action: 'attach', path: created.uploadPath, name: picked.name, mime: mime, size: picked.size, check: check });
+      rememberToken(created.token);
+      showDone(created.token, created.jobNumber, created.trackUrl);
+    } catch (e) {
+      msg('err', e.message || 'No se pudo enviar. Probá de nuevo.');
+      btn.disabled = false; btn.textContent = 'Enviar pedido';
+    }
+  });
+
+  // ---- Enviado ----
+  function showDone(token, jobNumber, url) {
+    $('dNum').textContent = 'Pedido #' + jobNumber;
+    $('dLink').textContent = url;
+    $('dOpen').href = '/seguimiento?t=' + encodeURIComponent(token);
+    show('viewDone');
+    window.scrollTo(0, 0);
+  }
+  $('dCopy').addEventListener('click', function () {
+    var url = $('dLink').textContent;
+    var fallback = function () { var r = document.createRange(); r.selectNodeContents($('dLink')); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); msg('dMsg', 'Seleccioná el link y copialo.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { $('dCopy').textContent = '¡Copiado!'; }, fallback);
+    } else { fallback(); }
+  });
+
+  // ---- Seguimiento ----
+  var currentToken = null;
+  async function loadTrack(token) {
+    currentToken = token;
+    show('viewTrack');
+    try {
+      var j = await api('/api/print-track?t=' + encodeURIComponent(token));
+      $('tTitle').textContent = 'Pedido #' + j.jobNumber;
+      $('tPill').textContent = SHORT[j.status] || j.status;
+      $('tPill').className = 'pill ' + (PILL[j.status] || '');
+      $('tStatus').textContent = FRIENDLY[j.status] || '';
+      $('tDeadline').textContent = (PROGRESS_WITH_DEADLINE.indexOf(j.status) !== -1 && j.deadlineBusinessDays) ? ('Plazo estimado: ' + j.deadlineBusinessDays + ' días hábiles.') : '';
+      if (j.observations) {
+        $('tObs').innerHTML = '<b>Observaciones</b>' + esc(j.observations);
+        $('tObs').classList.remove('hidden');
+      } else { $('tObs').classList.add('hidden'); }
+      var canUpload = (j.status === 'enviado' || j.status === 'devuelto');
+      $('tUpload').classList.toggle('hidden', !canUpload);
+      $('tUploadLabel').textContent = j.status === 'devuelto' ? 'Subí la versión corregida' : 'Subí una nueva versión (opcional)';
+      $('tFile').value = ''; $('tCheck').className = 'check'; msg('tErr', '');
+      $('tTimeline').innerHTML = (j.events || []).map(function (e) {
+        var what = e.kind === 'creado' ? 'Pedido cargado'
+          : e.kind === 'archivo_subido' ? ('Archivo subido' + (e.note ? ': ' + e.note : ''))
+          : (SHORT[e.to] || e.to);
+        var note = (e.kind === 'status' && e.note) ? '<span class="note">' + esc(e.note) + '</span>' : '';
+        return '<li><span class="when">' + esc(fmtWhen(e.at)) + ' · ' + esc(e.by) + '</span>' + esc(what) + note + '</li>';
+      }).join('');
+    } catch (e) {
+      $('tTitle').textContent = 'No encontramos este pedido';
+      $('tStatus').textContent = 'Revisá que el link esté completo o escribinos por WhatsApp.';
+      $('tPill').textContent = ''; $('tPill').className = 'pill';
+      $('tDeadline').textContent = ''; $('tObs').classList.add('hidden'); $('tUpload').classList.add('hidden');
+      $('tTimeline').innerHTML = '';
+    }
+  }
+
+  $('tFile').addEventListener('change', async function (e) {
+    var f = e.target.files[0];
+    $('tCheck').className = 'check'; msg('tErr', '');
+    if (!f) return;
+    if (!MIMES[mimeOf(f)]) { msg('tErr', 'Formato no permitido. Usá JPG, PNG, TIFF, WebP o PDF.'); e.target.value = ''; return; }
+    if (f.size > MAX) { msg('tErr', 'El archivo supera los 50 MB.'); e.target.value = ''; return; }
+    renderCheck($('tCheck'), await checkFile(f));
+  });
+
+  $('tSend').addEventListener('click', async function () {
+    var f = $('tFile').files[0];
+    msg('tErr', '');
+    if (!f) { msg('tErr', 'Elegí el archivo.'); return; }
+    var mime = mimeOf(f);
+    var btn = $('tSend');
+    btn.disabled = true; btn.textContent = 'Subiendo…';
+    try {
+      var check = await checkFile(f);
+      var s = await api('/api/print-track', { token: currentToken, action: 'sign', mime: mime, size: f.size });
+      var up = await fetch(s.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: f });
+      if (!up.ok) throw new Error('No pudimos subir el archivo. Probá de nuevo.');
+      await api('/api/print-track', { token: currentToken, action: 'attach', path: s.uploadPath, name: f.name, mime: mime, size: f.size, check: check });
+      await loadTrack(currentToken);
+    } catch (e) {
+      msg('tErr', e.message || 'No se pudo subir. Probá de nuevo.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Subir archivo';
+    }
+  });
+
+  // ---- Arranque ----
+  var params = new URLSearchParams(location.search);
+  var t = params.get('t');
+  if (t) { loadTrack(t); } else { show('viewIntake'); }
+})();
+</script>
+</body>
+</html>

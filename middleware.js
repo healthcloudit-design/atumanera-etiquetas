@@ -67,6 +67,12 @@ export default function middleware(request) {
     return Response.redirect(`https://${REGALOS_HOST}${u.pathname}${u.search}`, 302);
   }
   if (host === REGALOS_HOST) {
+    const uImp = new URL(request.url);
+    if (uImp.pathname === '/impresiones' || uImp.pathname === '/seguimiento') {
+      // Impresiones/plotter: formulario y seguimiento (no depende de REGALOS_LIVE).
+      uImp.pathname = '/impresiones.html';
+      return rewrite(uImp);
+    }
     const u = new URL(request.url);
     const wantsPreview = u.searchParams.get('preview') === 'regalos';
     const hasPreview = (request.headers.get('cookie') || '').includes(REGALOS_PREVIEW_COOKIE);
