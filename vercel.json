@@ -1,15 +1,61 @@
 {
   "redirects": [
-    { "source": "/", "has": [{ "type": "host", "value": "personaliza.praxisoperativa.com" }], "destination": "/panel", "permanent": false }
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "personaliza.praxisoperativa.com"
+        }
+      ],
+      "destination": "/panel",
+      "permanent": false
+    }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/panel", "destination": "/personaliza.html" },
-    { "source": "/superadmin", "destination": "/personaliza.html" },
-    { "source": "/t/:slug", "destination": "/tienda.html" },
-    { "source": "/admin", "destination": "/index.html" },
-    { "source": "/pago-exitoso", "destination": "/index.html" },
-    { "source": "/pago-fallido", "destination": "/index.html" },
-    { "source": "/pago-pendiente", "destination": "/index.html" }
+    {
+      "source": "/api/print-jobs",
+      "destination": "/api/print?op=intake"
+    },
+    {
+      "source": "/api/print-track",
+      "destination": "/api/print?op=track"
+    },
+    {
+      "source": "/api/print-admin",
+      "destination": "/api/print?op=admin"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/panel",
+      "destination": "/personaliza.html"
+    },
+    {
+      "source": "/superadmin",
+      "destination": "/personaliza.html"
+    },
+    {
+      "source": "/t/:slug",
+      "destination": "/tienda.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pago-exitoso",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pago-fallido",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pago-pendiente",
+      "destination": "/index.html"
+    }
   ]
 }
