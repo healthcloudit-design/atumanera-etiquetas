@@ -5,10 +5,13 @@
 //   POST {id, action:'confirm', days}          → confirmar a cliente + mail con plazo
 //   POST {id, action:'return', observations}   → devolver imagen + mail con observaciones
 //   POST {id, action:'status', status, note?}  → cambio manual de estado (sin mail)
+//   POST {action:'create', kind, ...}          → pedido cargado en el local (ver _print-local.js)
+//   POST {id, action:'payment', paymentMethod} → registrar/cambiar cómo pagó (pedidos del local)
 // Todo acotado por tenant_id del staff. El mail falla sin revertir el cambio de estado.
 
 const { applyCors, sendOptions, publicError, cleanString, isUuid } = require('./_utils');
 const { supabase, getStaff, logEvent, sendJobMail, trackUrl, BUCKET, STATUSES } = require('./_print');
+const { createLocalJob, InputError } = require('./_print-local');
 
 async function ownJob(id, tenantId) {
   if (!isUuid(id)) return null;
@@ -41,7 +44,7 @@ module.exports = async function handler(req, res) {
 
       let q = supabase
         .from('print_jobs')
-        .select('id, job_number, status, client_name, client_phone, client_email, description, file_name, file_size_bytes, file_check, external_link, deadline_business_days, created_at, updated_at')
+        .select('id, job_number, status, source, total_cents, payment_method, client_name, client_phone, client_email, description, file_name, file_size_bytes, file_check, external_link, deadline_business_days, created_at, updated_at')
         .eq('tenant_id', ctx.tenantId)
         .order('created_at', { ascending: false })
         .limit(300);
@@ -54,8 +57,26 @@ module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return publicError(res, 405, 'Method not allowed');
 
     const b = req.body || {};
+    if (b.action === 'create') {
+      try { return res.status(200).json(await createLocalJob(ctx, b)); }
+      catch (e) { if (e instanceof InputError) return publicError(res, 400, e.message); throw e; }
+    }
     const job = await ownJob(b.id, ctx.tenantId);
     if (!job) return publicError(res, 404, 'Pedido no encontrado');
+
+    if (b.action === 'payment') {
+      const PAY = { efectivo: 'Efectivo', transferencia: 'Transferencia', mercadopago_local: 'Mercado Pago en el local', pendiente: 'Pago pendiente' };
+      if (!PAY[b.paymentMethod]) return publicError(res, 400, 'Medio de pago no válido');
+      if (job.payment_method === 'mercadopago_online') return publicError(res, 409, 'Este pedido se pagó online');
+      const { data: upd, error: pErr } = await supabase
+        .from('print_jobs').update({ payment_method: b.paymentMethod })
+        .eq('id', job.id).eq('tenant_id', ctx.tenantId).select('*').single();
+      if (pErr) throw pErr;
+      await supabase.from('print_job_events').insert({
+        job_id: job.id, tenant_id: job.tenant_id, kind: 'observacion', actor: `staff:${ctx.userId}`, note: `Pago: ${PAY[b.paymentMethod]}`,
+      });
+      return res.status(200).json({ job: upd });
+    }
 
     let args;
     let mailType = null;

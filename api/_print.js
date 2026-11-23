@@ -85,7 +85,9 @@ async function sendJobMail(type, job) {
   if (type === 'confirmado') {
     subject = `Tu pedido #${n} está en marcha`;
     lines = [
-      `Hola ${job.client_name}, recibimos tu archivo y ya lo estamos trabajando.`,
+      job.source === 'local'
+        ? `Hola ${job.client_name}, ¡gracias por tu pedido en el local! Ya lo estamos trabajando.`
+        : `Hola ${job.client_name}, recibimos tu archivo y ya lo estamos trabajando.`,
       `Tu pedido se finaliza en ${job.deadline_business_days} días hábiles.`,
       `Podés seguir el estado acá: ${url}`,
     ];

@@ -163,6 +163,7 @@
               <option value="entregado">Entregado</option>
               <option value="completado">Completado</option>
             </select>
+            <button class="btn pink sm" type="button" onclick="nlOpen()" style="margin-left:auto">➕ Nuevo pedido en el local</button>
           </div>
           <table><thead><tr><th>#</th><th>Cliente</th><th>Trabajo</th><th>Archivo</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="printsBody"></tbody></table>
         </div>
@@ -194,6 +195,9 @@
     <div id="pjBody"></div>
     <div style="text-align:right;margin-top:14px"><button class="btn ghost sm" onclick="$('pjModal').classList.remove('show')">Cerrar</button></div>
   </div>
+</div>
+<div id="nlModal" class="modal-bg">
+  <div class="card" style="max-width:640px;width:100%;max-height:92vh;overflow:auto"><div id="nlBody"></div></div>
 </div>
 <div id="odModal" class="modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="card" style="max-width:780px;width:100%;max-height:90vh;overflow:auto">
@@ -405,6 +409,188 @@ function pjCheckText(c){
   if(c.warnings&&c.warnings.length) t+=' — '+c.warnings.map(esc).join('; ');
   return t;
 }
+// ===== Pedidos cargados en el local (entran a Impresiones, confirmados y con seguimiento) =====
+const PAY_LABELS={efectivo:'Efectivo',transferencia:'Transferencia',mercadopago_local:'Mercado Pago en el local',mercadopago_online:'Mercado Pago online',pendiente:'Pago pendiente'};
+const PAY_LOCAL=['efectivo','transferencia','mercadopago_local','pendiente'];
+const SRC_LABELS={formulario:'Formulario web',tienda:'Tienda online',local:'Cargado en el local'};
+const NL_MIMES={'image/jpeg':1,'image/png':1,'image/tiff':1,'image/webp':1,'application/pdf':1};
+let NL={cat:null,kind:'impresion',touched:false,list:null};
+function pjSrc(j){return j.source==='local'?'<span class="pill role" style="margin-right:6px">🏪 Local</span>':(j.source==='tienda'?'<span class="pill on" style="margin-right:6px">🛒 Tienda</span>':'');}
+function pjCobro(j){return j.total_cents!=null?`<div class="muted" style="font-size:11px;margin-top:2px">${money(j.total_cents)} · ${esc(PAY_LABELS[j.payment_method]||'Pago sin registrar')}</div>`:'';}
+async function pjPay(id,method){
+  try{await api('/api/print-admin',{method:'POST',body:JSON.stringify({id,action:'payment',paymentMethod:method})});toast('Pago actualizado');await pjReload(id);}
+  catch(e){toast(e.message,false);}
+}
+function nlPrintProducts(){return (NL.cat||[]).filter(p=>Array.isArray(p.matrix)&&p.matrix.length);}
+function nlLabelProducts(){return (NL.cat||[]).filter(p=>!(Array.isArray(p.matrix)&&p.matrix.length)&&!(p.options&&p.options.editor));}
+function nlDaysOf(p){const n=String(p&&p.elaboration_days||'').match(/\d+/g);return n?Number(n[n.length-1]):5;}
+function nlValues(p){const min={};p.matrix.forEach(r=>{const v=Number(r.price);if(!(r.option_value in min)||v<min[r.option_value])min[r.option_value]=v;});return Object.keys(min).sort((a,b)=>min[a]-min[b]);}
+function nlCur(){const s=$('nlProd');return s?(NL.cat||[]).find(p=>p.slug===s.value):null;}
+
+async function nlOpen(){
+  $('nlModal').classList.add('show');
+  NL.touched=false;
+  if(!NL.cat){
+    $('nlBody').innerHTML='<p class="muted">Cargando productos…</p>';
+    try{const r=await fetch('/api/storefront?tenant='+encodeURIComponent(myTenant.slug||''));const d=await r.json();NL.cat=d.products||[];}
+    catch(e){NL.cat=[];}
+  }
+  nlForm();
+}
+function nlKind(k){NL.kind=k;NL.touched=false;nlForm();}
+function nlForm(){
+  const k=NL.kind, pp=nlPrintProducts(), lp=nlLabelProducts();
+  const kinds=[['impresion','🖨️ Impresión'],['etiquetas','🏷️ Etiquetas'],['medida','✏️ A medida']];
+  let prod='';
+  if(k==='impresion'){
+    prod=pp.length?`<label>Producto</label><select id="nlProd" onchange="nlProdChange()">${pp.map(p=>`<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join('')}</select><div id="nlOpts"></div>`
+      :'<p class="muted">No hay productos de impresión con lista de precios.</p>';
+  }else if(k==='etiquetas'){
+    prod=lp.length?`<label>Producto</label><select id="nlProd" onchange="nlProdChange()">${lp.map(p=>`<option value="${esc(p.slug)}">${esc(p.name)} — ${money(p.price)}</option>`).join('')}</select>
+      <div class="row2"><div><label>Texto de la etiqueta</label><input id="nlText" maxlength="120" placeholder="Nombre y apellido"></div>
+      <div><label>Cantidad (packs)</label><input id="nlQty" type="number" min="1" max="100" value="1"></div></div>`
+      :'<p class="muted">No hay productos de etiquetas activos.</p>';
+  }else{
+    prod=`<label>Descripción del trabajo</label><textarea id="nlDesc" rows="3" maxlength="1000" placeholder="Qué hay que hacer: producto, medidas, cantidad, material…" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0e1727;color:var(--txt);font-size:13.5px"></textarea>`;
+  }
+  $('nlBody').innerHTML=`<h3 style="margin:0 0 4px">Nuevo pedido en el local</h3>
+    <p class="hint" style="margin:0 0 12px">Entra a Impresiones como <strong>Confirmado</strong>. Si cargás el email, al cliente le llega el mail con el link de seguimiento.</p>
+    <div class="tabs" style="margin-top:0">${kinds.map(([v,l])=>`<button type="button" class="tab${k===v?' active':''}" onclick="nlKind('${v}')">${l}</button>`).join('')}</div>
+    ${prod}
+    <div class="row2"><div><label>Total a cobrar ($)</label><input id="nlTotal" type="number" min="0" step="1" oninput="NL.touched=true;nlList()"></div>
+      <div><label>Cómo pagó</label><select id="nlPay">${PAY_LOCAL.map(m=>`<option value="${m}">${esc(PAY_LABELS[m])}</option>`).join('')}</select></div></div>
+    <p class="hint" id="nlListTxt" style="margin-top:4px"></p>
+    <div class="row2"><div><label>Nombre y apellido</label><input id="nlName" autocomplete="off"></div>
+      <div><label>WhatsApp</label><input id="nlPhone" type="tel" placeholder="11 1234-5678"></div></div>
+    <div class="row2"><div><label>Email (para el link de seguimiento)</label><input id="nlEmail" type="email" placeholder="opcional"></div>
+      <div><label>Plazo (días hábiles)</label><input id="nlDays" type="number" min="1" max="60" value="5"></div></div>
+    <div class="row2"><div><label>Archivo (opcional)</label><input id="nlFile" type="file" accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.pdf"></div>
+      <div><label>o link de descarga</label><input id="nlLink" type="url" placeholder="https://…"></div></div>
+    <div id="nlErr" class="err" style="display:none;border-radius:8px;padding:8px 10px;margin-top:12px;font-size:13px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn ghost" type="button" onclick="$('nlModal').classList.remove('show')">Cancelar</button>
+      <button class="btn pink" type="button" id="nlSend" onclick="nlSubmit()">Crear pedido</button></div>`;
+  if($('nlProd'))nlProdChange();else nlList();
+  ['nlText','nlQty'].forEach(id=>{if($(id))$(id).oninput=nlList;});
+}
+function nlProdChange(){
+  const p=nlCur(); NL.touched=false;
+  if(p&&$('nlDays'))$('nlDays').value=nlDaysOf(p);
+  if(NL.kind==='impresion'&&p){
+    const unit=p.matrix[0].unit, group=p.matrix[0].option_group, vals=nlValues(p);
+    const GL={tamano:'Tamaño',material:'Material',tipo:'Tipo'};
+    let h=`<div class="row2"><div><label>${esc(GL[group]||'Opción')}</label><select id="nlOpt" onchange="nlFillQty();nlList()">${vals.map(v=>`<option>${esc(v)}</option>`).join('')}</select></div>`;
+    if(unit==='unidad')h+=`<div><label>Cantidad</label><select id="nlQ" onchange="nlList()"></select></div></div>`;
+    else if(unit==='m2')h+=`<div class="row2" style="gap:8px"><div><label>Ancho (cm)</label><input id="nlW" type="number" min="1" max="300" value="100" oninput="nlList()"></div><div><label>Alto (cm)</label><input id="nlH" type="number" min="1" max="300" value="100" oninput="nlList()"></div></div></div>`;
+    else h+='<div></div></div>';
+    const ad=p.addons||[];
+    if(ad.length)h+=`<label>Opcionales</label><div style="display:flex;flex-wrap:wrap;gap:6px 16px">${ad.map((a,i)=>`<label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--txt);font-size:13px"><input type="checkbox" id="nlA${i}" style="width:auto" onchange="nlList()"> ${esc(a.name)}${a.kind==='per_unit'?` <input id="nlU${i}" type="number" min="1" max="500" value="4" style="width:64px;padding:4px 6px" oninput="nlList()">`:''}</label>`).join('')}</div>`;
+    $('nlOpts').innerHTML=h; nlFillQty();
+  }
+  nlList();
+}
+function nlFillQty(){
+  const p=nlCur(), q=$('nlQ'); if(!p||!q)return;
+  const prev=q.value, opt=$('nlOpt').value;
+  const qs=p.matrix.filter(r=>r.option_value===opt).map(r=>Number(r.quantity)).sort((a,b)=>a-b);
+  q.innerHTML=qs.map(n=>`<option value="${n}">${n.toLocaleString('es-AR')} unidades</option>`).join('');
+  if(qs.includes(Number(prev)))q.value=prev;
+}
+function nlSel(){
+  const p=nlCur(); if(!p)return null;
+  const group=p.matrix[0].option_group, opts={}; opts[group]=$('nlOpt').value;
+  const s={options:opts,quantity:$('nlQ')?Number($('nlQ').value):null,addons:[],units:null};
+  if($('nlW')){s.widthCm=Number($('nlW').value);s.heightCm=Number($('nlH').value);}
+  (p.addons||[]).forEach((a,i)=>{if($('nlA'+i)&&$('nlA'+i).checked){s.addons.push(a.name);if(a.kind==='per_unit')s.units=parseInt($('nlU'+i).value,10)||0;}});
+  return s;
+}
+// Precio de lista (el servidor lo vuelve a calcular al guardar).
+function nlQuote(){
+  const p=nlCur();
+  if(NL.kind==='etiquetas'){if(!p)return null;const q=parseInt($('nlQty').value,10);if(!(q>=1&&q<=100))throw new Error('Cantidad entre 1 y 100');return Number(p.price)*q;}
+  if(NL.kind!=='impresion'||!p)return null;
+  const s=nlSel();
+  const rows=p.matrix.filter(r=>s.options[r.option_group]===r.option_value); if(!rows.length)throw new Error('Elegí una opción');
+  const unit=rows[0].unit, row=unit==='unidad'?rows.find(r=>Number(r.quantity)===Number(s.quantity)):rows[0];
+  if(!row)throw new Error('Elegí una cantidad');
+  let area=null, base;
+  if(unit==='m2'){
+    if(!(s.widthCm>0&&s.heightCm>0))throw new Error('Ingresá ancho y alto');
+    if(s.widthCm>300||s.heightCm>300)throw new Error('Máximo 300 cm por lado');
+    if(/tornasol/i.test(s.options.material||'')&&Math.min(s.widthCm,s.heightCm)>120)throw new Error('El tornasolado va hasta 120 cm de ancho');
+    area=s.widthCm*s.heightCm/10000; base=Math.round(Number(row.price)*area);
+  }else base=Number(row.price);
+  let extra=0;
+  s.addons.forEach(n=>{const a=(p.addons||[]).find(x=>x.name===n);if(!a)return;
+    if(a.kind==='percent')extra+=Math.round(base*Number(a.amount)/100);
+    else if(a.kind==='per_m2')extra+=Math.round(Number(a.amount)*(area||0));
+    else{if(!(s.units>=1&&s.units<=500))throw new Error('Cantidad de '+a.name.toLowerCase()+' no válida');extra+=Number(a.amount)*s.units;}});
+  return base+extra;
+}
+function nlList(){
+  const t=$('nlListTxt'); if(!t)return;
+  try{
+    NL.list=nlQuote();
+    if(NL.list==null){t.textContent=NL.kind==='medida'?'Cargá el precio acordado con el cliente.':'';return;}
+    if(!NL.touched)$('nlTotal').value=Math.round(NL.list/100);
+    const typed=Math.round(Number($('nlTotal').value)*100);
+    t.innerHTML='Precio de lista: <strong>'+money(NL.list)+'</strong>'+(NL.touched&&typed!==NL.list?' · vas a cobrar '+money(typed)+' (queda registrado el cambio)':' · podés cambiarlo si hacés un descuento');
+  }catch(e){NL.list=null;t.innerHTML='<span style="color:var(--warn)">'+esc(e.message)+'</span>';}
+}
+function nlFail(m){const e=$('nlErr');e.textContent=m;e.style.display=m?'block':'none';}
+async function nlSubmit(){
+  nlFail('');
+  const k=NL.kind, p=nlCur();
+  const body={action:'create',kind:k,clientName:$('nlName').value.trim(),clientPhone:$('nlPhone').value.trim(),clientEmail:$('nlEmail').value.trim(),
+    paymentMethod:$('nlPay').value,days:parseInt($('nlDays').value,10),link:$('nlLink').value.trim()||null};
+  if(!body.clientName)return nlFail('Falta el nombre del cliente.');
+  if(!(body.days>=1&&body.days<=60))return nlFail('El plazo tiene que ser entre 1 y 60 días hábiles.');
+  const totalTxt=$('nlTotal').value.trim();
+  if(k==='medida'){
+    body.description=$('nlDesc').value.trim(); if(!body.description)return nlFail('Describí el trabajo.');
+    if(totalTxt==='')return nlFail('Cargá el precio del trabajo.');
+  }else{
+    if(!p)return nlFail('Elegí un producto.');
+    body.productSlug=p.slug;
+    try{nlQuote();}catch(e){return nlFail(e.message);}
+    if(k==='impresion')body.printJob=nlSel();
+    else{body.text=$('nlText').value.trim();body.qty=parseInt($('nlQty').value,10);if(!body.text)return nlFail('Escribí el texto de la etiqueta.');}
+  }
+  if(k==='medida'||NL.touched){const v=Number(totalTxt);if(!(v>=0))return nlFail('El total no es válido.');body.totalCents=Math.round(v*100);}
+  if(body.link&&!/^https?:\/\//i.test(body.link))return nlFail('El link tiene que empezar con http:// o https://');
+  const f=$('nlFile').files[0];
+  if(f){const mt=(f.type||'').toLowerCase();if(!NL_MIMES[mt])return nlFail('Formato de archivo no permitido (JPG, PNG, TIFF, WebP o PDF).');if(f.size>52428800)return nlFail('El archivo supera los 50 MB: pegá un link.');}
+  const btn=$('nlSend'); btn.disabled=true; btn.textContent=f?'Subiendo archivo…':'Guardando…';
+  try{
+    if(f){
+      const r=await fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json','X-Tenant':myTenant.slug||''},body:JSON.stringify({kind:'print',contentType:f.type.toLowerCase(),size:f.size})});
+      const up=await r.json().catch(()=>({})); if(!r.ok||!up.signedUrl)throw new Error(up.error||'No se pudo preparar la subida');
+      const put=await fetch(up.signedUrl,{method:'PUT',headers:{'Content-Type':f.type},body:f}); if(!put.ok)throw new Error('No se pudo subir el archivo');
+      body.file=up.path; body.fileName=f.name; btn.textContent='Guardando…';
+    }
+    const res=await api('/api/print-admin',{method:'POST',body:JSON.stringify(body)});
+    nlDone(res);
+    pjReload().catch(()=>{});
+  }catch(e){nlFail(e.message);btn.disabled=false;btn.textContent='Crear pedido';}
+}
+function nlDone(res){
+  const j=res.job, link=res.trackUrl, phone=String(j.client_phone||'').replace(/\D/g,'');
+  const msg=`¡Hola ${j.client_name}! Tu pedido #${j.job_number} en A tu manera Gráfica está confirmado (${j.deadline_business_days} días hábiles). Seguilo acá: ${link}`;
+  const wa=phone?`https://wa.me/${phone.length===10?'549'+phone:phone}?text=${encodeURIComponent(msg)}`:null;
+  const mail=j.client_email?(res.mailSent?`📧 Le enviamos el mail con el link a <strong>${esc(j.client_email)}</strong>.`:`⚠️ El mail a ${esc(j.client_email)} no salió${res.mailError?': '+esc(res.mailError):''}. Mandale el link por WhatsApp.`)
+    :'Sin email: mandale el link por WhatsApp o copialo.';
+  $('nlBody').innerHTML=`<h3 style="margin:0 0 6px">✅ Pedido #${j.job_number} creado</h3>
+    <p class="muted" style="margin:0 0 12px">${esc(j.client_name)} · ${money(j.total_cents)} · ${esc(PAY_LABELS[j.payment_method]||'')} · plazo ${j.deadline_business_days} días hábiles</p>
+    <p style="font-size:13.5px;margin:0 0 8px">${mail}</p>
+    <label>Link de seguimiento del cliente</label><input id="nlTrack" readonly value="${esc(link)}" onclick="this.select()">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn sec sm" type="button" onclick="navigator.clipboard.writeText($('nlTrack').value).then(()=>toast('Link copiado'))">Copiar link</button>
+      ${wa?`<a class="btn sm" style="background:#25D366;color:#04121b;text-decoration:none" href="${esc(wa)}" target="_blank" rel="noopener">Mandar por WhatsApp</a>`:''}
+      <button class="btn sec sm" type="button" onclick="$('nlModal').classList.remove('show');pjOpen('${j.id}')">Ver pedido</button>
+      <button class="btn pink sm" type="button" onclick="NL.touched=false;nlForm()">Cargar otro</button>
+    </div>`;
+}
+
 function pjRender(){
   const b=$('printsBody'); if(!b) return;
   const f=$('printStatusFilter')?$('printStatusFilter').value:'';
@@ -413,7 +599,7 @@ function pjRender(){
   js.forEach(j=>{const tr=document.createElement('tr');
     const file=j.file_name?`${esc(j.file_name)}<div class="muted" style="font-size:11px">${pjCheckText(j.file_check)}</div>`:(j.external_link?'<span class="muted">🔗 Link de descarga</span>':'<span class="muted">Sin archivo</span>');
     const sel=myRole==='admin'?`<select onchange="pjSetStatus('${j.id}',this.value)" style="width:auto">${PJ_STATES.map(s=>`<option value="${s}" ${s===j.status?'selected':''}>${PJ_LABELS[s]}</option>`).join('')}</select>`:pjPill(j.status);
-    tr.innerHTML=`<td><a onclick="pjOpen('${j.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${j.job_number}</a></td><td>${esc(j.client_name)}<div class="muted" style="font-size:11px">${esc(j.client_phone)}</div></td><td style="max-width:260px">${esc(j.description)}</td><td>${file}</td><td>${sel}</td><td class="muted">${(j.created_at||'').slice(0,10)}</td>`;
+    tr.innerHTML=`<td><a onclick="pjOpen('${j.id}')" style="color:var(--pri);cursor:pointer;font-weight:700">#${j.job_number}</a></td><td>${esc(j.client_name)}<div class="muted" style="font-size:11px">${esc(j.client_phone)}</div></td><td style="max-width:260px">${pjSrc(j)}${esc(j.description)}${pjCobro(j)}</td><td>${file}</td><td>${sel}</td><td class="muted">${(j.created_at||'').slice(0,10)}</td>`;
     b.appendChild(tr);});
 }
 async function pjOpen(id){
@@ -452,6 +638,9 @@ function pjDraw(){
     <div class="odgrid">
       <div><div class="odk">Cliente</div>${esc(j.client_name)}<br><span class="muted">${esc(j.client_email)}${wa?` · <a href="${wa}" target="_blank" rel="noopener" style="color:var(--pri)">WhatsApp</a>`:''}</span></div>
       <div><div class="odk">Estado</div>${stSel}${j.deadline_business_days?`<br><span class="muted">Plazo: ${j.deadline_business_days} días hábiles</span>`:''}</div>
+      <div><div class="odk">Cobro</div>${j.total_cents!=null?'<strong>'+money(j.total_cents)+'</strong>':'<span class="muted">Sin total</span>'}${j.price_detail&&j.price_detail.listTotal!=null?` <span class="muted">(lista ${money(j.price_detail.listTotal)})</span>`:''}
+        <div style="margin-top:4px">${admin&&j.payment_method!=='mercadopago_online'?`<select onchange="pjPay('${j.id}',this.value)" style="width:auto">${PAY_LOCAL.map(m=>`<option value="${m}" ${m===j.payment_method?'selected':''}>${PAY_LABELS[m]}</option>`).join('')}${j.payment_method?'':'<option value="" selected>Sin registrar</option>'}</select>`:`<span class="muted">${esc(PAY_LABELS[j.payment_method]||'Sin registrar')}</span>`}</div></div>
+      <div><div class="odk">Origen y seguimiento</div>${esc(SRC_LABELS[j.source]||'Formulario web')}<br><a href="${esc(pjCur.trackUrl)}" target="_blank" rel="noopener" style="color:var(--pri)">Ver link del cliente</a> · <a onclick="navigator.clipboard.writeText('${esc(pjCur.trackUrl)}').then(()=>toast('Link copiado'))" style="color:var(--pri);cursor:pointer">Copiar</a></div>
       <div style="grid-column:1/-1"><div class="odk">Trabajo</div>${esc(j.description)}</div>
       <div style="grid-column:1/-1"><div class="odk">Link de descarga</div>${j.external_link?`<a href="${esc(j.external_link)}" target="_blank" rel="noopener" style="color:var(--pri);word-break:break-all">${esc(j.external_link)}</a>`:'<span class="muted">—</span>'}</div>
       <div style="grid-column:1/-1"><div class="odk">Archivo</div>${j.file_name?esc(j.file_name)+' · '+pjCheckText(j.file_check):'<span class="muted">Sin archivo</span>'}</div>

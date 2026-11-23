@@ -30,7 +30,7 @@ const PRINT_MIME = { jpg: 'image/jpeg', png: 'image/png', tif: 'image/tiff', web
 async function createPrintJobs(order) {
   const { data: items, error } = await supabase
     .from('order_items')
-    .select('id, product_name, design_text, design, files')
+    .select('id, product_name, design_text, design, files, subtotal')
     .eq('order_id', order.id);
   if (error) throw error;
 
@@ -60,6 +60,8 @@ async function createPrintJobs(order) {
         file_mime: ext ? (PRINT_MIME[ext] || null) : null,
         external_link: it.design.link || files.link || null,
         price_detail: it.design,
+        total_cents: it.subtotal,
+        payment_method: 'mercadopago_online',
       })
       .select('id, tenant_id')
       .single();
