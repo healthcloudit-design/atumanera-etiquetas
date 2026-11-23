@@ -1455,7 +1455,7 @@ const CINTA_COLORS = [
   { hex:'#F4D35E', label:'Amarillo', textColor:'#1A1A1A' },
 ];
 
-let state = { productIdx:0, text:'', font:'Noteworthy', textColor:'#1A1A1A', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', align:'center', qty:1 };
+let state = { productIdx:0, text:'', font:'Noteworthy', textColor:'#000000', borderColor:'#00AEEF', pulseraColor:'#EC008C', pulseraTextColor:'#fff', cintaColor:'#FFFFFF', icon:'', iconSrc:null, position:'left', align:'center', qty:1 };
 function setAlign(a){ state.align=a; renderAlignRow(); updatePreview(); }
 function renderAlignRow(){ document.querySelectorAll('.align-btn').forEach(b=>b.classList.toggle('active', b.dataset.al===state.align)); }
 // El dibujito solo está disponible en falletina BLANCA; en pastel es solo texto. Pulsera no lleva dibujito.
@@ -1706,7 +1706,7 @@ function applyToMockup(textId, iconId, contentId, rawText, p) {
   const base = p.textDefaultSize;
   const iBase = p.iconDefaultSize;
   const isPulsera = p.id === 'pulsera';
-  const tColor = isPulsera ? '#000000' : state.textColor;
+  const tColor = '#000000';   // el texto va SIEMPRE en negro (pedido de Sandra)
 
   if (rawText.trim()) {
     // Máx 4 palabras, repartidas en hasta 2 líneas (2 arriba nombres, 2 abajo apellidos)
@@ -1800,7 +1800,7 @@ async function addToCart() {
     product: curName(),
     text: state.text || '(sin texto)',
     font: state.font,
-    textColor: state.textColor,
+    textColor: '#000000',
     icon: state.iconSrc,
     iconIdx: (state.icon && state.icon.indexOf('real_') === 0) ? parseInt(state.icon.replace('real_', '')) : null,
     thumbnail: thumbnail,
@@ -2220,7 +2220,7 @@ async function submitCheckout() {
     product: item.product,
     text: item.text,
     font: item.font,
-    textColor: item.textColor || '#1A1A1A',
+    textColor: '#000000',
     iconIndex: item.iconIdx ?? null,
     thumbnailUrl: item.thumbnail ?? null,
     printFile: item.printFile ?? null,

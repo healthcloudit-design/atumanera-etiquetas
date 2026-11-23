@@ -206,6 +206,19 @@ module.exports = async function handler(req, res) {
 
 // Sube una miniatura data-URI al bucket privado y devuelve la ruta de storage.
 // Si el valor no es data-URI o falla, devuelve el valor original sin romper nada.
+// Marca un JPEG con la resolución indicada (APP0/JFIF). No toca los píxeles.
+function setJpegDpi(buf, dpi) {
+  if (!buf || buf.length < 4 || buf[0] !== 0xFF || buf[1] !== 0xD8) return buf;
+  const isJfif = buf[2] === 0xFF && buf[3] === 0xE0 && buf.length > 18 && buf.toString('latin1', 6, 11) === 'JFIF\u0000';
+  if (isJfif) {
+    const out = Buffer.from(buf);
+    out[13] = 1; out.writeUInt16BE(dpi, 14); out.writeUInt16BE(dpi, 16);
+    return out;
+  }
+  const app0 = Buffer.from([0xFF, 0xE0, 0, 16, 0x4A, 0x46, 0x49, 0x46, 0, 1, 1, 1, dpi >> 8, dpi & 255, dpi >> 8, dpi & 255, 0, 0]);
+  return Buffer.concat([buf.subarray(0, 2), app0, buf.subarray(2)]);
+}
+
 async function storeThumbnail(tenantId, orderId, idx, value) {
   if (typeof value !== 'string' || !value.startsWith('data:image')) return value || null;
   try {
@@ -213,7 +226,9 @@ async function storeThumbnail(tenantId, orderId, idx, value) {
     if (!m) return value;
     const contentType = m[1];
     const ext = (contentType.split('/')[1] || 'png').replace('+xml', '');
-    const buffer = Buffer.from(m[2], 'base64');
+    let buffer = Buffer.from(m[2], 'base64');
+    // Archivo de impresión: el JPEG del navegador viene marcado a 72 dpi → se marca a 300 dpi (tamaño real).
+    if (String(idx).endsWith('-print') && contentType === 'image/jpeg') buffer = setJpegDpi(buffer, 300);
     if (buffer.length > 5 * 1024 * 1024) return value; // >5MB: no subir
     const path = `${tenantId}/${orderId}/${idx}.${ext}`;
     const { error } = await supabase.storage.from('designs').upload(path, buffer, { contentType, upsert: true });
@@ -565,7 +580,7 @@ async function buildOrderItems(cartItems, tenantId) {
       product_name: cleanString(product.name, 120),
       design_text: item.designText,
       design_font: item.font,
-      design_text_color: item.textColor,
+      design_text_color: '#000000',   // etiquetas: el texto va siempre en negro
       design_icon_index: Number.isInteger(item.iconIndex) && item.iconIndex >= 0 && item.iconIndex < 100 ? item.iconIndex : null,
       design_position: item.position,
       design_border_color: item.borderColor,
