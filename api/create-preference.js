@@ -14,6 +14,7 @@ const {
   cents,
   buildParcel,
 } = require('./_utils');
+const { priceSelection } = require('./_pricing');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -85,6 +86,9 @@ module.exports = async function handler(req, res) {
     }
 
     const orderItems = await buildOrderItems(cartItems, tenant.id);
+    if (orderItems.some(i => i._isPrint) && !buyerPhone) {
+      return publicError(res, 400, 'Para productos de impresión necesitamos un teléfono (WhatsApp)');
+    }
     const itemsSubtotal = orderItems.reduce((acc, item) => acc + item.subtotal, 0);
     // Bulto: si hay productos con peso/medidas (regalos) se calcula; si no, el de siempre.
     const parcel = buildParcel(
@@ -121,12 +125,18 @@ module.exports = async function handler(req, res) {
     // Mover miniaturas base64 al bucket privado 'designs' (F7). Si falla, se
     // conserva el data-URI para no romper el checkout.
     const rows = await Promise.all(orderItems.map(async (item, idx) => {
-      const { _printFile, _ship, _pendingFiles, ...rest } = item;
+      const { _printFile, _ship, _pendingFiles, _pendingPrint, _isPrint, ...rest } = item;
       const thumb = await storeThumbnail(tenant.id, order.id, idx, item.design_thumbnail_url);
       // Archivo de impresión a tamaño real → ruta derivable "<idx>-print.jpg" (sin columna nueva)
       if (_printFile) await storeThumbnail(tenant.id, order.id, idx + '-print', _printFile);
       // Regalos: mover archivos subidos (pending) a la carpeta del pedido.
       if (_pendingFiles) rest.files = await claimPendingFiles(tenant.id, order.id, idx, _pendingFiles);
+      // Impresión: mover el diseño (pending) a la carpeta del pedido en print-files.
+      if (_isPrint) {
+        rest.files = _pendingPrint
+          ? { print: await claimPrintFile(tenant.id, order.id, idx, _pendingPrint.path), fileName: _pendingPrint.name || null }
+          : { link: (rest.design && rest.design.link) || null };
+      }
       return { ...rest, order_id: order.id, design_thumbnail_url: thumb };
     }));
     const { error: itemsError } = await supabase.from('order_items').insert(rows);
@@ -269,6 +279,11 @@ function getPublicSiteUrl(req, tenantSlug) {
 // (*.vercel.app) vuelve a /regalos.html del mismo preview.
 function getBackUrlBuilder(req, siteUrl, orderId) {
   const rawHost = getRequestHost(req);
+  // Impresiones (regalos.*/impresiones): vuelve a la misma página, que muestra el resultado.
+  if (req.body && req.body.site === 'impresiones') {
+    if (rawHost.endsWith('.vercel.app')) return (estado) => `https://${rawHost}/impresiones.html?pago=${estado}&order=${orderId}`;
+    return (estado) => `${siteUrl}/impresiones?pago=${estado}&order=${orderId}`;
+  }
   if (req.body && req.body.site === 'regalos' && rawHost.endsWith('.vercel.app')) {
     return (estado) => `https://${rawHost}/regalos.html?pago=${estado}&order=${orderId}`;
   }
@@ -371,7 +386,96 @@ async function getProductsBySlug(slugs, tenantId) {
   if (error && error.code === '42703') ({ data, error } = await query(base));
   if (error) throw error;
 
-  return new Map((data || []).map(product => [product.slug, product]));
+  // Productos de impresión: matriz de precios y add-ons (si las tablas existen).
+  const list = data || [];
+  const ids = list.map(p => p.id).filter(Boolean);
+  if (ids.length) {
+    const [mRes, aRes] = await Promise.all([
+      supabase.from('product_price_matrix')
+        .select('product_id, option_group, option_value, quantity, unit, price')
+        .eq('tenant_id', tenantId).in('product_id', ids),
+      supabase.from('product_addons')
+        .select('product_id, name, kind, amount')
+        .eq('tenant_id', tenantId).eq('active', true).in('product_id', ids),
+    ]);
+    if (mRes.error && mRes.error.code !== '42P01') throw mRes.error;
+    if (aRes.error && aRes.error.code !== '42P01') throw aRes.error;
+    for (const p of list) {
+      p.matrix = (mRes.data || []).filter(r => r.product_id === p.id);
+      p.addons = (aRes.data || []).filter(r => r.product_id === p.id);
+    }
+  }
+
+  return new Map(list.map(product => [product.slug, product]));
+}
+
+// Mueve el diseño de impresión de pending/ a <tenant>/<order>/<idx>-print.<ext> (bucket print-files).
+async function claimPrintFile(tenantId, orderId, idx, from) {
+  const ext = from.split('.').pop();
+  const to = `${tenantId}/${orderId}/${idx}-print.${ext}`;
+  const { error } = await supabase.storage.from('print-files').move(from, to);
+  if (error) { console.error('claimPrintFile', from, error.message); return `storage:print-files/${from}`; }
+  return `storage:print-files/${to}`;
+}
+
+// Valida un ítem de impresión y calcula su precio en el servidor (nunca se usa el del navegador).
+function validatePrintItem(item, product, tenantId) {
+  const pj = item.printJob && typeof item.printJob === 'object' ? item.printJob : null;
+  if (!pj) throw new Error(`Faltan las opciones: ${product.slug}`);
+  const options = {};
+  for (const [k, v] of Object.entries(pj.options || {})) {
+    const kk = cleanString(k, 30), vv = cleanString(v, 80);
+    if (kk && vv) options[kk] = vv;
+  }
+  const units = Number.parseInt(pj.units, 10);
+  const sel = {
+    options,
+    quantity: Number.parseInt(pj.quantity, 10) || null,
+    widthCm: Number(pj.widthCm),
+    heightCm: Number(pj.heightCm),
+    units: Number.isInteger(units) ? units : null,
+    addons: Array.isArray(pj.addons) ? pj.addons.map(a => cleanString(a, 60)).filter(Boolean).slice(0, 10) : [],
+  };
+  const r = priceSelection(product.matrix, product.addons, sel);
+
+  const pathRe = new RegExp(`^${tenantId}/pending/\\d{8}/[0-9a-f-]{36}-print\\.(jpg|png|tif|webp|pdf)$`);
+  const file = typeof pj.file === 'string' && pathRe.test(pj.file) ? pj.file : null;
+  let link = null;
+  if (pj.link) {
+    try { const u = new URL(String(pj.link)); if (u.protocol === 'https:' || u.protocol === 'http:') link = u.toString().slice(0, 500); }
+    catch (_) { /* link inválido: se ignora */ }
+  }
+  if (!file && !link) throw new Error(`Falta el diseño: ${product.slug}`);
+
+  const withSize = r.area !== null;
+  const perUnitUsed = r.addons.some(b => (product.addons || []).some(a => a.name === b.name && a.kind === 'per_unit'));
+  const summary = [
+    ...Object.values(options),
+    r.units ? `${r.units} u.` : null,
+    withSize ? `${sel.widthCm}x${sel.heightCm} cm` : null,
+    ...r.addons.map(a => a.name),
+  ].filter(Boolean).join(' · ');
+
+  return {
+    unitPrice: r.unitTotal,
+    units: r.units || 1,
+    summary,
+    pendingFile: file,
+    fileName: cleanString(pj.fileName, 200),
+    design: {
+      kind: 'print',
+      options,
+      quantity: r.units,
+      widthCm: withSize ? sel.widthCm : null,
+      heightCm: withSize ? sel.heightCm : null,
+      area: r.area,
+      units: perUnitUsed ? sel.units : null,       // ej. cantidad de ojales
+      basePrice: r.basePrice,
+      addons: r.addons,
+      total: r.unitTotal,
+      link,
+    },
+  };
 }
 
 async function buildOrderItems(cartItems, tenantId) {
@@ -391,6 +495,8 @@ async function buildOrderItems(cartItems, tenantId) {
     design: item.design,
     files: item.files,
     variant: item.variant,
+    // Impresión (solo se usa si el producto tiene matriz de precios)
+    printJob: item.printJob,
   }));
 
   const slugs = [...new Set(normalized.map(item => item.productSlug).filter(Boolean))];
@@ -399,6 +505,31 @@ async function buildOrderItems(cartItems, tenantId) {
   return normalized.map(item => {
     const product = products.get(item.productSlug);
     if (!product) throw new Error(`Producto invalido: ${item.productSlug || 'sin slug'}`);
+
+    if (Array.isArray(product.matrix) && product.matrix.length) {
+      const pr = validatePrintItem(item, product, tenantId);
+      return {
+        product_id: product.id || null,
+        product_slug: item.productSlug,
+        product_name: cleanString(product.name, 120),
+        design_text: cleanString(pr.summary, 200) || '(impresión)',
+        design_font: item.font,
+        design_text_color: item.textColor,
+        design_icon_index: null,
+        design_position: 'print',
+        design_border_color: null,
+        design_pulsera_color: null,
+        design_thumbnail_url: null,
+        design: pr.design,
+        files: null,                  // se completa al mover el archivo al pedido
+        _pendingPrint: pr.pendingFile ? { path: pr.pendingFile, name: pr.fileName } : null,
+        _isPrint: true,
+        quantity: 1,                  // el precio de la lista ya es por el total elegido
+        units_total: pr.units,
+        unit_price: pr.unitPrice,
+        subtotal: pr.unitPrice,
+      };
+    }
 
     let unitPrice = cents(product.price);
     if (product.options && product.options.editor) {

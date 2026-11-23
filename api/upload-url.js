@@ -19,7 +19,12 @@ const MAX_BYTES = 25 * 1024 * 1024;
 const TYPES = {
   original:   { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif' },
   production: { 'image/png': 'png' },
+  // Diseño del cliente para productos de impresión (volantes, tarjetas, gran formato).
+  // Va al bucket print-files (el mismo de Impresiones), con su propio límite.
+  print:      { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/tiff': 'tif', 'image/webp': 'webp', 'application/pdf': 'pdf' },
 };
+const LIMITS = { print: 50 * 1024 * 1024 };
+const BUCKETS = { print: 'print-files' };
 
 module.exports = async function handler(req, res) {
   applyCors(req, res, 'POST, OPTIONS');
@@ -30,8 +35,9 @@ module.exports = async function handler(req, res) {
   const ext = TYPES[kind] && TYPES[kind][String(contentType || '').toLowerCase()];
   if (!ext) return publicError(res, 400, 'Tipo de archivo no permitido');
   const bytes = Number(size);
-  if (!Number.isFinite(bytes) || bytes <= 0 || bytes > MAX_BYTES) {
-    return publicError(res, 400, 'El archivo supera los 25 MB');
+  const limit = LIMITS[kind] || MAX_BYTES;
+  if (!Number.isFinite(bytes) || bytes <= 0 || bytes > limit) {
+    return publicError(res, 400, `El archivo supera los ${Math.round(limit / 1048576)} MB`);
   }
 
   try {
@@ -41,7 +47,7 @@ module.exports = async function handler(req, res) {
 
     const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const path = `${tenant.id}/pending/${day}/${crypto.randomUUID()}-${kind}.${ext}`;
-    const { data, error } = await supabase.storage.from('designs').createSignedUploadUrl(path);
+    const { data, error } = await supabase.storage.from(BUCKETS[kind] || 'designs').createSignedUploadUrl(path);
     if (error) throw error;
 
     return res.status(200).json({ path, signedUrl: data.signedUrl });

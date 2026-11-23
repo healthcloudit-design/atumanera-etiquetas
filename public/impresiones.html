@@ -57,16 +57,84 @@ h2{font-size:17px;margin:26px 0 0}
 .hidden{display:none!important}
 .linkbox{word-break:break-all;background:#f4f6fa;border-radius:12px;padding:11px 12px;margin-top:12px;font-size:14px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:10px}
+.prod{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;font:inherit;color:var(--ink);cursor:pointer;box-shadow:0 6px 16px rgba(20,30,50,.06)}
+.prod:hover{border-color:var(--fucsia)}
+.prod .muted{font-size:13.5px}
+.prod .from{font-weight:800;color:var(--fucsia);margin-top:4px}
+select{width:100%;font:inherit;font-size:16px;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+select:focus{outline:3px solid rgba(236,0,140,.3);outline-offset:2px;border-color:var(--fucsia)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.addon{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+label.chk{display:flex;align-items:center;gap:8px;font-weight:600;margin:0;font-size:14.5px}
+label.chk input{width:auto;margin:0}
+.addon .units{width:96px;padding:8px 10px}
+.total{background:#f4f6fa;border-radius:14px;padding:12px 14px;margin-top:16px;font-size:14.5px}
+.total b{display:block;font-size:22px;margin-top:4px}
+.total .bad{color:#a51b1b;font-weight:700}
+.notes{margin:14px 0 0;padding-left:18px;color:var(--muted);font-size:13.5px}
+.back{display:inline-block;margin:16px 0 0;color:var(--fucsia);font-weight:700;text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header><a href="https://regalos.atumaneragraf.com/"><img src="/assets/img/logo-header.png" alt="A tu manera Gráfica"></a></header>
 
+  <!-- ===== PRODUCTOS CON PRECIO ===== -->
+  <section id="viewShop" class="hidden">
+    <h1>Impresiones con precio online</h1>
+    <p class="lead">Elegí el producto, subí tu diseño y pagá con Mercado Pago. Revisamos cada archivo antes de producir.</p>
+    <div id="shopList"><p class="muted">Cargando productos…</p></div>
+    <div class="panel" style="margin-top:26px">
+      <b>¿Necesitás algo a medida?</b>
+      <p class="muted" style="margin:6px 0 0">Tazas, remeras, plotter o cualquier trabajo especial: mandanos tu proyecto y te pasamos el precio.</p>
+      <button id="toIntake" class="btn sec" type="button">Pedir cotización</button>
+    </div>
+  </section>
+
+  <!-- ===== PRODUCTO: opciones, diseño y pago ===== -->
+  <section id="viewProduct" class="hidden">
+    <a href="#" class="back" id="pBack">← Volver a productos</a>
+    <h1 id="pTitle"></h1>
+    <p class="lead" id="pInfo"></p>
+    <div class="panel">
+      <div id="pForm"></div>
+      <div id="pTotal" class="total"></div>
+      <ul id="pNotes" class="notes"></ul>
+      <h2>Tu diseño</h2>
+      <label for="pFile">Archivo</label>
+      <input id="pFile" type="file" accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.pdf">
+      <p class="hint">JPG, PNG, TIFF, WebP o PDF. Hasta 50 MB.</p>
+      <div id="pCheck" class="check"></div>
+      <label for="pLink">Link de descarga (si tu archivo pesa más de 50 MB)</label>
+      <input id="pLink" type="url" placeholder="https://drive.google.com/…">
+      <h2>Tus datos</h2>
+      <label for="pName">Nombre y apellido</label>
+      <input id="pName" autocomplete="name">
+      <label for="pPhone">WhatsApp</label>
+      <input id="pPhone" type="tel" autocomplete="tel" placeholder="11 1234-5678">
+      <label for="pEmail">Email</label>
+      <input id="pEmail" type="email" autocomplete="email">
+      <p class="hint">Retiro o envío a coordinar con el taller.</p>
+      <div id="pErr" class="msg err"></div>
+      <button id="pPay" class="btn" type="button">Ir a pagar</button>
+    </div>
+  </section>
+
+  <!-- ===== VUELTA DE MERCADO PAGO ===== -->
+  <section id="viewPaid" class="hidden">
+    <h1 id="payTitle"></h1>
+    <div class="panel">
+      <p id="payText" style="margin:0"></p>
+      <button id="payBack" class="btn sec" type="button">Volver a productos</button>
+    </div>
+  </section>
+
   <!-- ===== INTAKE: enviar proyecto ===== -->
   <section id="viewIntake" class="hidden">
     <h1>Enviá tu proyecto para imprimir</h1>
     <p class="lead">Tazas, remeras, plotter, gran formato y cartelería. Subí tu archivo y te escribimos para confirmarlo. El pago lo coordinamos aparte.</p>
+    <p style="margin:-8px 0 18px"><a href="#" class="back" id="toShop" style="margin:0">← Ver productos con precio online</a></p>
     <form id="intake" class="panel" novalidate>
       <label for="name">Nombre y apellido</label>
       <input id="name" name="name" autocomplete="name" required>
@@ -148,7 +216,7 @@ h2{font-size:17px;margin:26px 0 0}
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function show(id) { ['viewIntake', 'viewDone', 'viewTrack'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); }
+  function show(id) { ['viewShop', 'viewProduct', 'viewPaid', 'viewIntake', 'viewDone', 'viewTrack'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); }
   function msg(id, text) { var el = $(id); el.textContent = text || ''; el.classList.toggle('show', !!text); }
   function mimeOf(f) { if (f.type) return f.type.toLowerCase(); var ext = (f.name.split('.').pop() || '').toLowerCase(); return EXT_MIME[ext] || ''; }
   function fmtWhen(iso) { try { return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } }
@@ -362,10 +430,231 @@ h2{font-size:17px;margin:26px 0 0}
     }
   });
 
+  // ---- Productos con precio (matriz de precios + add-ons) ----
+  // El total que se muestra es informativo: el servidor recalcula el precio al cobrar.
+  var TENANT_SLUG = 'atumanera';
+  var SHOP = [], CUR = null;
+  var GROUP_LABEL = { tamano: 'Tamaño', material: 'Material', tipo: 'Tipo' };
+  var CAT_ORDER = ['Volantes', 'Tarjetas', 'Gran formato', 'Banners'];
+  var MAX_SIDE = 300, TORNASOL_MAX = 120;
+
+  function money(c) { return '$' + Math.round((Number(c) || 0) / 100).toLocaleString('es-AR'); }
+  function distinct(arr) { var o = []; arr.forEach(function (v) { if (o.indexOf(v) === -1) o.push(v); }); return o; }
+  function addonPriceText(a) {
+    if (a.kind === 'percent') return '+' + a.amount + '%';
+    if (a.kind === 'per_m2') return money(a.amount) + ' por m²';
+    return money(a.amount) + ' c/u';
+  }
+
+  async function loadShop() {
+    show('viewShop');
+    var box = $('shopList');
+    try {
+      var d = await api('/api/storefront?tenant=' + TENANT_SLUG);
+      SHOP = (d.products || []).filter(function (p) { return Array.isArray(p.matrix) && p.matrix.length; });
+      if (!SHOP.length) { box.innerHTML = '<p class="muted">Muy pronto vas a ver acá nuestros productos con precio.</p>'; return; }
+      var cats = distinct(SHOP.map(function (p) { return p.category; }));
+      cats.sort(function (a, b) { var ia = CAT_ORDER.indexOf(a), ib = CAT_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+      box.innerHTML = cats.map(function (c) {
+        return '<h2>' + esc(c) + '</h2><div class="grid">' + SHOP.map(function (p, i) {
+          if (p.category !== c) return '';
+          var min = Math.min.apply(null, p.matrix.map(function (r) { return Number(r.price); }));
+          var per = p.matrix[0].unit === 'm2' ? ' el m²' : '';
+          return '<button type="button" class="prod" data-i="' + i + '"><b>' + esc(p.name) + '</b>' +
+            '<span class="muted">' + esc(p.size_description || '') + '</span>' +
+            '<span class="from">desde ' + money(min) + per + '</span></button>';
+        }).join('') + '</div>';
+      }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('.prod'), function (b) {
+        b.addEventListener('click', function () { openProduct(+b.getAttribute('data-i')); });
+      });
+    } catch (e) {
+      box.innerHTML = '<p class="muted">No pudimos cargar los productos. Probá de nuevo en un rato.</p>';
+    }
+  }
+
+  function openProduct(i) {
+    CUR = SHOP[i];
+    var p = CUR, unit = p.matrix[0].unit, group = p.matrix[0].option_group;
+    var values = distinct(p.matrix.map(function (r) { return r.option_value; }));
+    var h = '<label for="pOpt">' + esc(GROUP_LABEL[group] || 'Opción') + '</label><select id="pOpt">' +
+      values.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join('') + '</select>';
+    if (unit === 'unidad') h += '<label for="pQty">Cantidad</label><select id="pQty"></select>';
+    if (unit === 'm2') {
+      h += '<div class="row2"><div><label for="pW">Ancho (cm)</label><input id="pW" type="number" min="1" max="' + MAX_SIDE + '" value="100" inputmode="numeric"></div>' +
+        '<div><label for="pH">Alto (cm)</label><input id="pH" type="number" min="1" max="' + MAX_SIDE + '" value="100" inputmode="numeric"></div></div>' +
+        '<p class="hint">El precio de lista es por m² (100 × 100 cm). Calculamos la superficie según tus medidas.</p>';
+    }
+    var ad = p.addons || [];
+    if (ad.length) {
+      h += '<label>Opcionales</label>' + ad.map(function (a, k) {
+        var units = a.kind === 'per_unit'
+          ? ' <input class="units" id="pU' + k + '" type="number" min="1" max="500" value="4" inputmode="numeric" aria-label="Cantidad de ' + esc(a.name) + '">'
+          : '';
+        return '<div class="addon"><label class="chk"><input type="checkbox" id="pA' + k + '"> ' + esc(a.name) +
+          ' <span class="muted">(' + esc(addonPriceText(a)) + ')</span></label>' + units + '</div>';
+      }).join('');
+    }
+    $('pForm').innerHTML = h;
+    $('pTitle').textContent = p.name;
+    $('pInfo').textContent = [p.material, p.size_description, p.elaboration_days ? 'Entrega: ' + p.elaboration_days : null].filter(Boolean).join(' · ');
+    var notes = [p.notes].concat(ad.map(function (a) { return a.notice; })).filter(Boolean);
+    $('pNotes').innerHTML = notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('');
+    $('pFile').value = ''; $('pLink').value = ''; $('pCheck').className = 'check';
+    msg('pErr', '');
+    $('pForm').oninput = recalc;
+    $('pForm').onchange = function (e) { if (e.target && e.target.id === 'pOpt') fillQty(); recalc(); };
+    fillQty(); recalc();
+    show('viewProduct');
+    window.scrollTo(0, 0);
+  }
+
+  function fillQty() {
+    var q = $('pQty'); if (!q) return;
+    var prev = q.value, opt = $('pOpt').value;
+    var qs = CUR.matrix.filter(function (r) { return r.option_value === opt; })
+      .map(function (r) { return Number(r.quantity); }).sort(function (a, b) { return a - b; });
+    q.innerHTML = qs.map(function (n) { return '<option value="' + n + '">' + n.toLocaleString('es-AR') + ' unidades</option>'; }).join('');
+    if (qs.indexOf(Number(prev)) !== -1) q.value = prev;
+  }
+
+  function selection() {
+    var p = CUR, group = p.matrix[0].option_group, opts = {};
+    opts[group] = $('pOpt').value;
+    var sel = { options: opts, quantity: $('pQty') ? Number($('pQty').value) : null, addons: [], units: null };
+    if ($('pW')) { sel.widthCm = Number($('pW').value); sel.heightCm = Number($('pH').value); }
+    (p.addons || []).forEach(function (a, k) {
+      if ($('pA' + k) && $('pA' + k).checked) {
+        sel.addons.push(a.name);
+        if (a.kind === 'per_unit') sel.units = parseInt($('pU' + k).value, 10) || 0;
+      }
+    });
+    return sel;
+  }
+
+  function priceOf(sel) {
+    var p = CUR;
+    var rows = p.matrix.filter(function (r) { return sel.options[r.option_group] === r.option_value; });
+    if (!rows.length) throw new Error('Elegí una opción.');
+    var unit = rows[0].unit;
+    var row = unit === 'unidad' ? rows.filter(function (r) { return Number(r.quantity) === Number(sel.quantity); })[0] : rows[0];
+    if (!row) throw new Error('Elegí una cantidad.');
+    var area = null, base;
+    if (unit === 'm2') {
+      if (!(sel.widthCm > 0 && sel.heightCm > 0)) throw new Error('Ingresá ancho y alto en cm.');
+      if (sel.widthCm > MAX_SIDE || sel.heightCm > MAX_SIDE) throw new Error('Medidas máximas: ' + MAX_SIDE + ' cm por lado.');
+      if (/tornasol/i.test(sel.options.material || '') && Math.min(sel.widthCm, sel.heightCm) > TORNASOL_MAX) {
+        throw new Error('El vinilo tornasolado se imprime hasta ' + TORNASOL_MAX + ' cm de ancho.');
+      }
+      area = sel.widthCm * sel.heightCm / 10000;
+      base = Math.round(Number(row.price) * area);
+    } else {
+      base = Number(row.price);
+    }
+    var lines = [], extras = 0;
+    sel.addons.forEach(function (name) {
+      var a = (p.addons || []).filter(function (x) { return x.name === name; })[0];
+      if (!a) return;
+      var amt;
+      if (a.kind === 'percent') amt = Math.round(base * Number(a.amount) / 100);
+      else if (a.kind === 'per_m2') amt = Math.round(Number(a.amount) * (area || 0));
+      else {
+        if (!(sel.units >= 1 && sel.units <= 500)) throw new Error('Indicá cuántos ' + a.name.toLowerCase() + ' querés.');
+        amt = Number(a.amount) * sel.units;
+      }
+      extras += amt; lines.push([a.name + (a.kind === 'per_unit' ? ' × ' + sel.units : ''), amt]);
+    });
+    return { base: base, area: area, lines: lines, total: base + extras };
+  }
+
+  function recalc() {
+    var box = $('pTotal');
+    try {
+      var r = priceOf(selection());
+      var parts = ['Precio: ' + money(r.base) + (r.area !== null ? ' (' + r.area.toLocaleString('es-AR', { maximumFractionDigits: 2 }) + ' m²)' : '')];
+      r.lines.forEach(function (l) { parts.push(esc(l[0]) + ': +' + money(l[1])); });
+      box.innerHTML = parts.join('<br>') + '<b>Total ' + money(r.total) + '</b>';
+      $('pPay').disabled = false;
+    } catch (e) {
+      box.innerHTML = '<span class="bad">' + esc(e.message) + '</span>';
+      $('pPay').disabled = true;
+    }
+  }
+
+  $('pFile').addEventListener('change', async function () {
+    var f = this.files[0]; var el = $('pCheck');
+    msg('pErr', '');
+    if (!f) { el.className = 'check'; return; }
+    var mime = mimeOf(f);
+    if (!MIMES[mime]) { el.className = 'check'; msg('pErr', 'Formato no permitido. Usá JPG, PNG, TIFF, WebP o PDF.'); return; }
+    if (f.size > MAX) { el.className = 'check'; msg('pErr', 'El archivo supera los 50 MB. Pegá un link de descarga.'); return; }
+    renderCheck(el, await checkFile(f));
+  });
+
+  $('pPay').addEventListener('click', async function () {
+    msg('pErr', '');
+    var name = $('pName').value.trim(), phone = $('pPhone').value.trim(), email = $('pEmail').value.trim();
+    var sel;
+    try { sel = selection(); priceOf(sel); } catch (e) { msg('pErr', e.message); return; }
+    var f = $('pFile').files[0], link = $('pLink').value.trim();
+    if (!f && !link) { msg('pErr', 'Subí tu diseño o pegá un link de descarga.'); return; }
+    if (link && !/^https?:\/\//i.test(link)) { msg('pErr', 'El link tiene que empezar con http:// o https://'); return; }
+    if (f && (!MIMES[mimeOf(f)] || f.size > MAX)) { msg('pErr', 'Revisá el archivo: formato JPG, PNG, TIFF, WebP o PDF, hasta 50 MB.'); return; }
+    if (!name || !phone || !email) { msg('pErr', 'Completá nombre, WhatsApp y email.'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { msg('pErr', 'Revisá el email.'); return; }
+    var btn = $('pPay');
+    btn.disabled = true; btn.textContent = f ? 'Subiendo tu diseño…' : 'Preparando el pago…';
+    try {
+      var path = null;
+      if (f) {
+        var up = await api('/api/upload-url', { kind: 'print', contentType: mimeOf(f), size: f.size });
+        var put = await fetch(up.signedUrl, { method: 'PUT', headers: { 'Content-Type': mimeOf(f) }, body: f });
+        if (!put.ok) throw new Error('No pudimos subir el archivo. Probá de nuevo.');
+        path = up.path;
+        btn.textContent = 'Preparando el pago…';
+      }
+      var job = { options: sel.options, quantity: sel.quantity, widthCm: sel.widthCm, heightCm: sel.heightCm, units: sel.units, addons: sel.addons,
+        file: path, fileName: f ? f.name : null, link: link || null };
+      var r = await fetch('/api/create-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant': TENANT_SLUG },
+        body: JSON.stringify({ site: 'impresiones', buyer: { name: name, email: email, phone: phone }, shipping: { method: 'retiro' },
+          cartItems: [{ productSlug: CUR.slug, qty: 1, printJob: job }] })
+      });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok || !d.initPoint) throw new Error(d.error || 'No se pudo iniciar el pago.');
+      location.href = d.initPoint;
+    } catch (e) {
+      msg('pErr', e.message);
+      btn.disabled = false; btn.textContent = 'Ir a pagar';
+    }
+  });
+
+  function showPaid(estado) {
+    var T = {
+      exitoso: ['¡Pago recibido!', 'Gracias. Revisamos tu diseño y te escribimos por mail con la fecha de entrega, o si hace falta algún ajuste en el archivo.'],
+      pendiente: ['Tu pago está pendiente', 'Cuando Mercado Pago lo apruebe, revisamos tu diseño y te escribimos por mail.'],
+      fallido: ['El pago no se completó', 'No se hizo ningún cobro. Podés intentarlo de nuevo cuando quieras.']
+    };
+    var m = T[estado] || T.pendiente;
+    $('payTitle').textContent = m[0]; $('payText').textContent = m[1];
+    show('viewPaid');
+  }
+
+  ['pName', 'pPhone', 'pEmail', 'pLink'].forEach(function (id) { $(id).addEventListener('input', function () { msg('pErr', ''); }); });
+  $('pBack').addEventListener('click', function (e) { e.preventDefault(); show('viewShop'); window.scrollTo(0, 0); });
+  $('payBack').addEventListener('click', function () { history.replaceState(null, '', location.pathname); loadShop(); });
+  $('toIntake').addEventListener('click', function () { show('viewIntake'); window.scrollTo(0, 0); });
+  $('toShop').addEventListener('click', function (e) { e.preventDefault(); loadShop(); window.scrollTo(0, 0); });
+
   // ---- Arranque ----
   var params = new URLSearchParams(location.search);
   var t = params.get('t');
-  if (t) { loadTrack(t); } else { show('viewIntake'); }
+  var pago = params.get('pago');
+  if (t) { loadTrack(t); }
+  else if (pago) { showPaid(pago); }
+  else if (params.get('cotizar') !== null) { show('viewIntake'); }
+  else { loadShop(); }
 })();
 </script>
 </body>

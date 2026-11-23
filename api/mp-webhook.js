@@ -23,6 +23,57 @@ async function getTenantSecret(tenantId, name) {
   return data || null;
 }
 
+const PRINT_MIME = { jpg: 'image/jpeg', png: 'image/png', tif: 'image/tiff', webp: 'image/webp', pdf: 'application/pdf' };
+
+// Un print_job por ítem de impresión del pedido. Idempotente: si ya existe para
+// ese order_item no se crea otro (Mercado Pago repite los avisos).
+async function createPrintJobs(order) {
+  const { data: items, error } = await supabase
+    .from('order_items')
+    .select('id, product_name, design_text, design, files')
+    .eq('order_id', order.id);
+  if (error) throw error;
+
+  for (const it of items || []) {
+    if (!it.design || it.design.kind !== 'print') continue;
+    const { data: exists } = await supabase.from('print_jobs').select('id').eq('order_item_id', it.id).maybeSingle();
+    if (exists) continue;
+
+    const files = it.files || {};
+    const prefix = 'storage:print-files/';
+    const filePath = typeof files.print === 'string' && files.print.startsWith(prefix) ? files.print.slice(prefix.length) : null;
+    const ext = filePath ? filePath.split('.').pop().toLowerCase() : null;
+
+    const { data: job, error: jErr } = await supabase
+      .from('print_jobs')
+      .insert({
+        tenant_id: order.tenant_id,
+        source: 'tienda',
+        order_id: order.id,
+        order_item_id: it.id,
+        client_name: order.buyer_name || '(sin nombre)',
+        client_phone: order.buyer_phone || '',
+        client_email: order.buyer_email || '',
+        description: `${it.product_name} · ${it.design_text} (pagado en la tienda)`,
+        file_path: filePath,
+        file_name: files.fileName || (filePath ? filePath.split('/').pop() : null),
+        file_mime: ext ? (PRINT_MIME[ext] || null) : null,
+        external_link: it.design.link || files.link || null,
+        price_detail: it.design,
+      })
+      .select('id, tenant_id')
+      .single();
+    if (jErr) {
+      if (jErr.code !== '23505') console.error('print job insert', it.id, jErr.message);  // 23505 = ya existía
+      continue;
+    }
+    const { error: evErr } = await supabase.from('print_job_events').insert({
+      job_id: job.id, tenant_id: job.tenant_id, kind: 'creado', actor: 'tienda', note: 'Pedido pagado en la tienda',
+    });
+    if (evErr) console.error('print event', job.id, evErr.message);
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return publicError(res, 405, 'Method not allowed');
 
@@ -47,7 +98,7 @@ module.exports = async function handler(req, res) {
     const mpStatus = paymentData.status; // approved | pending | rejected | cancelled
 
     // Buscar el pedido acotado al tenant (defensa en profundidad)
-    let orderQuery = supabase.from('orders').select('id, total, status, tenant_id').eq('id', orderId);
+    let orderQuery = supabase.from('orders').select('id, total, status, tenant_id, buyer_name, buyer_email, buyer_phone').eq('id', orderId);
     if (tenant?.id) orderQuery = orderQuery.eq('tenant_id', tenant.id);
     const { data: order, error: orderError } = await orderQuery.single();
     if (orderError || !order) return res.status(200).json({ ok: true });
@@ -75,6 +126,13 @@ module.exports = async function handler(req, res) {
       .eq('id', orderId);
 
     console.log(`Order ${orderId} updated to ${orderStatus} (MP: ${mpStatus})`);
+
+    // Productos de impresión pagados → trabajo en el panel de Impresiones.
+    // Si falla no se corta el webhook (el pago ya quedó registrado).
+    if (orderStatus === 'paid') {
+      try { await createPrintJobs(order); }
+      catch (e) { console.error('createPrintJobs', orderId, e.message || e); }
+    }
     return res.status(200).json({ ok: true });
 
   } catch (err) {

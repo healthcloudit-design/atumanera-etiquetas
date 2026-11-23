@@ -42,6 +42,33 @@ module.exports = async function handler(req, res) {
     if (pErr && pErr.code === '42703') ({ data: products, error: pErr } = await productsQuery(baseCols));
     if (pErr) throw pErr;
 
+    // Matriz de precios y add-ons (migración product_price_matrix / product_addons).
+    // Si las tablas todavía no existen (42P01) la tienda sigue igual que antes.
+    const list = products || [];
+    if (list.length) {
+      const { data: idRows } = await supabase.from('products').select('id, slug').eq('tenant_id', tenant.id);
+      const idBySlug = new Map((idRows || []).map(r => [r.slug, r.id]));
+      const { data: mRows, error: mErr } = await supabase
+        .from('product_price_matrix')
+        .select('product_id, option_group, option_value, quantity, unit, price')
+        .eq('tenant_id', tenant.id);
+      const { data: aRows, error: aErr } = await supabase
+        .from('product_addons')
+        .select('product_id, name, kind, amount, notice, sort_order')
+        .eq('tenant_id', tenant.id)
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+      const okM = !mErr || mErr.code !== '42P01';
+      const okA = !aErr || aErr.code !== '42P01';
+      if (mErr && okM) console.error('storefront matrix:', mErr.message);
+      if (aErr && okA) console.error('storefront addons:', aErr.message);
+      for (const p of list) {
+        const pid = idBySlug.get(p.slug);
+        p.matrix = okM ? (mRows || []).filter(r => r.product_id === pid).map(({ product_id, ...rest }) => rest) : [];
+        p.addons = okA ? (aRows || []).filter(r => r.product_id === pid).map(({ product_id, ...rest }) => rest) : [];
+      }
+    }
+
     return res.status(200).json({
       tenant: {
         slug: tenant.slug,
