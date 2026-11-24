@@ -1,5 +1,5 @@
 // api/_print-local.js
-// Alta de pedidos cargados por el taller en el local (Impresiones / Etiquetas / A medida).
+// Alta de pedidos cargados por el taller en el local (Impresiones / Etiquetas / Regalos / A medida).
 // Entran al panel de Impresiones ya confirmados, con su plazo, y si el cliente dejó
 // email le llega el mail de confirmación con el link de seguimiento.
 // El precio lo calcula el servidor (misma matriz que la tienda); el taller puede
@@ -11,7 +11,7 @@ const { priceSelection } = require('./_pricing');
 const { supabase, sendJobMail, logEvent, trackUrl, BUCKET } = require('./_print');
 
 const PAYMENTS = ['efectivo', 'transferencia', 'mercadopago_local', 'pendiente'];
-const KINDS = ['impresion', 'etiquetas', 'medida'];
+const KINDS = ['impresion', 'etiquetas', 'regalos', 'medida'];
 const EXT_MIME = { jpg: 'image/jpeg', png: 'image/png', tif: 'image/tiff', webp: 'image/webp', pdf: 'application/pdf' };
 const MAX_TOTAL = 100000000; // $1.000.000 en centavos
 
@@ -23,7 +23,7 @@ async function getProduct(tenantId, slug) {
   if (!s) bad('Elegí un producto');
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, slug, price, units_per_set, unit_label')
+    .select('id, name, slug, price, units_per_set, unit_label, options')
     .eq('tenant_id', tenantId).eq('slug', s).eq('active', true)
     .maybeSingle();
   if (error) throw error;
@@ -95,6 +95,41 @@ async function quote(tenantId, b) {
       total: unit * qty,
       description: `${p.name} · "${text}" · ${qty} ${qty === 1 ? 'pack' : 'packs'}${per}`,
       detail: { kind: 'etiquetas', product: p.slug, text, qty, unitPrice: unit },
+    };
+  }
+
+  if (b.kind === 'regalos') {
+    const p = await getProduct(tenantId, b.productSlug);
+    const opts = p.options || {};
+    if (!opts.editor) bad('Ese producto no es un regalo');
+    const qty = Number.parseInt(b.qty, 10);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 100) bad('La cantidad tiene que ser entre 1 y 100');
+    const design = cleanString(b.design, 500);
+    if (!design) bad('Contá qué lleva el diseño (foto, frase, nombre…)');
+    const parts = [];
+    const variant = {};
+    if (Array.isArray(opts.colors) && opts.colors.length) {
+      const c = opts.colors.find(x => x.name === b.color);
+      if (!c) bad('Elegí el color');
+      variant.color = c.name; variant.color_hex = c.hex; parts.push(c.name);
+    }
+    if (Array.isArray(opts.sizes) && opts.sizes.length) {
+      if (!opts.sizes.includes(b.size)) bad('Elegí el talle');
+      variant.size = b.size; parts.push(`Talle ${b.size}`);
+    }
+    let extra = 0;
+    const zones = [];
+    if (Array.isArray(opts.zones) && opts.zones.length) {
+      const wanted = Array.isArray(b.zones) ? b.zones : [];
+      for (const z of opts.zones) if (wanted.includes(z.id)) { zones.push(z.name || z.id); extra += Number(z.price) || 0; }
+      if (!zones.length) bad('Elegí al menos una zona de impresión');
+      parts.push(zones.join(' + '));
+    }
+    const unit = (Number(p.price) || 0) + extra;
+    return {
+      total: unit * qty,
+      description: [p.name, ...parts, `${qty} u.`, `"${design}"`].join(' · '),
+      detail: { kind: 'regalos', product: p.slug, variant, zones, qty, unitPrice: unit, design },
     };
   }
 

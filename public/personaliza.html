@@ -136,6 +136,7 @@
 
     <!-- ===== DASHBOARD DE TENANT ===== -->
     <div id="tnView" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn pink" type="button" onclick="nlOpen()">➕ Nuevo pedido</button></div>
       <div class="kpis" id="tnKpis"></div>
       <div class="card">
         <div class="tabs">
@@ -163,7 +164,6 @@
               <option value="entregado">Entregado</option>
               <option value="completado">Completado</option>
             </select>
-            <button class="btn pink sm" type="button" onclick="nlOpen()" style="margin-left:auto">➕ Nuevo pedido en el local</button>
           </div>
           <table><thead><tr><th>#</th><th>Cliente</th><th>Trabajo</th><th>Archivo</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="printsBody"></tbody></table>
         </div>
@@ -423,6 +423,7 @@ async function pjPay(id,method){
 }
 function nlPrintProducts(){return (NL.cat||[]).filter(p=>Array.isArray(p.matrix)&&p.matrix.length);}
 function nlLabelProducts(){return (NL.cat||[]).filter(p=>!(Array.isArray(p.matrix)&&p.matrix.length)&&!(p.options&&p.options.editor));}
+function nlGiftProducts(){return (NL.cat||[]).filter(p=>p.options&&p.options.editor);}
 function nlDaysOf(p){const n=String(p&&p.elaboration_days||'').match(/\d+/g);return n?Number(n[n.length-1]):5;}
 function nlValues(p){const min={};p.matrix.forEach(r=>{const v=Number(r.price);if(!(r.option_value in min)||v<min[r.option_value])min[r.option_value]=v;});return Object.keys(min).sort((a,b)=>min[a]-min[b]);}
 function nlCur(){const s=$('nlProd');return s?(NL.cat||[]).find(p=>p.slug===s.value):null;}
@@ -439,8 +440,8 @@ async function nlOpen(){
 }
 function nlKind(k){NL.kind=k;NL.touched=false;nlForm();}
 function nlForm(){
-  const k=NL.kind, pp=nlPrintProducts(), lp=nlLabelProducts();
-  const kinds=[['impresion','🖨️ Impresión'],['etiquetas','🏷️ Etiquetas'],['medida','✏️ A medida']];
+  const k=NL.kind, pp=nlPrintProducts(), lp=nlLabelProducts(), gp=nlGiftProducts();
+  const kinds=[['impresion','🖨️ Impresión'],['regalos','🎁 Regalo'],['etiquetas','🏷️ Etiquetas'],['medida','✏️ A medida']];
   let prod='';
   if(k==='impresion'){
     prod=pp.length?`<label>Producto</label><select id="nlProd" onchange="nlProdChange()">${pp.map(p=>`<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join('')}</select><div id="nlOpts"></div>`
@@ -450,11 +451,16 @@ function nlForm(){
       <div class="row2"><div><label>Texto de la etiqueta</label><input id="nlText" maxlength="120" placeholder="Nombre y apellido"></div>
       <div><label>Cantidad (packs)</label><input id="nlQty" type="number" min="1" max="100" value="1"></div></div>`
       :'<p class="muted">No hay productos de etiquetas activos.</p>';
+  }else if(k==='regalos'){
+    prod=gp.length?`<label>Producto</label><select id="nlProd" onchange="nlProdChange()">${gp.map(p=>`<option value="${esc(p.slug)}">${esc(p.name)} — ${money(p.price)}</option>`).join('')}</select><div id="nlOpts"></div>
+      <div class="row2"><div><label>¿Qué lleva el diseño?</label><input id="nlGDesign" maxlength="500" placeholder="Foto, frase, nombre…"></div>
+      <div><label>Cantidad</label><input id="nlQty" type="number" min="1" max="100" value="1"></div></div>`
+      :'<p class="muted">No hay regalos activos.</p>';
   }else{
     prod=`<label>Descripción del trabajo</label><textarea id="nlDesc" rows="3" maxlength="1000" placeholder="Qué hay que hacer: producto, medidas, cantidad, material…" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0e1727;color:var(--txt);font-size:13.5px"></textarea>`;
   }
   $('nlBody').innerHTML=`<h3 style="margin:0 0 4px">Nuevo pedido en el local</h3>
-    <p class="hint" style="margin:0 0 12px">Entra a Impresiones como <strong>Confirmado</strong>. Si cargás el email, al cliente le llega el mail con el link de seguimiento.</p>
+    <p class="hint" style="margin:0 0 12px">Para ventas de mostrador. Queda en <strong>🖨️ Impresiones</strong> como <strong>Confirmado</strong>, con su seguimiento. Si cargás el email, al cliente le llega el mail con el link.</p>
     <div class="tabs" style="margin-top:0">${kinds.map(([v,l])=>`<button type="button" class="tab${k===v?' active':''}" onclick="nlKind('${v}')">${l}</button>`).join('')}</div>
     ${prod}
     <div class="row2"><div><label>Total a cobrar ($)</label><input id="nlTotal" type="number" min="0" step="1" oninput="NL.touched=true;nlList()"></div>
@@ -471,6 +477,7 @@ function nlForm(){
       <button class="btn ghost" type="button" onclick="$('nlModal').classList.remove('show')">Cancelar</button>
       <button class="btn pink" type="button" id="nlSend" onclick="nlSubmit()">Crear pedido</button></div>`;
   if($('nlProd'))nlProdChange();else nlList();
+  $('nlBody').oninput=$('nlBody').onchange=()=>nlFail('');
   ['nlText','nlQty'].forEach(id=>{if($(id))$(id).oninput=nlList;});
 }
 function nlProdChange(){
@@ -486,6 +493,14 @@ function nlProdChange(){
     const ad=p.addons||[];
     if(ad.length)h+=`<label>Opcionales</label><div style="display:flex;flex-wrap:wrap;gap:6px 16px">${ad.map((a,i)=>`<label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--txt);font-size:13px"><input type="checkbox" id="nlA${i}" style="width:auto" onchange="nlList()"> ${esc(a.name)}${a.kind==='per_unit'?` <input id="nlU${i}" type="number" min="1" max="500" value="4" style="width:64px;padding:4px 6px" oninput="nlList()">`:''}</label>`).join('')}</div>`;
     $('nlOpts').innerHTML=h; nlFillQty();
+  }else if(NL.kind==='regalos'&&p){
+    const o=p.options||{}; let h='';
+    const sels=[];
+    if(Array.isArray(o.colors)&&o.colors.length)sels.push(`<div><label>${esc(o.color_label||'Color')}</label><select id="nlGColor">${o.colors.map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>`);
+    if(Array.isArray(o.sizes)&&o.sizes.length)sels.push(`<div><label>Talle</label><select id="nlGSize">${o.sizes.map(z=>`<option>${esc(z)}</option>`).join('')}</select></div>`);
+    if(sels.length)h+=`<div class="row2">${sels.join('')}${sels.length===1?'<div></div>':''}</div>`;
+    if(Array.isArray(o.zones)&&o.zones.length)h+=`<label>Zonas de impresión</label><div style="display:flex;flex-wrap:wrap;gap:6px 16px">${o.zones.map((z,i)=>`<label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--txt);font-size:13px"><input type="checkbox" id="nlZ${i}" data-z="${esc(z.id)}" style="width:auto" ${i===0?'checked':''} onchange="nlList()"> ${esc(z.name||z.id)} <span class="muted">+${money(z.price)}</span></label>`).join('')}</div>`;
+    $('nlOpts').innerHTML=h;
   }
   nlList();
 }
@@ -508,6 +523,13 @@ function nlSel(){
 function nlQuote(){
   const p=nlCur();
   if(NL.kind==='etiquetas'){if(!p)return null;const q=parseInt($('nlQty').value,10);if(!(q>=1&&q<=100))throw new Error('Cantidad entre 1 y 100');return Number(p.price)*q;}
+  if(NL.kind==='regalos'){
+    if(!p)return null;const q=parseInt($('nlQty').value,10);if(!(q>=1&&q<=100))throw new Error('Cantidad entre 1 y 100');
+    const o=p.options||{};let unit=Number(p.price)||0,nz=0;
+    (o.zones||[]).forEach((z,i)=>{if($('nlZ'+i)&&$('nlZ'+i).checked){unit+=Number(z.price)||0;nz++;}});
+    if((o.zones||[]).length&&!nz)throw new Error('Elegí al menos una zona de impresión');
+    return unit*q;
+  }
   if(NL.kind!=='impresion'||!p)return null;
   const s=nlSel();
   const rows=p.matrix.filter(r=>s.options[r.option_group]===r.option_value); if(!rows.length)throw new Error('Elegí una opción');
@@ -554,6 +576,12 @@ async function nlSubmit(){
     body.productSlug=p.slug;
     try{nlQuote();}catch(e){return nlFail(e.message);}
     if(k==='impresion')body.printJob=nlSel();
+    else if(k==='regalos'){
+      body.qty=parseInt($('nlQty').value,10);body.design=$('nlGDesign').value.trim();
+      if(!body.design)return nlFail('Contá qué lleva el diseño (foto, frase, nombre…).');
+      if($('nlGColor'))body.color=$('nlGColor').value; if($('nlGSize'))body.size=$('nlGSize').value;
+      body.zones=Array.from(document.querySelectorAll('#nlOpts input[data-z]')).filter(x=>x.checked).map(x=>x.dataset.z);
+    }
     else{body.text=$('nlText').value.trim();body.qty=parseInt($('nlQty').value,10);if(!body.text)return nlFail('Escribí el texto de la etiqueta.');}
   }
   if(k==='medida'||NL.touched){const v=Number(totalTxt);if(!(v>=0))return nlFail('El total no es válido.');body.totalCents=Math.round(v*100);}
